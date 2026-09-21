@@ -1,0 +1,14 @@
+{
+  "$schema": "https://code.claude.com/schemas/marketplace.json",
+  "name": "polaria-agent-plugins",
+  "owner": {
+    "name": "Polaria Tech",
+    "url": "https://polaria.tech"
+  },
+  "description": "Plugins internos de Polaria para Claude Code: auditoria tecnica, protocolos y herramientas de agentes reutilizables entre repos.",
+  "version": "0.1.0",
+  "metadata": {
+    "pluginRoot": "./plugins"
+  },
+  "plugins": []
+}

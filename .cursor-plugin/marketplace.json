@@ -1,0 +1,13 @@
+{
+  "name": "polaria-agent-plugins",
+  "owner": {
+    "name": "Polaria Tech",
+    "url": "https://polaria.tech"
+  },
+  "description": "Plugins internos de Polaria para Cursor: auditoria tecnica, protocolos y herramientas de agentes reutilizables entre repos.",
+  "version": "0.1.0",
+  "metadata": {
+    "pluginRoot": "./plugins"
+  },
+  "plugins": []
+}
