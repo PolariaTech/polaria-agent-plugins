@@ -57,7 +57,10 @@ editores.
 
 ## Plugins actuales
 
-Ninguno todavia — este repo se creo con la carpeta `plugins/` vacia. El primer candidato
-pendiente es migrar aqui el paquete de Auditoria Tecnica y Tests que hoy vive en Drive
-(`06_AUDITORIA_TECNICA_Y_TESTS/skill/` en el Drive compartido de Polaria), como plugin
-`auditoria-tecnica`.
+| Plugin | Que hace | Requiere |
+|---|---|---|
+| `auditoria-tecnica` | Orquesta el Protocolo de Auditoria Tecnica de Software y Workflows v1.1 de Polaria (skill `auditoria-tecnica-polaria` + agentes especialistas por dominio) | spec-kit instalado por separado en el repo auditado (`specify extension add bug` + `specify extension add assess`) |
+
+Fuente de verdad de este contenido: `PROTOCOLOS_NUEVOS/AUDITORIA/` del repo de metodologia
+(`METODOLOGIA`). Cualquier cambio se hace ahi y se vuelve a publicar aqui — este repo es el
+destino de distribucion, nunca donde se edita el contenido primero.
