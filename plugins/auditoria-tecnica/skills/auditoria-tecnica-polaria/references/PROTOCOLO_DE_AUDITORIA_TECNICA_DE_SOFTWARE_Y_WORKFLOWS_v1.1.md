@@ -133,7 +133,7 @@ Tras una corrección, agente auditor revalida con ejecución real: el caso origi
 | Extensión de dominio correspondiente (Workflow n8n / Base de datos / Agente IA / Integraciones / Frontend / Backend / Metodología y Protocolos) | Siempre — el paso 2 no puede ejecutarse sin la extensión del dominio declarado en el paso 1 |
 | Protocolo de Versionamiento (si el proyecto lo usa) | Cuando el Motivo declarado es "Release" — esta auditoría es la verificación técnica previa a la aprobación de despliegue |
 | `plantilla_prompt_auditoria.md` (misma carpeta que este protocolo) | Siempre que se redacta el prompt de un agente auditor — sea auditoría de sistema real o auditoría iterativa de diseño |
-| spec-kit (bug extension + SDD + assess extension) instalado en el repo auditado | En dominios de código: siempre para diagnóstico (`bug.assess`) y corrección (`bug.fix`/`bug.test` o `tasks`/`implement`/`converge`); para el Motivo "Diseño o propuesta antes de construir" (Idea Assessment) — ver `skill/SKILL.md` y `GUIA_DE_INSTALACION_CURSOR_Y_CLAUDE_v1.0.md` de esta carpeta |
+| spec-kit (bug extension + SDD + assess extension) instalado en el repo auditado | En dominios de código: siempre para diagnóstico (`bug.assess`) y corrección (`bug.fix`/`bug.test` o `tasks`/`implement`/`converge`); para el Motivo "Diseño o propuesta antes de construir" (Idea Assessment) — ver `../SKILL.md` (esta skill) — spec-kit es un prerrequisito externo, no lo instala este plugin |
 
 ## Modo de emergencia
 
