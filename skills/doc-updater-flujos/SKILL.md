@@ -1,6 +1,6 @@
 ---
 name: doc-updater-flujos
-description: "Mantiene sincronizada la documentación técnica del Dev Hub `flujos` (glosario, runbooks, onboarding, seguridad, testing, arquitectura, changelog compartido) con el estado real de Polaria WMS, cuando el cambio que la dispara ocurrió en cualquiera de los 4 repos de código (polaria-wms-web, polaria-wms-api, polaria-wms-db, Widget-react) o en este mismo Dev Hub. Variante específica de este repo — no es la versión genérica del plugin `gestion-linear` de `polaria-agent-plugins`: usa la guía propia de este proyecto (`public/docs/guia_documentacion_proyectos.md`, 19 puntos) en vez de la Guía de Documentación de Polaria, sabe que el CHANGELOG y el número de versión de producto son compartidos entre los 4 repos + este hub, y sabe editar contenido que vive como módulos JS (`src/data/polaria*Doc.js`) además de Markdown plano. Se activa en dos momentos — MODO A (frase exacta \"Documenta el cambio aprobado\") y MODO B (cierre de hilo o fin de sesión de trabajo: \"cerremos el hilo\", \"abrimos otro chat\", \"cierro aquí\", \"nuevo hilo\"). NO cubre manuales de usuario (`public/docs/manual-usuario/` — eso es la skill `manuales-usuario-metadata-drive`) ni los schemas de formularios (`public/docs/formularios/schemas/` — protocolo de validación v1.0 aparte)."
+description: "Mantiene sincronizada la documentación técnica del Dev Hub `flujos` (glosario, runbooks, onboarding, seguridad, testing, arquitectura, changelog compartido) con el estado real de Polaria WMS, cuando el cambio que la dispara ocurrió en cualquiera de los 4 repos de código (polaria-wms-web, polaria-wms-api, polaria-wms-db, Widget-react) o en este mismo Dev Hub. Variante específica de este repo — no es la versión genérica del plugin `gestion-linear` de `polaria-agent-plugins`: usa la guía propia de este proyecto (`public/docs/guia_documentacion_proyectos.md`, 19 puntos) en vez de la Guía de Documentación de Polaria, sabe que el CHANGELOG y el número de versión de producto son compartidos entre los 4 repos + este hub, y sabe editar contenido que vive como módulos JS (`src/data/polaria*Doc.js`) además de Markdown plano. Se activa en dos momentos — MODO A (variantes de \"documenta el/los cambio(s)\", con o sin \"aprobado(s)\" — preguntando antes si revisar los cambios uno por uno, todos juntos o sin confirmación) y MODO B (cierre de hilo o fin de sesión de trabajo: \"cerremos el hilo\", \"abrimos otro chat\", \"cierro aquí\", \"nuevo hilo\"). NO cubre manuales de usuario (`public/docs/manual-usuario/` — eso es la skill `manuales-usuario-metadata-drive`) ni los schemas de formularios (`public/docs/formularios/schemas/` — protocolo de validación v1.0 aparte)."
 compatibility: "Requiere acceso de archivos (Read/Edit/Write) a este repo (flujos) y, si el cambio se originó en otro repo del producto, también acceso de lectura a ese repo (clonado localmente o accesible por otra vía) para confirmar qué cambió exactamente."
 ---
 
@@ -65,7 +65,7 @@ El README también muestra "**Versión de producto: X.X.X**" en la primera líne
 
 ## Triggers
 
-**MODO A — Cambio aprobado:** frase exacta `"Documenta el cambio aprobado"`. Sin esa frase, no se activa aunque haya cambios discutidos o probados en la conversación.
+**MODO A — Cambio aprobado:** se activa con cualquier variante que combine el verbo "documentar" (imperativo o presente: "documenta", "documentas") con "cambio"/"cambios", con o sin la palabra "aprobado"/"aprobados" — por ejemplo: "documenta el cambio", "documenta los cambios", "documentas los cambios", "documenta el cambio aprobado", "documenta los cambios aprobados". No se activa con menciones indirectas de que algo ya funciona o quedó listo si no incluyen ese verbo explícito.
 
 **MODO B — Cierre de hilo / fin de sesión:** frases como "cerremos el hilo", "abrimos otro chat", "cierro aquí", "nuevo hilo", o el equivalente de fin de sesión de trabajo sobre el Dev Hub o sobre cualquiera de los 4 repos del producto si la conversación tocó documentación de este hub.
 
@@ -121,7 +121,23 @@ Usar la tabla de "Mapa de artefactos de este Dev Hub" arriba. Ejemplos:
 
 Si un artefacto relevante no existe todavía en el Mapa (CONTRIBUTING, ADRs, entornos, observabilidad, compliance), confirmar con el usuario antes de crearlo — no forzar la estructura de la Guía genérica de Polaria sobre este repo.
 
-### Paso 4 — Presentar autorizaciones una por una
+### Paso 4 — Elegir modo de revisión
+
+Antes de presentar cualquier cambio, preguntar explícitamente (una sola vez por esta ejecución de MODO A — no repetir la pregunta en cada cambio):
+
+```
+¿Cómo querés revisar los cambios de documentación antes de aplicarlos?
+
+1. Uno por uno — te presento cada cambio por separado y espero tu aprobación antes de seguir con el siguiente.
+2. Todos juntos — te presento el listado completo de cambios propuestos en un solo mensaje y espero una sola aprobación para aplicarlos todos.
+3. Sin confirmación — aplico los cambios directo, sin pedirte aprobación por cada uno. ⚠️ Al elegir esta opción das tu consentimiento explícito para que se editen los archivos sin revisión previa uno por uno.
+```
+
+Usar la respuesta para el resto de esta ejecución de MODO A (y de MODO B si aplica, ver Paso B3) — no volver a preguntar a mitad de camino salvo que el usuario cambie de opinión explícitamente.
+
+### Paso 5 — Presentar los cambios según el modo elegido
+
+**Uno por uno:** para cada cambio, presentar:
 
 ```
 ¿Me autorizas a reemplazar esto:
@@ -135,19 +151,35 @@ por esto:
 en [nombre del artefacto] (`ruta/del/archivo`)?
 ```
 
-Una autorización por cambio. Esperar respuesta explícita antes de seguir. Si se rechaza, registrar y continuar con la siguiente. Si se pide modificar, ajustar y volver a presentar la misma autorización.
+Esperar respuesta explícita antes de seguir con el siguiente. Si se rechaza, registrar y continuar con la siguiente. Si se pide modificar, ajustar y volver a presentar la misma autorización.
 
-### Paso 5 — Ejecutar Edit por cada autorización aprobada
+**Todos juntos:** presentar el listado completo en un solo mensaje, numerado, cada ítem con el mismo formato "actual → nuevo → artefacto/archivo", y pedir una sola aprobación para el lote:
 
-1. `Edit` con `old_string`/`new_string` exactos (sintaxis JS íntegra en archivos `.js`).
+```
+Cambios propuestos ([N] en total):
+
+1. [artefacto] (`ruta/del/archivo`) — actual: [...] → nuevo: [...]
+2. [artefacto] (`ruta/del/archivo`) — actual: [...] → nuevo: [...]
+...
+
+¿Aplico todos, o querés ajustar/excluir alguno antes?
+```
+
+Si el usuario excluye o pide ajustar alguno, aplicar solo los que confirmó.
+
+**Sin confirmación:** no presentar autorizaciones — pasar directo al Paso 6 aplicando todos los cambios identificados en el Paso 3, dejando constancia en la verificación final (Paso 7) de que se aplicaron sin revisión previa por el consentimiento explícito dado en el Paso 4.
+
+### Paso 6 — Ejecutar Edit
+
+1. `Edit` con `old_string`/`new_string` exactos (sintaxis JS íntegra en archivos `.js`), para cada cambio aprobado (o para todos, en modo "sin confirmación").
 2. Confirmar: `✓ Actualizado en [archivo] — [artefacto]`.
-3. Siguiente autorización pendiente.
+3. Siguiente cambio pendiente.
 
 Si `old_string` no es único, agregar contexto o usar `replace_all` solo si el reemplazo debe aplicarse a todas las ocurrencias intencionalmente.
 
-### Paso 6 — Verificación final
+### Paso 7 — Verificación final
 
-Mostrar el conteo por archivo tocado, incluyendo si la versión (`VERSION`, `package.json`, `polariaWmsMeta.js`, README) quedó en sync o si algún archivo de esos tres quedó pendiente de actualizar y por qué.
+Mostrar el conteo por archivo tocado, incluyendo si la versión (`VERSION`, `package.json`, `polariaWmsMeta.js`, README) quedó en sync o si algún archivo de esos tres quedó pendiente de actualizar y por qué. Si el modo elegido fue "sin confirmación", recordar explícitamente que los cambios se aplicaron sin revisión previa por el consentimiento dado en el Paso 4.
 
 ---
 
@@ -167,7 +199,7 @@ Dev Hub `flujos` — Polaria WMS
 
 ### Paso B3 — Aplicar cambios locales
 
-Si hay cambios, seguir el flujo de MODO A (Pasos 2→3→4→5→6) — el Paso 2 (SemVer) no se omite. Si no hay cambios, decirlo y pasar a B4.
+Si hay cambios, seguir el flujo de MODO A (Pasos 2→7, incluido el Paso 4 de elegir modo de revisión) — el Paso 2 (SemVer) no se omite. Si no hay cambios, decirlo y pasar a B4.
 
 ### Paso B4 — Project Update en Linear (si aplica)
 
@@ -192,11 +224,11 @@ Listar por nombre los archivos modificados. Si nada cambió, decirlo explícitam
 ## Reglas de operación
 
 1. **Nunca reescribir un archivo existente completo** — solo `Edit` quirúrgico, incluso en los módulos `.js`. `Write` solo para artefactos que no existían.
-2. **Nunca ejecutar un Edit sin autorización explícita** del usuario.
+2. **Nunca ejecutar un Edit sin autorización explícita** del usuario — salvo que el usuario haya elegido el modo "sin confirmación" en el Paso 4 de MODO A, cuyo consentimiento cubre todos los cambios de esa ejecución.
 3. **Siempre leer los archivos con `Read`** antes de empezar y antes de cada `Edit`.
 4. **El tipo de versión lo determina el checklist del Paso 2**, mirando impacto en el producto completo, no solo en el código de este hub.
 5. **Todo cambio de versión lleva su justificación explícita**, y debe reflejarse en los tres lugares (`VERSION`, `package.json`, `polariaWmsMeta.js`) más el README — nunca actualizar uno sin verificar los otros tres.
-6. **Una autorización por cambio.**
+6. **Una autorización por cambio en modo "uno por uno"; una autorización por lote en modo "todos juntos"; consentimiento del modo mismo en modo "sin confirmación"** — nunca mezclar modos a mitad de una ejecución de MODO A/B.
 7. **Si un Edit falla** en un archivo `.js`, mostrar el fragmento exacto que falló (incluida la sintaxis JS) y pedir confirmación antes de reintentar.
 8. **No documentar cambios en prueba** — si el usuario menciona que algo se está evaluando, detener y esperar nueva instrucción.
 9. **Nunca insertar saltos de línea manuales a mitad de una oración o viñeta** — cada párrafo, viñeta, celda de tabla o línea de array/template literal que se escriba o edite va en una sola línea de texto.

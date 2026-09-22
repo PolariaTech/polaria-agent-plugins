@@ -1,6 +1,6 @@
 ---
 name: doc-updater
-description: "Mantiene sincronizados los artefactos de documentación técnica (README, CHANGELOG, ADRs, glosario, y el resto de los 21 puntos de GUIA_DOCUMENTACION_EXTENDIDA/RESUMIDA de Polaria) de CUALQUIER proyecto con su estado real, y publica el Project Update correspondiente en Linear vía MCP — versión generalizada de la skill `doc-updater` original (que solo cubría Mateo Support/RAG Pipeline). Orquesta hacia la Guía como fuente de verdad de la estructura de cada artefacto — no reimplementa sus plantillas. El avance operativo (issue activo, próximos pasos, bloqueos) ya no vive en un archivo de estado local — vive en el propio feed de Project Updates de Linear. Si el proyecto no tiene ningún artefacto de documentación todavía, los crea empezando por los de prioridad Alta en vez de fallar. Se activa en tres momentos — MODO A (frase exacta \"Documenta el cambio aprobado\"), MODO B (cierre de hilo o fin de una sesión de trabajo sobre el proyecto — siempre publica el Project Update en Linear), y MODO INIT (cuando el proyecto no tiene ningún artefacto de documentación y hay que crear los relevantes desde cero antes de poder actualizarlos). Opera de forma quirúrgica sobre archivos existentes — nunca reescribe un archivo completo salvo que lo esté creando por primera vez."
+description: "Mantiene sincronizados los artefactos de documentación técnica (README, CHANGELOG, ADRs, glosario, y el resto de los 21 puntos de GUIA_DOCUMENTACION_EXTENDIDA/RESUMIDA de Polaria) de CUALQUIER proyecto con su estado real, y publica el Project Update correspondiente en Linear vía MCP — versión generalizada de la skill `doc-updater` original (que solo cubría Mateo Support/RAG Pipeline). Orquesta hacia la Guía como fuente de verdad de la estructura de cada artefacto — no reimplementa sus plantillas. El avance operativo (issue activo, próximos pasos, bloqueos) ya no vive en un archivo de estado local — vive en el propio feed de Project Updates de Linear. Si el proyecto no tiene ningún artefacto de documentación todavía, los crea empezando por los de prioridad Alta en vez de fallar. Se activa en tres momentos — MODO A (variantes de \"documenta el/los cambio(s)\", con o sin \"aprobado(s)\" — preguntando antes si revisar los cambios uno por uno, todos juntos o sin confirmación), MODO B (cierre de hilo o fin de una sesión de trabajo sobre el proyecto — siempre publica el Project Update en Linear), y MODO INIT (cuando el proyecto no tiene ningún artefacto de documentación y hay que crear los relevantes desde cero antes de poder actualizarlos). Opera de forma quirúrgica sobre archivos existentes — nunca reescribe un archivo completo salvo que lo esté creando por primera vez."
 compatibility: "Requiere acceso de archivos (Read/Edit/Write) al repo del proyecto, y MCP de Linear conectado para publicar el Project Update."
 ---
 
@@ -54,7 +54,7 @@ Mantiene sincronizados los artefactos de documentación técnica de un proyecto 
 
 **MODO INIT — el proyecto no tiene ningún artefacto de documentación todavía:** se activa cuando, en cualquiera de los otros dos modos, no se encuentra ninguno de los artefactos relevantes del Mapa de los 21 para el proyecto indicado.
 
-**MODO A — Cambio aprobado:** frase exacta `"Documenta el cambio aprobado"`. Sin esa frase, no se activa aunque haya cambios discutidos o probados en la conversación.
+**MODO A — Cambio aprobado:** se activa con cualquier variante que combine el verbo "documentar" (imperativo o presente: "documenta", "documentas") con "cambio"/"cambios", con o sin la palabra "aprobado"/"aprobados" — por ejemplo: "documenta el cambio", "documenta los cambios", "documentas los cambios", "documenta el cambio aprobado", "documenta los cambios aprobados". No se activa con menciones indirectas de que algo ya funciona o quedó listo si no incluyen ese verbo explícito.
 
 **MODO B — Cierre de hilo / fin de sesión de trabajo:** frases como "cerremos el hilo", "abrimos otro chat", "cierro aquí", "nuevo hilo", o el equivalente de fin de sesión de trabajo sobre el proyecto (Paso 3 del Protocolo de Ciclo de Vida en Linear) — este modo, a diferencia del original, **siempre** intenta publicar el Project Update en Linear al final, no solo actualizar archivos locales.
 
@@ -135,7 +135,23 @@ Incremento: PATCH x.x.X→x.x.(X+1) · MINOR x.X.x→x.(X+1).0 · MAJOR X.x.x→
 
 Mapeo completo antes de proponer cualquier cambio, usando el Mapa de los 21 artefactos para decidir cuáles se tocan. Ejemplos: una variable de entorno nueva → `.env.example` + sección Variables del README (punto 4/1); una decisión de arquitectura → un ADR nuevo en `docs/adr/` (punto 9), nunca editar un ADR existente; un endpoint nuevo o modificado → la documentación de API (punto 3); un cambio en cómo se instala o corre el proyecto → README/INSTALL (punto 5); un flujo de negocio nuevo o alterado → `docs/flujos-negocio.md` (punto 8). El CHANGELOG (punto 13) se toca casi siempre — la excepción es la lista explícita de la Guía (refactors internos sin cambio de comportamiento, cambios de documentación, actualización de dependencias sin cambio de comportamiento no van al CHANGELOG). Si un artefacto relevante todavía no existe, crearlo seguido de la sección correspondiente de la Guía (mismo criterio que MODO INIT Paso 3), no como excepción aparte. El estado operativo (issue activo, próximos pasos) no se edita aquí — se publica como Project Update en Linear (MODO B, Paso B4).
 
-### Paso 4 — Presentar autorizaciones una por una
+### Paso 4 — Elegir modo de revisión
+
+Antes de presentar cualquier cambio, preguntar explícitamente (una sola vez por esta ejecución de MODO A — no repetir la pregunta en cada cambio):
+
+```
+¿Cómo querés revisar los cambios de documentación antes de aplicarlos?
+
+1. Uno por uno — te presento cada cambio por separado y espero tu aprobación antes de seguir con el siguiente.
+2. Todos juntos — te presento el listado completo de cambios propuestos en un solo mensaje y espero una sola aprobación para aplicarlos todos.
+3. Sin confirmación — aplico los cambios directo, sin pedirte aprobación por cada uno. ⚠️ Al elegir esta opción das tu consentimiento explícito para que se editen los archivos sin revisión previa uno por uno.
+```
+
+Usar la respuesta para el resto de esta ejecución de MODO A (y de MODO B si aplica, ver Paso B3) — no volver a preguntar a mitad de camino salvo que el usuario cambie de opinión explícitamente.
+
+### Paso 5 — Presentar los cambios según el modo elegido
+
+**Uno por uno:** para cada cambio, presentar:
 
 ```
 ¿Me autorizas a reemplazar esto:
@@ -149,19 +165,35 @@ por esto:
 en la sección **[nombre de la sección]** de [nombre del archivo]?
 ```
 
-Una autorización por cambio. El bloque "actual" debe ser texto copiado exactamente del archivo. Esperar respuesta explícita antes de seguir. Si se rechaza, registrar y continuar con el siguiente. Si se pide modificar, ajustar y volver a presentar esa misma autorización.
+Esperar respuesta explícita antes de seguir con el siguiente. Si se rechaza, registrar y continuar con el siguiente. Si se pide modificar, ajustar y volver a presentar esa misma autorización.
 
-### Paso 5 — Ejecutar Edit por cada autorización aprobada
+**Todos juntos:** presentar el listado completo en un solo mensaje, numerado, cada ítem con el mismo formato "actual → nuevo → archivo/sección", y pedir una sola aprobación para el lote:
 
-1. `Edit` con `old_string` exacto y `new_string` nuevo.
+```
+Cambios propuestos ([N] en total):
+
+1. [archivo/sección] — actual: [...] → nuevo: [...]
+2. [archivo/sección] — actual: [...] → nuevo: [...]
+...
+
+¿Aplico todos, o querés ajustar/excluir alguno antes?
+```
+
+Si el usuario excluye o pide ajustar alguno, aplicar solo los que confirmó.
+
+**Sin confirmación:** no presentar autorizaciones — pasar directo al Paso 6 aplicando todos los cambios identificados en el Paso 3, dejando constancia en la verificación final (Paso 7) de que se aplicaron sin revisión previa por el consentimiento explícito dado en el Paso 4.
+
+### Paso 6 — Ejecutar Edit
+
+1. `Edit` con `old_string` exacto y `new_string` nuevo, para cada cambio aprobado (o para todos, en modo "sin confirmación").
 2. Confirmar: `✓ Actualizado en [archivo] — sección [nombre]`.
-3. Siguiente autorización pendiente.
+3. Siguiente cambio pendiente.
 
 Si `old_string` no es único, incluir más contexto o usar `replace_all` solo si el reemplazo debe aplicarse a todas las ocurrencias intencionalmente.
 
-### Paso 6 — Verificación final
+### Paso 7 — Verificación final
 
-Mostrar el conteo por archivo tocado. Los cambios ya quedaron en disco — no releer solo para verificar, salvo error o pedido explícito del usuario.
+Mostrar el conteo por archivo tocado. Si el modo elegido fue "sin confirmación", recordar explícitamente que los cambios se aplicaron sin revisión previa por el consentimiento dado en el Paso 4. Los cambios ya quedaron en disco — no releer solo para verificar, salvo error o pedido explícito del usuario.
 
 ---
 
@@ -182,7 +214,7 @@ Usando el Mapa de los 21 artefactos (mismo criterio que MODO A Paso 3), determin
 
 ### Paso B3 — Aplicar cambios locales
 
-Si hay cambios, seguir el flujo de MODO A (Pasos 2→3→4→5→6) — el Paso 2 (determinar tipo de versión) no se omite: toda entrada nueva de CHANGELOG necesita su SemVer. Si no hay cambios, decirlo y pasar a B4.
+Si hay cambios, seguir el flujo de MODO A (Pasos 2→7, incluido el Paso 4 de elegir modo de revisión) — el Paso 2 (determinar tipo de versión) no se omite: toda entrada nueva de CHANGELOG necesita su SemVer. Si no hay cambios, decirlo y pasar a B4.
 
 ### Paso B4 — Publicar el Project Update en Linear
 
@@ -231,11 +263,11 @@ Listar por nombre los archivos modificados y confirmar si el Project Update qued
 ## Reglas de operación
 
 1. **Nunca reescribir un archivo existente completo** — solo `Edit` quirúrgico. `Write` solo se usa para crear un archivo que no existía (MODO INIT).
-2. **Nunca ejecutar un Edit sin autorización explícita** del usuario.
+2. **Nunca ejecutar un Edit sin autorización explícita** del usuario — salvo que el usuario haya elegido el modo "sin confirmación" en el Paso 4 de MODO A, cuyo consentimiento cubre todos los cambios de esa ejecución.
 3. **Siempre leer los archivos con `Read`** antes de empezar y antes de cada `Edit`.
 4. **El tipo de versión lo determina el protocolo** (Paso 2) — no la percepción del cambio.
 5. **Todo cambio de versión lleva su justificación explícita.**
-6. **Una autorización por cambio.**
+6. **Una autorización por cambio en modo "uno por uno"; una autorización por lote en modo "todos juntos"; consentimiento del modo mismo en modo "sin confirmación"** — nunca mezclar modos a mitad de una ejecución de MODO A/B.
 7. **Si un Edit falla**, mostrar el fragmento exacto que falló y pedir confirmación del texto correcto antes de reintentar.
 8. **No documentar cambios en prueba** — si el usuario menciona que algo se está evaluando, detener y esperar nueva instrucción.
 9. **Nunca insertar saltos de línea manuales a mitad de una oración o viñeta** — cada párrafo, viñeta o celda de tabla que se escriba o edite va en una sola línea de texto, sin cortar la oración a la mitad con un salto de línea. Esto aplica sin importar el editor (Claude Code o Cursor) ni el archivo (README, CHANGELOG, DOC técnico, etc.).
