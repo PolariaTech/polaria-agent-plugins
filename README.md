@@ -36,16 +36,20 @@ instalar el marketplace: la unica via es clonar este repo y copiar a mano las ca
 polaria-agent-plugins/
 ├── .claude-plugin/marketplace.json   # entry point que lee Claude Code
 ├── .cursor-plugin/marketplace.json   # entry point que lee Cursor
-└── plugins/
-    └── <nombre-del-plugin>/
-        ├── .claude-plugin/plugin.json
-        ├── .cursor-plugin/plugin.json
-        ├── skills/<skill>/SKILL.md
-        ├── agents/*.md
-        └── commands/ (si aplica)
+├── plugins/
+│   └── <nombre-del-plugin>/
+│       ├── .claude-plugin/plugin.json
+│       ├── .cursor-plugin/plugin.json
+│       ├── skills/<skill>/SKILL.md
+│       ├── agents/*.md
+│       └── commands/ (si aplica)
+└── skills/
+    └── <nombre-variante>/SKILL.md    # variantes repo-especificas, no distribuidas via plugin
 ```
 
-Ver `plugins/README.md` para el detalle exacto de como agregar un plugin nuevo.
+Ver `plugins/README.md` para el detalle exacto de como agregar un plugin nuevo, y
+`skills/README.md` para la diferencia con las variantes repo-especificas de `skills/` (no se
+instalan via marketplace, se copian a mano al repo destino).
 
 ## Por que dos manifiestos por plugin y no uno
 
