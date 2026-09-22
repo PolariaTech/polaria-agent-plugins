@@ -14,7 +14,7 @@
     {
       "name": "auditoria-tecnica",
       "displayName": "Auditoria Tecnica y Tests (Polaria)",
-      "source": "./plugins/auditoria-tecnica",
+      "source": "auditoria-tecnica",
       "description": "Orquesta el Protocolo de Auditoria Tecnica de Software y Workflows v1.1 de Polaria, delegando en spec-kit.",
       "version": "1.1.0",
       "author": { "name": "Polaria Tech" },
