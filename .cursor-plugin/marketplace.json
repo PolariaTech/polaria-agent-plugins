@@ -5,17 +5,17 @@
     "url": "https://polaria.tech"
   },
   "description": "Plugins internos de Polaria para Cursor: auditoria tecnica, protocolos y herramientas de agentes reutilizables entre repos.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "metadata": {
     "pluginRoot": "./plugins"
   },
   "plugins": [
     {
       "name": "auditoria-tecnica",
-      "displayName": "Auditoria Tecnica y Tests (Polaria)",
+      "displayName": "Auditoria Tecnica (Polaria)",
       "source": "auditoria-tecnica",
-      "description": "Orquesta el Protocolo de Auditoria Tecnica de Software y Workflows v1.1 de Polaria, delegando en spec-kit.",
-      "version": "1.1.0",
+      "description": "Orquesta el Protocolo de Auditoria Tecnica de Software y Workflows v1.2 de Polaria, delegando en spec-kit.",
+      "version": "1.2.0",
       "author": { "name": "Polaria Tech" },
       "keywords": ["auditoria", "testing", "spec-kit", "polaria"]
     },
@@ -27,6 +27,15 @@
       "version": "1.0.0",
       "author": { "name": "Polaria Tech" },
       "keywords": ["linear", "gestion-de-proyectos", "issues", "polaria"]
+    },
+    {
+      "name": "gate-calidad-tecnica",
+      "displayName": "Gate de Calidad Tecnica Pre-Merge (Polaria)",
+      "source": "gate-calidad-tecnica",
+      "description": "Revisa cada cambio antes del push con un subagente revisor aislado y bloquea el git push sin veredicto (hook para Claude Code y Cursor).",
+      "version": "1.2.0",
+      "author": { "name": "Polaria Tech" },
+      "keywords": ["gate", "code-review", "calidad", "pre-merge", "polaria"]
     }
   ]
 }

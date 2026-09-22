@@ -17,19 +17,19 @@ extensiones completas cada vez.
 | Integraciones | `testing-api-tester.md` + `cloud-production-readiness-reviewer.md` | `/speckit.bug.assess` |
 | Metodología y Protocolos | Los 20 agentes de `.claude/agents/` de este proyecto, según `CLAUDE.md` | Mecanismo propio (Fases A-D de su extensión) — **no usa spec-kit** |
 
-## Por tipo de hallazgo confirmado (Paso 6 — implementación)
+## Corrección de hallazgos confirmados — fuera de esta skill
 
-| Tipo de hallazgo | Comandos de spec-kit | Veredicto/salida |
-|---|---|---|
-| Comportamiento roto (algo que ya existe y falla) | `/speckit.bug.fix` (slug) → `/speckit.bug.test` (slug) | `verified` / `partial` / `failed` — nunca se infla sin reproducción real |
-| Funcionalidad faltante (no existe, hay que construirla) | `/speckit.tasks` → `/speckit.implement` → `/speckit.converge` (repetir hasta "Converged") | "Converged" o lista de pendientes |
+Esta skill no despacha ningún comando de corrección (`bug.fix`, `bug.test`, `tasks`,
+`implement`, `converge`): la corrección la hace el dev sobre el issue de Linear y pasa por
+`gate-calidad-tecnica-pre-merge-polaria` antes del `push`. Esta skill vuelve a entrar solo
+para revalidar (Paso 6 de `SKILL.md`).
 
 ## Por Motivo declarado (Paso 1, bifurcación)
 
 | Motivo | Proceso de spec-kit | Notas |
 |---|---|---|
 | Diseño o propuesta antes de construir (dominios de código) | Idea Assessment: `/speckit-assess-intake` → `research` → `define` → `shape` → `decide` | Termina en `go`/`clarify`/`stop`; un `go` se entrega a `/speckit-specify`, fuera del alcance de esta skill |
-| Release / Cierre de épica / Sospecha puntual / Otro | Flujo normal (Pasos 2-8 de `SKILL.md`) | — |
+| Release / Cierre de épica / Sospecha puntual / Otro | Flujo normal (Pasos 2-7 de `SKILL.md`) | — |
 | Cualquier Motivo, Dominio = Metodología y Protocolos | Ninguno — mecanismo propio | Spec-kit no aplica a auditoría de texto |
 
 ## Prerrequisito común

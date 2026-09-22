@@ -1,8 +1,8 @@
 {
   "name": "auditoria-tecnica",
-  "displayName": "Auditoria Tecnica y Tests (Polaria)",
-  "version": "1.1.0",
-  "description": "Orquesta el Protocolo de Auditoria Tecnica de Software y Workflows v1.1 de Polaria, delegando en spec-kit. Requiere spec-kit instalado en el repo auditado (extensiones bug y assess) por separado.",
+  "displayName": "Auditoria Tecnica (Polaria)",
+  "version": "1.2.0",
+  "description": "Orquesta el Protocolo de Auditoria Tecnica de Software y Workflows v1.2 de Polaria, delegando en spec-kit. Requiere spec-kit instalado en el repo auditado (extensiones bug y assess) por separado.",
   "author": {
     "name": "Polaria Tech",
     "url": "https://polaria.tech"

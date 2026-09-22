@@ -1,17 +1,18 @@
 ---
 name: auditoria-tecnica-polaria
-description: Orquesta el Protocolo de Auditoría Técnica de Software y Workflows v1.1 de Polaria — desde que alguien pide verificar que algo "funciona bien" hasta el hallazgo marcado ✅ Resuelto. Úsala SIEMPRE que se pida auditar, verificar, revisar si algo funciona, diagnosticar un bug, o evaluar una propuesta antes de construirla — incluso si no se menciona "auditoría" por nombre (ej. "¿esto funciona?", "revisa X", "arreglé un bug, ¿qué le agrego de test?", "¿deberíamos construir esto?"). No la uses para ceremonias/gestión sin artefacto real que verificar, ni para redactar la corrección de un hallazgo ya confirmado (eso es `documentation-playbook-builder`, fuera del alcance de esta skill).
+description: Orquesta el Protocolo de Auditoría Técnica de Software y Workflows v1.2 de Polaria — desde que alguien pide verificar que algo "funciona bien" hasta el hallazgo marcado ✅ Resuelto tras revalidar la corrección que hizo otro. Úsala SIEMPRE que se pida auditar, verificar, revisar si algo funciona, diagnosticar un bug, revalidar una corrección ya hecha, o evaluar una propuesta antes de construirla — incluso si no se menciona "auditoría" por nombre (ej. "¿esto funciona?", "revisa X", "¿por qué falla Y?", "ya corregí el hallazgo, revalídalo", "¿deberíamos construir esto?"). No la uses para corregir un hallazgo ni para escribir sus pruebas (eso lo hace el dev y lo revisa `gate-calidad-tecnica-pre-merge-polaria` antes del push), ni para ceremonias/gestión sin artefacto real que verificar, ni para redactar la corrección de un hallazgo de texto (eso es `documentation-playbook-builder`).
 ---
 
-# Skill: Auditoría Técnica y Tests
+# Skill: Auditoría Técnica
 
-Ejecuta, paso a paso, el `PROTOCOLO_DE_AUDITORIA_TECNICA_DE_SOFTWARE_Y_WORKFLOWS_v1.1.md` y la
+Ejecuta, paso a paso, el `PROTOCOLO_DE_AUDITORIA_TECNICA_DE_SOFTWARE_Y_WORKFLOWS_v1.2.md` y la
 extensión de dominio correspondiente (en `references/` y `references/EXTENSIONES_DOMINIO/` de
 esta misma skill) — esos son la fuente de verdad de cada paso, regla, excepción y criterio de
-salida. Esta skill es la capa de ejecución: qué agente/comando invocar en cada paso, cómo
-delega en spec-kit, y el gate que bloquea código sin confirmación.
+salida. Esta skill es la capa de ejecución: qué agente/comando
+invocar en cada paso y cómo delega el diagnóstico en spec-kit. **Audita, no corrige:** nunca
+escribe código ni pruebas (regla del protocolo base v1.2, sección 5).
 
-**Nota sobre numeración:** "Paso" aquí (1-8) es la numeración propia de esta skill — distinta
+**Nota sobre numeración:** "Paso" aquí (1-7) es la numeración propia de esta skill — distinta
 de los "Paso 1-7" del protocolo base y de los "Paso 1-N" de la sección 6 de cada extensión de
 dominio. Los tres son sistemas de numeración paralelos e independientes; esta skill cita a
 los otros dos explícitamente entre paréntesis para no mezclarlos.
@@ -29,10 +30,14 @@ vuelve a publicar al plugin, nunca al revés.
 
 ## Antes de empezar
 
-Si spec-kit (o su extensión `bug`/`assess`) no está instalado en el repo que se va a auditar,
-detente y señálalo — no ejecutes manualmente lo que esas extensiones automatizan como
+Si el Dominio es de código (todos salvo Metodología y Protocolos, que no usa spec-kit) y
+spec-kit (o su extensión `bug`/`assess`) no está instalado en el repo que se va a auditar,
+detente después del Paso 1 y señálalo — no ejecutes manualmente lo que esas extensiones automatizan como
 sustituto, eso reintroduciría exactamente los agentes que esta skill retiró (ver
 `references/mapa_de_despacho_spec_kit.md`).
+
+Si lo que piden es revalidar una corrección ya hecha sobre un hallazgo existente, salta
+directo al Paso 6.
 
 ## Paso 1 — Levantamiento y alcance (Paso 1 y 2 del protocolo base)
 
@@ -65,15 +70,15 @@ Según la sección 4/5 de la extensión de dominio ya leída, despacha el/los ag
 especializado(s) recomendados (comité en paralelo si hay más de uno, secuencial si el
 dominio solo tiene un especialista — Bases de Datos). Cada agente genera **candidatos con
 evidencia cruda** (escaneo, benchmark, request/response real, ejecución forzada) — ya no
-redacta el hallazgo final, eso lo hace spec-kit en el Paso 3 de abajo.
+redacta el hallazgo final, eso lo hace spec-kit en el Paso 3 de abajo. Que estos agentes
+ejecuten pruebas (carga, contrato, fallos forzados) es auditar contra el artefacto real, no
+escribir pruebas del producto: lo que ejecutan no se agrega al repo auditado.
 
 Si el Dominio es Metodología y Protocolos, sigue en cambio el mecanismo propio de esa
 extensión (Fases A/B/C/D descritas ahí) para el diagnóstico y la consolidación — no aplican
-los Pasos 2-4 siguientes de esta skill. Tampoco aplican los Pasos 5-8: esa extensión declara
-explícitamente que redactar la corrección de un hallazgo de texto es un paso posterior, fuera
-de su alcance (cadena "Mejora el proceso de X" de `CLAUDE.md`), no el gate/implementación de
-código de esta skill. El trabajo de esta skill para ese dominio termina en el informe
-consolidado de esa extensión.
+los Pasos 3-7 siguientes de esta skill. Redactar la corrección de un hallazgo de texto es un
+paso posterior, fuera de su alcance (cadena "Mejora el proceso de X" de `CLAUDE.md`). El
+trabajo de esta skill para ese dominio termina en el informe consolidado de esa extensión.
 
 ## Paso 3 — Diagnóstico spec-kit (Paso 4 del protocolo base, Fase B de la extensión)
 
@@ -91,45 +96,33 @@ use el formato con emoji 🔴🟠🟡🟢 de `ESTADO.md` de este repo de metodol
 extensión de Metodología), cada fila con su columna Evidencia y su símbolo ✅/🔄/⚪, más la
 sección "Qué no se pudo verificar" (nunca se omite).
 
-## Paso 5 — GATE ⛔ (Paso 6 del protocolo base, reforzado)
+## Paso 5 — Presentar y entregar (Paso 6 del protocolo base)
 
-Presenta la tabla consolidada al Responsable del proyecto/sistema auditado, junto con un plan
-de corrección riguroso por cada hallazgo (qué cambia, en qué orden, cómo se revalida — no un
-resumen vago). Pide confirmación explícita.
+Presenta la tabla consolidada al Responsable del proyecto/sistema auditado y pide que
+confirme por escrito qué hallazgos se accionan y en qué orden. Solo con esa confirmación
+crea el issue de Linear de cada hallazgo confirmado (tipo Bug si es comportamiento roto,
+Feature/Improvement si es funcionalidad faltante), enlazando su `assessment.md` — la
+remediación propuesta ahí es el punto de partida del dev, no un plan que esta skill ejecute.
 
-**Cero código se escribe sin esa confirmación — ni un solo dígito.** Esto es más estricto que
-"ningún hallazgo pasa a Linear sin confirmación" (regla ya existente del protocolo base): aquí
-ni siquiera se toca el código. Si el Responsable no confirma, el informe queda como está,
-ningún hallazgo pasa a Linear, y esta skill termina aquí para ese hallazgo.
+Aquí termina el trabajo de esta skill para ese hallazgo hasta que exista una corrección. La
+corrección la hace un dev fuera de esta skill (spec-kit `bug.fix` o `tasks`/`implement`, a su
+criterio) y pasa por `gate-calidad-tecnica-pre-merge-polaria` antes del `push`, que es donde
+se exigen las pruebas de la corrección, incluido el test de regresión propio si el
+hallazgo es un Bug (criterio 6 de ese gate).
 
-## Paso 6 — Implementación (Paso 7 del protocolo base, reforzado) — bifurca por tipo
+## Paso 6 — Revalidar (Paso 7 del protocolo base)
 
-Solo para hallazgos confirmados en el Paso 5:
+Cuando el dev avisa que la corrección está lista, ejecuta con ejecución real: el caso
+original del `assessment.md`, los casos vecinos (mismo componente/nodo/tabla), y, si el
+hallazgo era un Bug, el test de regresión que el gate exigió. Si la reproducción no se pudo ejecutar de verdad, el resultado
+es parcial, no resuelto. Si la corrección resulta incorrecta, documéntala como hallazgo
+nuevo derivado y vuelve al Paso 3 sobre ese hallazgo (Excepciones del protocolo base).
 
-- **Comportamiento roto:** ejecuta `/speckit.bug.fix` (mismo slug del assessment), y después
-  `/speckit.bug.test`. El fix se mantiene dentro del alcance evaluado — si aparece evidencia
-  que lo amplía, se registra como desviación explícita en `fix.md`, nunca se expande en
-  silencio.
-- **Funcionalidad faltante:** ejecuta `/speckit.tasks` → `/speckit.implement` →
-  `/speckit.converge` (mismo patrón que ya usa el Protocolo de Construcción de Producto desde
-  Cero). Repite `implement → converge` hasta que reporte "Converged".
+## Paso 7 — Cierre (Paso 7 del protocolo base)
 
-En ambos casos, antes de cerrar el hallazgo confirma que existe un test de regresión propio
-de ese hallazgo (bug corregido o funcionalidad agregada) — regla nueva del protocolo base v1.1,
-sección 5.
-
-## Paso 7 — Revalidar (Paso 7 del protocolo base)
-
-Ejecuta el test de regresión del Paso 6, el caso original, y los casos vecinos (mismo
-componente/nodo/tabla). El veredicto de `bug.test` (`verified`/`partial`/`failed`) nunca se
-infla: si la reproducción no se ejecutó de verdad, el resultado es `partial`, no `verified`.
-
-## Paso 8 — Cierre (Paso 7 del protocolo base)
-
-Marca el hallazgo ✅ Resuelto con fecha y evidencia — nunca se borra. Los tres archivos
-(`assessment.md`, `fix.md`, `test.md`, o el equivalente de tasks/implement/converge) quedan
-juntos en `.specify/bugs/<slug>/` para trazabilidad — no se consolidan en un solo documento
-propio, esa es la fuente de verdad ya nativa de spec-kit.
+Marca el hallazgo ✅ Resuelto con fecha y evidencia de la revalidación — nunca se borra. El
+`assessment.md` queda en `.specify/bugs/<slug>/` junto a lo que haya generado la corrección
+del dev, para trazabilidad.
 
 ## Si el entorno no soporta subagentes nativos
 
@@ -142,19 +135,22 @@ instaladas.
 
 ## Restricciones
 
-- Nunca marques un paso como completo sin su criterio de salida — están en el protocolo base,
+- NUNCA escribas ni modifiques código ni pruebas del repo auditado, ni siquiera después de la
+  confirmación del Paso 5 — ni ejecutes `bug.fix`, `tasks` ni `implement`. Si te lo piden,
+  explica que la corrección la hace el dev y la revisa el gate pre-merge.
+- NUNCA marques un paso como completo sin su criterio de salida — están en el protocolo base,
   no se infieren.
-- Nunca ejecutes manualmente lo que `bug.assess`/`bug.fix`/`bug.test` automatizan como
-  sustituto de tenerlos instalados.
-- Nunca escribas ni un carácter de código antes de la confirmación explícita del Paso 5.
-- Nunca cierres un hallazgo de dominio de código sin su test de regresión propio.
-- Nunca reportes un veredicto más confiado del que la evidencia sostiene (regla nativa de
+- NUNCA ejecutes manualmente lo que `bug.assess` automatiza como sustituto de tenerlo
+  instalado.
+- NUNCA crees un issue de Linear sin la confirmación escrita del Responsable (Paso 5).
+- NUNCA marques ✅ Resuelto sin la revalidación del Paso 6 con ejecución real.
+- NUNCA reportes un veredicto más confiado del que la evidencia sostiene (regla nativa de
   spec-kit, ya alineada con "nunca se acepta 'según el documento' como evidencia" del
   protocolo base).
 
 ## Verificación
 
-Antes de dar por cerrado el trabajo de esta skill (Paso 8):
+Antes de dar por cerrado el trabajo de esta skill:
 
 - [ ] Los 3 campos del Paso 1 están declarados y la extensión de dominio correspondiente fue
       leída completa.
@@ -162,7 +158,7 @@ Antes de dar por cerrado el trabajo de esta skill (Paso 8):
       terminó en una decisión `go`/`clarify`/`stop` registrada.
 - [ ] Cada candidato del Paso 2 tiene su `assessment.md` de `/speckit.bug.assess` — ninguno se
       reportó sin ese diagnóstico formal.
-- [ ] El Responsable confirmó explícitamente antes de que se escribiera cualquier código.
-- [ ] Cada hallazgo confirmado tiene su test de regresión propio, y su revalidación
-      (`bug.test` o el equivalente) con veredicto no inflado.
-- [ ] El hallazgo quedó marcado ✅ Resuelto con fecha y evidencia, nunca borrado.
+- [ ] Ningún issue de Linear se creó sin confirmación escrita del Responsable.
+- [ ] Esta skill no escribió ni una línea de código ni de pruebas del repo auditado.
+- [ ] Cada hallazgo cerrado tiene revalidación con ejecución real (caso original + vecinos +
+      test de regresión si era un Bug) y quedó marcado ✅ Resuelto con fecha y evidencia, nunca borrado.

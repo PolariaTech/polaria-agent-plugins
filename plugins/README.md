@@ -12,7 +12,8 @@ plugins/<nombre-del-plugin>/
 │   └── <skill>/SKILL.md
 ├── agents/
 │   └── *.md
-└── commands/              # si aplica
+├── commands/              # si aplica
+└── hooks/                 # si aplica: hooks.json (Claude Code) y/o otro archivo declarado en .cursor-plugin/plugin.json (Cursor), + scripts
 ```
 
 El contenido real (skills, agentes, comandos) se escribe **una sola vez** dentro de la

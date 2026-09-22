@@ -17,6 +17,7 @@ Convertir cualquier solicitud de auditoría técnica de software/workflow — si
 | Solicitante de la auditoría | Define qué se audita y por qué. Puede ser el Responsable del proyecto (= del sistema auditado) o el Responsable del equipo |
 | Agente auditor (IA) | Ejecuta la verificación contra el artefacto real; comité paralelo si es análisis divergente, autor único si es tarea convergente |
 | Responsable del proyecto/sistema auditado | Confirma decisiones abiertas que la auditoría no puede resolver sola, y aprueba explícitamente que un hallazgo se convierta en issue de Linear — nunca automático |
+| Dev asignado al issue | Corrige el hallazgo fuera de este protocolo (pasando por `GATE_DE_CALIDAD_TECNICA_PRE_MERGE` en dominios de código) y avisa al agente auditor cuando la corrección está lista, lo que dispara el paso 7 |
 
 ## 4. Pasos
 
@@ -70,7 +71,7 @@ Agente auditor presenta el informe al Responsable del proyecto/sistema auditado.
 
 **Paso 7**
 
-Tras una corrección, agente auditor revalida con ejecución real: el caso original + los casos vecinos (mismo componente/nodo/tabla).
+Cuando el Dev asignado avisa que la corrección está lista, agente auditor revalida con ejecución real: el caso original + los casos vecinos (mismo componente/nodo/tabla) + el test de regresión del hallazgo, si era un Bug. La corrección no la hace el agente auditor: la hace el Dev sobre el issue de Linear del paso 6, y en dominios de código pasa por `GATE_DE_CALIDAD_TECNICA_PRE_MERGE` antes del `push` (ver Dependencias).
 
 **Criterio de salida:**
 
@@ -87,8 +88,7 @@ Tras una corrección, agente auditor revalida con ejecución real: el caso origi
 | La revalidación de una corrección siempre incluye los casos vecinos, no solo el caso original reportado | Un fix puede resolver el síntoma reportado y dejar el mismo defecto en un componente hermano |
 | En auditoría iterativa de diseño (ver paso 3), una ronda nueva nunca se lanza sin que el Solicitante confirme explícitamente "otra ronda" — nunca por iniciativa del propio agente auditor ni del agente que coordina | La decisión de seguir auditando o pasar a implementar es del Solicitante, igual que la decisión de accionar hallazgos (paso 6) |
 | La iteración de auditoría de diseño se da por cerrada cuando una ronda no reporta ningún hallazgo Crítico ni Alto nuevo y el propio agente auditor lo declara explícitamente en su veredicto — nunca por un número de rondas fijado de antemano | Un número fijo de rondas puede detenerse antes de que aparezca el hallazgo real, o seguir gastando rondas después de que el diseño ya convergió |
-| En dominios de código, ningún código se escribe hasta que el Responsable confirma explícitamente el plan de corrección del paso 6 — esto es más estricto que "ningún hallazgo pasa a Linear sin confirmación": aquí ni siquiera se toca el código, se pase o no a Linear | Confirmar que se accione un hallazgo y confirmar que se puede tocar código son dos permisos distintos; el primero no implica el segundo |
-| Toda corrección de un hallazgo en dominios de código incluye un test de regresión propio de ese hallazgo (bug corregido o funcionalidad agregada), antes de darse por cerrado en el paso 7 | Sin un test dedicado, nada impide que el mismo defecto reaparezca sin que la siguiente auditoría lo note a tiempo |
+| El agente auditor nunca escribe código ni pruebas, ni siquiera después de la confirmación del paso 6 — la corrección la hace un dev sobre el issue de Linear, y las pruebas de esa corrección (incluido el test de regresión propio si el hallazgo es un Bug) las exige `GATE_DE_CALIDAD_TECNICA_PRE_MERGE` (criterio 6) antes del `push` | Si el auditor corrige, el paso 7 se vuelve auto-revisión: quien escribió el fix no puede ser quien lo revalida. Además, las auditorías son de solo lectura (ver Rollback) |
 
 ## 6. Excepciones
 
@@ -133,7 +133,8 @@ Tras una corrección, agente auditor revalida con ejecución real: el caso origi
 | Extensión de dominio correspondiente (Workflow n8n / Base de datos / Agente IA / Integraciones / Frontend / Backend / Metodología y Protocolos) | Siempre — el paso 2 no puede ejecutarse sin la extensión del dominio declarado en el paso 1 |
 | Protocolo de Versionamiento (si el proyecto lo usa) | Cuando el Motivo declarado es "Release" — esta auditoría es la verificación técnica previa a la aprobación de despliegue |
 | `plantilla_prompt_auditoria.md` (misma carpeta que este protocolo) | Siempre que se redacta el prompt de un agente auditor — sea auditoría de sistema real o auditoría iterativa de diseño |
-| spec-kit (bug extension + SDD + assess extension) instalado en el repo auditado | En dominios de código: siempre para diagnóstico (`bug.assess`) y corrección (`bug.fix`/`bug.test` o `tasks`/`implement`/`converge`); para el Motivo "Diseño o propuesta antes de construir" (Idea Assessment) — ver `../SKILL.md` (esta skill) — spec-kit es un prerrequisito externo, no lo instala este plugin |
+| spec-kit (bug extension + assess extension) instalado en el repo auditado | En dominios de código: siempre para diagnóstico (`bug.assess`, paso 4); para el Motivo "Diseño o propuesta antes de construir" (Idea Assessment, paso 2). La corrección (`bug.fix`, `tasks`/`implement`) no es parte de este protocolo — la ejecuta el dev fuera de él. Ver `../SKILL.md` (esta skill) — spec-kit es un prerrequisito externo, no lo instala este plugin |
+| `GATE_DE_CALIDAD_TECNICA_PRE_MERGE` (`PROTOCOLOS_EXISTENTES/`) | Cada vez que un dev corrige un hallazgo confirmado en dominios de código — el gate exige las pruebas de la corrección (test de regresión si es un Bug) antes del `push`; esta auditoría revalida después, en el paso 7 |
 
 ## Modo de emergencia
 
@@ -143,9 +144,10 @@ Si durante la ejecución aparece un hallazgo que representa un **riesgo activo e
 
 | Campo | Valor |
 |---|---|
-| Versión | v1.1 |
+| Versión | v1.2 |
 | Fecha de aprobación v1.0 | 25/08/2026 |
-| Fecha de esta revisión (v1.1) | 16/09/2026 |
+| Fecha de esta revisión (v1.2) | 22/09/2026 |
 | Aprobado por | Responsable Técnico |
-| Qué cambió en v1.1 | Se envuelve el protocolo en una skill instalable (`skill/`) que delega diagnóstico y corrección en dominios de código a spec-kit (bug extension, SDD, assess extension); se agregan 2 reglas nuevas (gate de código antes del paso 6, test de regresión por hallazgo en el paso 7) y la dependencia de spec-kit. Ningún paso, criterio de salida ni regla existente de v1.0 se eliminó o contradijo |
+| Qué cambió en v1.1 (16/09/2026) | Se envuelve el protocolo en una skill instalable (`skill/`) que delega diagnóstico y corrección en dominios de código a spec-kit; se agregan 2 reglas (gate de código antes del paso 6, test de regresión por hallazgo en el paso 7) y la dependencia de spec-kit |
+| Qué cambió en v1.2 | Se separa auditar de corregir: la auditoría deja de escribir código y pruebas (contradecía "las auditorías son de solo lectura" y convertía el paso 7 en auto-revisión). Las 2 reglas de v1.1 se reemplazan por una sola ("el agente auditor nunca escribe código ni pruebas"); el test de regresión por hallazgo (Bug) pasa a exigirlo `GATE_DE_CALIDAD_TECNICA_PRE_MERGE` (criterio 6). Se agrega el actor Dev asignado, que dispara el paso 7. spec-kit queda solo para diagnóstico e Idea Assessment |
 | Próxima revisión | Tras cada auditoría realizada con este protocolo |

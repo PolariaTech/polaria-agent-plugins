@@ -1,0 +1,16 @@
+{
+  "description": "Bloquea git push sin veredicto del Gate de Calidad Técnica Pre-Merge para el commit actual.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/verificar-gate.js\""
+          }
+        ]
+      }
+    ]
+  }
+}
