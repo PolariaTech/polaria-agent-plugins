@@ -18,6 +18,15 @@
       "version": "1.1.0",
       "author": { "name": "Polaria Tech" },
       "keywords": ["auditoria", "testing", "spec-kit", "polaria"]
+    },
+    {
+      "name": "gestion-linear",
+      "displayName": "Gestion de Linear (Polaria)",
+      "source": "gestion-linear",
+      "description": "Paquete de skills para gestionar el ciclo de vida de proyectos e issues de Linear del equipo Polaria.",
+      "version": "1.0.0",
+      "author": { "name": "Polaria Tech" },
+      "keywords": ["linear", "gestion-de-proyectos", "issues", "polaria"]
     }
   ]
 }

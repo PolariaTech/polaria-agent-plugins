@@ -1,0 +1,13 @@
+{
+  "name": "gestion-linear",
+  "displayName": "Gestion de Linear (Polaria)",
+  "version": "1.0.0",
+  "description": "Paquete de skills para gestionar el ciclo de vida de proyectos e issues de Linear del equipo Polaria: crear/cerrar proyectos, crear issues, transicionar estados y mantener la documentacion asociada al dia.",
+  "author": {
+    "name": "Polaria Tech",
+    "url": "https://polaria.tech"
+  },
+  "homepage": "https://github.com/PolariaTech/polaria-agent-plugins",
+  "keywords": ["linear", "gestion-de-proyectos", "issues", "polaria"],
+  "defaultEnabled": false
+}
