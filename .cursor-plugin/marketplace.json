@@ -5,7 +5,7 @@
     "url": "https://polaria.tech"
   },
   "description": "Plugins internos de Polaria para Cursor: auditoria tecnica, protocolos y herramientas de agentes reutilizables entre repos.",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "metadata": {
     "pluginRoot": "./plugins"
   },
@@ -45,6 +45,15 @@
       "version": "1.1.0",
       "author": { "name": "Polaria Tech" },
       "keywords": ["formularios", "validacion", "schema", "polaria"]
+    },
+    {
+      "name": "construccion-desde-cero",
+      "displayName": "Construccion de Producto desde Cero (Polaria)",
+      "source": "construccion-desde-cero",
+      "description": "Lleva una iniciativa nueva desde la idea hasta Versionamiento e inicializa la carpeta del proyecto (git, spec-kit, plugins, docs/) para software o n8n. Instalar a nivel de usuario.",
+      "version": "1.1.0",
+      "author": { "name": "Polaria Tech" },
+      "keywords": ["construccion-desde-cero", "inicializar-proyecto", "spec-kit", "n8n", "polaria"]
     }
   ]
 }
