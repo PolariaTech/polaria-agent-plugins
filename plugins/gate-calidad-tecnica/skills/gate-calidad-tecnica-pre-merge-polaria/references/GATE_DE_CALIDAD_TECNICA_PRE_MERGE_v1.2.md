@@ -101,7 +101,7 @@ La definición completa (rol, formato de salida, ejemplo) vive en el subagente `
 | 4 | Código de debug | Quedan `console.log`, `print`, `TODO borrar` o código muerto. |
 | 5 | Convenciones Polaria | El estilo no es consistente con el lenguaje del diff. |
 | 6 | Pruebas | No hay pruebas que cubran el cambio; es un Bug y no trae su test de regresión; no hay salida real de la ejecución; o alguna prueba falla. Mencionar pruebas no basta. Si el cambio no es automatizable, vale una prueba manual documentada con pasos y resultado. |
-| 7 | Validación de formularios (`N/A` si el diff no toca un formulario) | Falta algo de lo que exige `PROTOCOLO_DE_VALIDACION_DE_FORMULARIOS_v1.0.md`: schema de campos, niveles por campo, pruebas por campo o la salida de su ejecución. |
+| 7 | Validación de formularios (`N/A` si el diff no toca un formulario) | Falta algo de lo que exige `PROTOCOLO_DE_VALIDACION_DE_FORMULARIOS_v1.1.md` para las capas que viven en este repo, con la librería que use el repo: el schema completo (`schemas/schema_<formulario>.md` o el issue de Linear), los niveles por campo, las pruebas por campo, su ejecución o el checklist de prueba manual en PASS. |
 
 ## 7. Dependencias
 
@@ -125,4 +125,4 @@ Si un cambio ya mergeado tiene un problema, se revierte y se genera una versión
 
 v1.2 · aprobado 22/09/2026 · Responsable Técnico · próxima revisión: tras cada ejecución real del protocolo, o si el equipo de dev crece más allá de 3 personas
 
-_Historial: v1.0 (13/09/2026) "Revisión de Pares", un prompt que el dev pegaba a mano. v1.1 (22/09/2026): la revisión pasa a antes del `push`. v1.2 (22/09/2026): revisor aislado (subagente), plugin con hook que bloquea el `push` sin veredicto en Claude Code y Cursor, y criterio 6 con test de regresión por Bug y ejecución real de pruebas (regla que antes vivía en el Protocolo de Auditoría Técnica). Pendiente republicar en Drive — hoy solo está publicado como `REVISION_DE_PARES_v1.0`._
+_Historial: v1.0 (13/09/2026) "Revisión de Pares", un prompt que el dev pegaba a mano. v1.1 (22/09/2026): la revisión pasa a antes del `push`. v1.2 (22/09/2026): revisor aislado (subagente), plugin con hook que bloquea el `push` sin veredicto en Claude Code y Cursor, y criterio 6 con test de regresión por Bug y ejecución real de pruebas (regla que antes vivía en el Protocolo de Auditoría Técnica). Ajuste del 23/09/2026 (plugin 1.2.1): el criterio 7 verifica contra el schema del formulario que vive en el repo y sirve para cualquier stack, alineado con Validación de Formularios v1.1. Pendiente republicar en Drive — hoy solo está publicado como `REVISION_DE_PARES_v1.0`._

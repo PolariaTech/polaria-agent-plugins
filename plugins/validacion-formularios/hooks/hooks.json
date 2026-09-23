@@ -1,0 +1,16 @@
+{
+  "description": "Avisa cuando un schemas/schema_*.md queda con texto de plantilla sin reemplazar (Protocolo de Validación de Formularios, Paso 1).",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/verificar-schema.js\""
+          }
+        ]
+      }
+    ]
+  }
+}

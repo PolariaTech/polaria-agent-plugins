@@ -66,10 +66,11 @@ editores.
 | `auditoria-tecnica` | Orquesta el Protocolo de Auditoria Tecnica de Software y Workflows v1.2 de Polaria (skill `auditoria-tecnica-polaria` + agentes especialistas por dominio) | spec-kit instalado por separado en el repo auditado (`specify extension add bug` + `specify extension add assess`) |
 | `gestion-linear` | Skills para el ciclo de vida de proyectos e issues de Linear del equipo Polaria (crear/cerrar proyecto, crear issue, transicionar estado, actualizar documentacion asociada) | Acceso al workspace de Linear de Polaria via MCP/API |
 | `gate-calidad-tecnica` | Ejecuta el Gate de Calidad Tecnica Pre-Merge v1.2 de Polaria antes de cada push: skill `gate-calidad-tecnica-pre-merge-polaria` + subagente aislado `revisor-tecnico-pre-merge` + hook que bloquea `git push` sin veredicto | Node.js en la maquina del dev (para el hook). Opcional: MCP de Linear y GitHub (o `gh`) para leer el tipo de issue y publicar el reporte |
+| `validacion-formularios` | Ejecuta el Protocolo de Validacion de Formularios v1.1 de Polaria: skill `validacion-formularios-polaria` (entrevista del schema de campos, 5 niveles con el stack que ya usa el repo, pruebas y checklist de prueba manual) + hook que avisa si un `schemas/schema_*.md` queda con texto de plantilla | Node.js en la maquina del dev (para el hook). Recomendado: `gate-calidad-tecnica` instalado (su criterio 7 verifica este protocolo antes del push). Opcional: MCP de Linear para publicar la evidencia |
 
 Fuente de verdad de este contenido: `PROTOCOLOS_NUEVOS/AUDITORIA/` del repo de metodologia
 (`METODOLOGIA`) para `auditoria-tecnica`, `PROTOCOLOS_EXISTENTES/GATE_DE_CALIDAD_TECNICA_PRE_MERGE/skill/`
-para `gate-calidad-tecnica`, y `~/.cursor/skills/` (revisadas y generalizadas el
+para `gate-calidad-tecnica`, `PROTOCOLOS_EXISTENTES/PROTOCOLO_DE_VALIDACION_DE_FORMULARIOS/skill/` (mas el protocolo y `SCHEMAS_FORMULARIOS/PLANTILLA_SCHEMA_DE_CAMPOS_v1.1.md` copiados a `references/`) para `validacion-formularios`, y `~/.cursor/skills/` (revisadas y generalizadas el
 17/09/2026) para `gestion-linear`. Cualquier cambio se hace en la fuente y se vuelve a
 publicar aqui — este repo es el destino de distribucion, nunca donde se edita el contenido
 primero.

@@ -1,0 +1,14 @@
+{
+  "name": "validacion-formularios",
+  "displayName": "Validacion de Formularios (Polaria)",
+  "version": "1.1.0",
+  "description": "Construye la validacion de formularios en 5 niveles desde un schema de campos entrevistado con el dev, con el stack que ya usa el repo, y avisa (hook) si el schema queda con texto de plantilla.",
+  "author": {
+    "name": "Polaria Tech",
+    "url": "https://polaria.tech"
+  },
+  "homepage": "https://github.com/PolariaTech/polaria-agent-plugins",
+  "keywords": ["formularios", "validacion", "schema", "polaria"],
+  "skills": ["./skills"],
+  "hooks": "./hooks/cursor-hooks.json"
+}

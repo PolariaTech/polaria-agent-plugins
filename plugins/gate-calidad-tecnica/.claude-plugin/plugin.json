@@ -1,7 +1,7 @@
 {
   "name": "gate-calidad-tecnica",
   "displayName": "Gate de Calidad Tecnica Pre-Merge (Polaria)",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Revisa cada cambio antes del push con un subagente revisor aislado (7 criterios, incluye test de regresion y ejecucion real de pruebas) y bloquea el git push sin veredicto mediante un hook.",
   "author": {
     "name": "Polaria Tech",

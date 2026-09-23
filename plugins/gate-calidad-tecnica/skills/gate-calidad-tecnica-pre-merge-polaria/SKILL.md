@@ -5,9 +5,9 @@ description: Ejecuta el gate de calidad técnica de Polaria sobre los commits lo
 
 # Skill: Gate de Calidad Técnica Pre-Merge
 
-Ejecuta, paso a paso, `references/GATE_DE_CALIDAD_TECNICA_PRE_MERGE_v1.2.md` — fuente de verdad de cada paso, regla, excepción y métrica. Esta skill orquesta; **no revisa el código ella misma**. La revisión la hace el subagente `revisor-tecnico-pre-merge` (`agents/revisor-tecnico-pre-merge.md` en la raíz de este plugin), que es la fuente ejecutable de los 7 criterios, el formato de salida y el ejemplo.
+Ejecuta, paso a paso, `GATE_DE_CALIDAD_TECNICA_PRE_MERGE_v1.2.md` (documento hermano de esta skill, en la carpeta superior) — fuente de verdad de cada paso, regla, excepción y métrica. Esta skill orquesta; **no revisa el código ella misma**. La revisión la hace el subagente `revisor-tecnico-pre-merge` (`agents/revisor-tecnico-pre-merge.md`), que es la fuente ejecutable de los 7 criterios, el formato de salida y el ejemplo.
 
-**Instalación:** esta skill se distribuye como parte del plugin `gate-calidad-tecnica` del marketplace `PolariaTech/polaria-agent-plugins` (skill + subagente + hook de `git push`), instalado con `/plugin install gate-calidad-tecnica@polaria-agent-plugins` (Claude Code) o vía Team Marketplace en Cursor (el hook funciona en ambos). La fuente de verdad es `PROTOCOLOS_EXISTENTES/GATE_DE_CALIDAD_TECNICA_PRE_MERGE/skill/` del repo de metodología; cualquier cambio se hace ahí y se vuelve a publicar al plugin, nunca al revés.
+**Instalación:** esta carpeta (`skill/`) es la copia canónica versionada dentro de la metodología de Polaria, inerte aquí. Se publica como el plugin `gate-calidad-tecnica` del marketplace `PolariaTech/polaria-agent-plugins` (skill + subagente + hook de `git push` para Claude Code y Cursor) y se instala en cada repo de código con `/plugin install gate-calidad-tecnica@polaria-agent-plugins` (Claude Code) o vía Team Marketplace en Cursor. Cualquier cambio se hace aquí y se vuelve a publicar al plugin, nunca al revés.
 
 ## Antes de empezar
 
@@ -21,6 +21,7 @@ Si el dev te da un número de PR ya abierto (cambio publicado antes de esta vers
 - **Diff:** `git diff <principal>...HEAD`.
 - **Tipo de cambio:** si la rama o los commits citan un issue (`POL-XX`), lee su tipo (Bug / Feature / Improvement) con el MCP de Linear (`get_issue`). Si no hay issue o no hay MCP de Linear, pregúntaselo al dev. El tipo decide si se exige test de regresión (criterio 6b).
 - **Salida de pruebas:** si el dev ya corrió las pruebas en otro entorno (CI, staging) porque no se pueden correr en local, pide esa salida real (Excepción de la sección 5).
+- **Formularios:** si el diff toca un formulario o su validación, trae el checklist de prueba manual y la salida de pruebas que se publicaron en el issue de Linear (`list_comments`), o pídeselos al dev. Si el schema vive en otro repo, trae también su contenido. Todo va en `<contexto>`: el subagente no tiene acceso a Linear (criterio 7).
 
 **Workflow n8n fuera de git** (Excepción de la sección 5): pide el JSON exportado antes y después del cambio y pásale al subagente esa diferencia como `<code_diff>`. No hay marca ni `push` en este caso: el reporte va al issue de Linear antes de activar el workflow.
 
