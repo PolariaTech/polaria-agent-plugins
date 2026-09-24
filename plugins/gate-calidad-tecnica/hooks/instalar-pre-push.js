@@ -3,8 +3,9 @@
 // Lo ejecuta el inicio de sesión (SessionStart en Claude Code, sessionStart en Cursor), y la skill
 // a mano si falta. Es idempotente: se puede correr en cada sesión.
 //
-// - Copia verificar-gate.js a <git-common-dir>/polaria-gate/, así el hook no depende de la ruta
-//   del plugin (que cambia con cada versión) y queda actualizado en cada sesión.
+// - Copia verificar-gate.js y registrar-veredicto.js a <git-common-dir>/polaria-gate/, así el hook
+//   y la skill no dependen de la ruta del plugin (que cambia con cada versión) y quedan
+//   actualizados en cada sesión.
 // - Escribe <hooks>/pre-push, que ejecuta esa copia. Nunca pisa un pre-push ajeno ni escribe
 //   dentro del repo versionado (core.hooksPath de husky u otro): en esos casos solo avisa.
 //
@@ -54,6 +55,13 @@ function instalar(directorio) {
     terminar(); // No es un repo git: no hay push que proteger.
   }
 
+  // Los scripts se copian aunque el pre-push no se pueda instalar: la skill los usa igual.
+  const carpetaGate = path.join(directorioComun, 'polaria-gate');
+  fs.mkdirSync(carpetaGate, { recursive: true });
+  for (const script of ['verificar-gate.js', 'registrar-veredicto.js']) {
+    fs.copyFileSync(path.join(__dirname, script), path.join(carpetaGate, script));
+  }
+
   if (path.relative(directorioComun, directorioHooks).startsWith('..')) {
     terminar(
       `Gate de Calidad Técnica: este repo usa core.hooksPath (${directorioHooks}), así que el hook pre-push del ` +
@@ -61,10 +69,6 @@ function instalar(directorio) {
         'node "$(git rev-parse --git-common-dir)/polaria-gate/verificar-gate.js" --git-pre-push "$@"'
     );
   }
-
-  const carpetaGate = path.join(directorioComun, 'polaria-gate');
-  fs.mkdirSync(carpetaGate, { recursive: true });
-  fs.copyFileSync(path.join(__dirname, 'verificar-gate.js'), path.join(carpetaGate, 'verificar-gate.js'));
 
   const prePush = path.join(directorioHooks, 'pre-push');
   let actual = null;

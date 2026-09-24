@@ -11,7 +11,7 @@ Ejecuta, paso a paso, `GATE_DE_CALIDAD_TECNICA_PRE_MERGE_v1.2.md` (documento her
 
 ## Antes de empezar
 
-0. Confirma que el hook `pre-push` de git del gate está instalado: el archivo que devuelve `git rev-parse --git-path hooks/pre-push` existe y contiene `polaria-gate-calidad-tecnica`. Si no, ejecuta `node <raíz del plugin>/hooks/instalar-pre-push.js` desde la raíz del repo (la raíz del plugin es la carpeta dos niveles arriba de esta skill) y muestra al dev cualquier aviso que imprima. Si un pedido de push trajo al dev hasta aquí, un pedido de push no exime del gate: primero se corre esta skill completa.
+0. Confirma que el gate está instalado en el repo: el archivo que devuelve `git rev-parse --git-path hooks/pre-push` existe y contiene `polaria-gate-calidad-tecnica`, y existe `registrar-veredicto.js` en la carpeta `polaria-gate` de `git rev-parse --git-common-dir`. Si falta algo, ejecuta `node <raíz del plugin>/hooks/instalar-pre-push.js` desde la raíz del repo (la raíz del plugin es la carpeta dos niveles arriba de esta skill) y muestra al dev cualquier aviso que imprima. Si un pedido de push trajo al dev hasta aquí, un pedido de push no exime del gate: primero se corre esta skill completa.
 1. Confirma que hay commits locales reales contra la rama principal (`git log <principal>..HEAD` no vacío). La rama principal es la que apunta `origin/HEAD` (`git symbolic-ref refs/remotes/origin/HEAD`); si no existe, pregúntala.
 2. Si hay cambios sin commit (`git status` no limpio), pide al dev que los incluya en un commit local antes de revisar. El veredicto queda atado al commit revisado: si el código cambia después, el hook bloquea el `push` hasta revisar de nuevo.
 
@@ -22,7 +22,7 @@ Si el dev te da un número de PR ya abierto (cambio publicado antes de esta vers
 - **Diff:** `git diff <principal>...HEAD`.
 - **Tipo de cambio:** si la rama o los commits citan un issue (`POL-XX`), lee su tipo (Bug / Feature / Improvement) con el MCP de Linear (`get_issue`). Si no hay issue o no hay MCP de Linear, pregúntaselo al dev. El tipo decide si se exige test de regresión (criterio 6b).
 - **Salida de pruebas:** si el dev ya corrió las pruebas en otro entorno (CI, staging) porque no se pueden correr en local, pide esa salida real (Excepción de la sección 5).
-- **Formularios:** si el diff toca un formulario o su validación, trae el checklist de prueba manual y la salida de pruebas que se publicaron en el issue de Linear (`list_comments`), o pídeselos al dev. Si el schema vive en otro repo, trae también su contenido. Todo va en `<contexto>`: el subagente no tiene acceso a Linear (criterio 7).
+- **Formularios:** si el diff toca un formulario o su validación, trae el checklist de prueba manual y la salida de pruebas que se publicaron en el issue de Linear (`list_comments`), o pídeselos al dev. Busca el schema `schemas/schema_<formulario>.md` en este orden y detente en el primero que lo tenga: (1) este repo; (2) si este repo no tiene la carpeta `schemas/` o no está el schema, un repo cuyo nombre contenga `flujo` entre las demás carpetas del workspace (en Cursor, las otras raíces del workspace; si no hay varias, las carpetas hermanas de este repo); (3) cualquier otra carpeta del workspace o carpeta hermana que tenga ese schema; (4) si no aparece, pídele al dev la ruta o el issue de Linear que lo tiene. Si lo encontraste fuera de este repo, dile al dev de dónde lo leíste y pasa su contenido completo. Todo va en `<contexto>`: el subagente no tiene acceso a Linear ni a otros repos (criterio 7).
 
 **Workflow n8n fuera de git** (Excepción de la sección 5): pide el JSON exportado antes y después del cambio y pásale al subagente esa diferencia como `<code_diff>`. No hay marca ni `push` en este caso: el reporte va al issue de Linear antes de activar el workflow.
 
@@ -38,11 +38,15 @@ Devuelve al dev el reporte del subagente tal cual, sin reescribirlo ni suavizarl
 
 ## Paso 3 — Registrar el veredicto (Pasos 2 y 3 del protocolo)
 
-Escribe el veredicto en `<git-dir>/polaria-gate/<sha de HEAD>.md` (`git rev-parse --git-dir`, `git rev-parse HEAD`): la primera línea es exactamente `VEREDICTO: APROBADO`, `VEREDICTO: RECHAZADO` o `VEREDICTO: RECHAZADO_JUSTIFICADO`, y debajo va el reporte completo. Vive dentro de `.git/`, así que no se commitea. Es lo que lee el hook de `git push` del plugin.
+Registra el veredicto con un solo comando desde la raíz del repo, sin crear ningún archivo (ni temporal) en el proyecto:
+
+`node "$(git rev-parse --git-common-dir)/polaria-gate/registrar-veredicto.js" <APROBADO | RECHAZADO | RECHAZADO_JUSTIFICADO>`
+
+El script escribe la marca dentro de `.git/` (no se commitea ni se ve en el proyecto), atada al commit actual. Es lo único que lee el hook de `git push`. El reporte no se guarda en archivo: se muestra en el chat y, en el Paso 4, va al PR/Linear.
 
 - **`APROBADO`:** dile al dev que puede hacer `push` y abrir el PR. No hagas el `push` tú: espera a que el dev lo pida después de ver el reporte. Un "haz push" dicho antes del gate no cuenta como autorización.
-- **`RECHAZADO`:** lista cada `[FAIL]` con su justificación y deja explícito que **no** debe hacer `push` todavía. Cuando llegue la corrección (un commit nuevo), repite desde el Paso 1.
-- **El dev justifica por escrito cada `[FAIL]`** (posible falso positivo, Excepción de la sección 5): reescribe la marca con `VEREDICTO: RECHAZADO_JUSTIFICADO`, el reporte y la justificación de cada `FAIL` debajo. La justificación también debe quedar en el PR/Linear (Paso 4).
+- **`RECHAZADO`:** el reporte ya trae, debajo del veredicto, cómo corregir cada `[FAIL]`. Deja explícito que **no** debe hacer `push` todavía. No apliques tú las correcciones salvo que el dev lo pida. Cuando llegue la corrección (un commit nuevo), repite desde el Paso 1.
+- **El dev justifica por escrito cada `[FAIL]`** (posible falso positivo, Excepción de la sección 5): registra de nuevo con `RECHAZADO_JUSTIFICADO`. La justificación de cada `FAIL` queda en el chat y en el PR/Linear junto al reporte (Paso 4).
 
 ## Paso 4 — Publicar la evidencia (Paso 2 del protocolo)
 
@@ -70,6 +74,7 @@ No corrijas el commit ya mergeado. Guía al dev a revertirlo y generar una versi
 
 - NUNCA revises el diff en tu propio contexto si puedes despachar el subagente: la independencia es la razón de ser del gate.
 - NUNCA reescribas, resumas ni cambies el estado de un criterio del reporte del subagente.
+- NUNCA crees archivos en el proyecto, ni siquiera temporales para armar la marca: la única escritura del gate es la de `registrar-veredicto.js` dentro de `.git/`.
 - NUNCA escribas una marca `APROBADO` o `RECHAZADO_JUSTIFICADO` que no salga de un reporte real y, en el segundo caso, de una justificación escrita del dev para cada `FAIL`.
 - NUNCA le digas al dev que haga `push`/abra PR con un Veredicto `RECHAZADO` sin justificar.
 - NUNCA hagas el `push` tú sin que el dev lo pida después de ver el reporte, ni lo hagas sin veredicto porque el dev pidió "solo el push", ni uses `--no-verify`.
