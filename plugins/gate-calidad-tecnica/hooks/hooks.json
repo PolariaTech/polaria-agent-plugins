@@ -1,6 +1,16 @@
 {
-  "description": "Bloquea git push sin veredicto del Gate de Calidad Técnica Pre-Merge para el commit actual.",
+  "description": "Instala el hook pre-push de git del gate al iniciar sesión y bloquea git push sin veredicto del Gate de Calidad Técnica Pre-Merge para el commit actual.",
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/instalar-pre-push.js\""
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash",

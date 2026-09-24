@@ -30,7 +30,8 @@ Todo lo ejecuta el plugin `gate-calidad-tecnica`, instalado en cada repo de cód
 |---|---|
 | Skill `gate-calidad-tecnica-pre-merge-polaria` | Coordina todo el flujo. No revisa el código. |
 | Subagente `revisor-tecnico-pre-merge` | Revisa el diff en un contexto aislado: no ve la conversación en la que se escribió el código. Solo lee y ejecuta pruebas. |
-| Hook de `git push` | Bloquea el `push` que ejecuta la IA si ese commit no tiene veredicto. Requiere Node.js en la máquina del dev. |
+| Hook de `git push` | Bloquea el `push` que ejecuta la IA si ese commit no tiene veredicto. Si el hook falla, también bloquea en vez de dejar pasar. Requiere Node.js en la máquina del dev. |
+| Hook `pre-push` de git | Lo instala el plugin en el repo al abrir cada sesión. Bloquea el `push` sin veredicto venga de donde venga: la IA, la terminal o el panel de Git del editor. |
 | MCP de Linear y GitHub | Lee el tipo de issue y publica el reporte, siempre con confirmación del dev. |
 
 **Paso 0 — Arranque.** El dev dice algo como *"terminé, revísalo antes de hacer push"* o *"¿puedo subir esto?"*, y la skill se activa sola. Si el dev pide el `push` sin pasar por el gate, el hook lo bloquea y eso activa la skill.
@@ -49,7 +50,7 @@ Todo lo ejecuta el plugin `gate-calidad-tecnica`, instalado en cada repo de cód
 | `RECHAZADO` | El dev corrige, hace un commit nuevo y vuelve al paso 1. El `push` queda bloqueado. |
 | `RECHAZADO_JUSTIFICADO` | El dev justificó por escrito cada `FAIL` como falso positivo. Puede hacer `push`, y la justificación va junto al reporte en el PR/Linear. |
 
-**Paso 5 — Push.** Al ejecutar `git push`, el hook revisa el veredicto del commit actual: si es `APROBADO` o `RECHAZADO_JUSTIFICADO`, deja pasar; si no existe o es de un commit anterior, bloquea.
+**Paso 5 — Push.** El dev pide el `push` después de ver el reporte; la IA no lo hace por su cuenta, aunque se lo hayan pedido antes del gate. Al ejecutar `git push`, los hooks revisan el veredicto del commit: si es `APROBADO` o `RECHAZADO_JUSTIFICADO`, dejan pasar; si no existe o es de un commit anterior, bloquean.
 
 **Paso 6 — PR y evidencia.** La skill ofrece abrir el PR y publicar el reporte completo como primer comentario del PR y/o en el issue de Linear. Siempre pide confirmación antes.
 
@@ -87,7 +88,8 @@ flowchart TD
 | El dev no está de acuerdo con un `FAIL` | Lo justifica por escrito (queda `RECHAZADO_JUSTIFICADO`). Si la duda es real, consulta al Responsable antes de decidir solo. |
 | Las pruebas no se pueden correr en la máquina del dev (necesitan servicios o credenciales que no tiene) | El dev pega la salida real de CI o staging. Sin ninguna salida real, el criterio 6 es `FAIL`. |
 | El cambio es un workflow n8n que no vive en git | Se revisa el JSON exportado antes y después del cambio. No hay `push` que bloquear: el reporte va a Linear antes de activar el workflow. |
-| El dev hace el `push` desde su propia terminal | El hook no lo ve (solo intercepta lo que ejecuta la IA). La regla sigue aplicando, y la falta del reporte en el PR lo hace visible. |
+| El repo ya tiene su propio `pre-push` o usa `core.hooksPath` (por ejemplo, husky) | El plugin no lo pisa y avisa al abrir la sesión. El dev agrega al `pre-push` existente la línea que indica el aviso. Hasta hacerlo, el `push` desde la terminal no se bloquea, y la falta del reporte en el PR lo hace visible. |
+| El dev hace el `push` con `--no-verify` | Salta el `pre-push`. Incumple el protocolo, y la falta del reporte en el PR lo hace visible. |
 
 ## 6. Los 7 criterios
 
@@ -125,4 +127,4 @@ Si un cambio ya mergeado tiene un problema, se revierte y se genera una versión
 
 v1.2 · aprobado 22/09/2026 · Responsable Técnico · próxima revisión: tras cada ejecución real del protocolo, o si el equipo de dev crece más allá de 3 personas
 
-_Historial: v1.0 (13/09/2026) "Revisión de Pares", un prompt que el dev pegaba a mano. v1.1 (22/09/2026): la revisión pasa a antes del `push`. v1.2 (22/09/2026): revisor aislado (subagente), plugin con hook que bloquea el `push` sin veredicto en Claude Code y Cursor, y criterio 6 con test de regresión por Bug y ejecución real de pruebas (regla que antes vivía en el Protocolo de Auditoría Técnica). Ajuste del 23/09/2026 (plugin 1.2.1): el criterio 7 verifica contra el schema del formulario que vive en el repo y sirve para cualquier stack, alineado con Validación de Formularios v1.1. Pendiente republicar en Drive — hoy solo está publicado como `REVISION_DE_PARES_v1.0`._
+_Historial: v1.0 (13/09/2026) "Revisión de Pares", un prompt que el dev pegaba a mano. v1.1 (22/09/2026): la revisión pasa a antes del `push`. v1.2 (22/09/2026): revisor aislado (subagente), plugin con hook que bloquea el `push` sin veredicto en Claude Code y Cursor, y criterio 6 con test de regresión por Bug y ejecución real de pruebas (regla que antes vivía en el Protocolo de Auditoría Técnica). Ajuste del 23/09/2026 (plugin 1.2.1): el criterio 7 verifica contra el schema del formulario que vive en el repo y sirve para cualquier stack, alineado con Validación de Formularios v1.1. Ajuste del 24/09/2026 (plugin 1.3.0): un `push` hecho en Cursor pasó sin veredicto porque el hook dejaba pasar cuando fallaba; ahora bloquea si falla, el plugin instala además un `pre-push` de git que cubre la terminal y el panel de Git, y la IA no hace el `push` sin que el dev lo pida después del reporte. Pendiente republicar en Drive — hoy solo está publicado como `REVISION_DE_PARES_v1.0`._
