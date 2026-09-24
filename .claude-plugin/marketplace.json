@@ -6,7 +6,7 @@
     "url": "https://polaria.tech"
   },
   "description": "Plugins internos de Polaria para Claude Code: auditoria tecnica, protocolos y herramientas de agentes reutilizables entre repos.",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "metadata": {
     "pluginRoot": "./plugins"
   },
@@ -26,7 +26,7 @@
       "displayName": "Gestion de Linear (Polaria)",
       "source": "gestion-linear",
       "description": "Paquete de skills para gestionar el ciclo de vida de proyectos e issues de Linear del equipo Polaria.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": { "name": "Polaria Tech" },
       "keywords": ["linear", "gestion-de-proyectos", "issues", "polaria"],
       "defaultEnabled": false

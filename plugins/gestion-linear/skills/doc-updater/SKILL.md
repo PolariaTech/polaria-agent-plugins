@@ -1,12 +1,14 @@
 ---
 name: doc-updater
-description: "Mantiene sincronizados los artefactos de documentación técnica (README, CHANGELOG, ADRs, glosario, y el resto de los 21 puntos de GUIA_DOCUMENTACION_EXTENDIDA/RESUMIDA de Polaria) de CUALQUIER proyecto con su estado real, y publica el Project Update correspondiente en Linear vía MCP — versión generalizada de la skill `doc-updater` original (que solo cubría Mateo Support/RAG Pipeline). Orquesta hacia la Guía como fuente de verdad de la estructura de cada artefacto — no reimplementa sus plantillas. El avance operativo (issue activo, próximos pasos, bloqueos) ya no vive en un archivo de estado local — vive en el propio feed de Project Updates de Linear. Si el proyecto no tiene ningún artefacto de documentación todavía, los crea empezando por los de prioridad Alta en vez de fallar. Se activa en tres momentos — MODO A (variantes de \"documenta el/los cambio(s)\", con o sin \"aprobado(s)\" — preguntando antes si revisar los cambios uno por uno, todos juntos o sin confirmación), MODO B (cierre de hilo o fin de una sesión de trabajo sobre el proyecto — siempre publica el Project Update en Linear), y MODO INIT (cuando el proyecto no tiene ningún artefacto de documentación y hay que crear los relevantes desde cero antes de poder actualizarlos). Opera de forma quirúrgica sobre archivos existentes — nunca reescribe un archivo completo salvo que lo esté creando por primera vez."
+description: "Mantiene al día la documentación técnica de CUALQUIER proyecto de Polaria (README, CHANGELOG, ADRs, glosario y el resto de los 21 puntos de la Guía de Documentación), publica el Project Update en Linear vía MCP y deja CONTINUIDAD.md listo para retomar en una sesión nueva. MODO A — variantes de \"documenta el/los cambio(s)\", con o sin \"aprobado(s)\" (pregunta antes si revisar uno por uno, todos juntos o sin confirmación). MODO B — cierre de hilo: \"cerremos el hilo\", \"abrimos otro chat\", \"cierro aquí\", \"nuevo hilo\", \"prepara el clear\", \"voy a hacer /clear\", \"deja todo listo para la próxima sesión\" — actualiza la documentación, publica el Project Update y escribe CONTINUIDAD.md. MODO C — fin de tarea: actívala SIN que el usuario la pida cuando una tarea termina (un issue pasa a In Review o Done, el usuario dice \"listo\", \"ya quedó\", \"eso es todo\", \"perfecto, gracias\", estás por preguntar \"¿qué sigue?\", o el usuario trae una tarea nueva sin relación) — solo sugiere cerrar el hilo en una línea, nunca cierra sin confirmación. MODO INIT — el proyecto no tiene ningún artefacto de documentación: crea los de prioridad Alta. También cuando el usuario dice \"Retoma desde CONTINUIDAD.md\". Opera de forma quirúrgica: nunca reescribe un archivo existente completo, salvo CONTINUIDAD.md."
 compatibility: "Requiere acceso de archivos (Read/Edit/Write) al repo del proyecto, y MCP de Linear conectado para publicar el Project Update."
 ---
 
 # Doc Updater — genérico (cualquier proyecto de Polaria)
 
 Mantiene sincronizados los artefactos de documentación técnica de un proyecto con su estado real, y cierra el círculo con Linear publicando el Project Update correspondiente (Paso 3 del Protocolo de Ciclo de Vida en Linear). A diferencia de la versión original (atada a los dos grupos fijos de Mateo Support/RAG Pipeline, con un solo archivo `DOC.md` genérico y un archivo de estado local separado), esta pregunta qué proyecto y qué documentación le corresponde, orquesta hacia los 21 artefactos reales de `GUIA_DOCUMENTACION_EXTENDIDA.md` (o `GUIA_DOCUMENTACION_RESUMIDA.md` si el equipo prefiere la versión corta) en vez de inventar su propia estructura, los crea si todavía no existen, y no mantiene ningún archivo de estado/bitácora — ese rol lo cumple directamente el feed de Project Updates de Linear.
+
+**Regla de una tarea por sesión** (fuente: [Best practices for Claude Code](https://code.claude.com/docs/en/best-practices), antipatrón "kitchen sink session"): el rendimiento baja a medida que el contexto se llena de trabajo ajeno a la tarea actual. Cada tarea terminada DEBERÍA cerrarse con MODO B, y la siguiente arrancar con `/clear` (o en una sesión nueva) leyendo `CONTINUIDAD.md`. Ese archivo no es un archivo de estado: es un traspaso puntual para la próxima sesión de esta máquina, se sobrescribe en cada cierre y queda fuera de git. El avance que ve el equipo sigue viviendo en Linear.
 
 **Principio de orquestación:** esta skill decide **qué** artefacto(s) toca un cambio y **dónde** vive cada uno (ver "Mapa de los 21 artefactos" abajo) — la estructura interna de cada artefacto (qué campos lleva un ADR, qué secciones lleva el README, el formato del CHANGELOG) la define la Guía, no esta skill. Si tienes duda de cómo estructurar algo, consulta la sección correspondiente de la Guía antes de improvisar — nunca inventes una estructura propia cuando la Guía ya la define.
 
@@ -56,7 +58,11 @@ Mantiene sincronizados los artefactos de documentación técnica de un proyecto 
 
 **MODO A — Cambio aprobado:** se activa con cualquier variante que combine el verbo "documentar" (imperativo o presente: "documenta", "documentas") con "cambio"/"cambios", con o sin la palabra "aprobado"/"aprobados" — por ejemplo: "documenta el cambio", "documenta los cambios", "documentas los cambios", "documenta el cambio aprobado", "documenta los cambios aprobados". No se activa con menciones indirectas de que algo ya funciona o quedó listo si no incluyen ese verbo explícito.
 
-**MODO B — Cierre de hilo / fin de sesión de trabajo:** frases como "cerremos el hilo", "abrimos otro chat", "cierro aquí", "nuevo hilo", o el equivalente de fin de sesión de trabajo sobre el proyecto (Paso 3 del Protocolo de Ciclo de Vida en Linear) — este modo, a diferencia del original, **siempre** intenta publicar el Project Update en Linear al final, no solo actualizar archivos locales.
+**MODO B — Cierre de hilo / fin de sesión de trabajo:** frases como "cerremos el hilo", "abrimos otro chat", "cierro aquí", "nuevo hilo", "prepara el clear", "voy a hacer /clear", "deja todo listo para la próxima sesión", o el equivalente de fin de sesión de trabajo sobre el proyecto (Paso 3 del Protocolo de Ciclo de Vida en Linear). También se activa cuando el usuario acepta la sugerencia del MODO C. Este modo, a diferencia del original, **siempre** intenta publicar el Project Update en Linear al final, y siempre termina escribiendo `CONTINUIDAD.md`.
+
+**MODO C — Fin de tarea detectado:** no necesita frase del usuario. Ver "Protocolo de ejecución — MODO C" para las señales exactas.
+
+**Retomar — "Retoma desde CONTINUIDAD.md":** lee `CONTINUIDAD.md` en la raíz del repo y sigue su sección 0 al pie de la letra. Si el archivo no existe, dilo y pregunta en qué issue se trabaja — no inventes un objetivo.
 
 ---
 
@@ -97,7 +103,8 @@ Cuando el proyecto no tiene ningún artefacto de documentación todavía:
 | Leer archivo o sección | `Read` | Obligatorio leer un archivo antes de editarlo |
 | Reemplazo quirúrgico | `Edit` | `old_string` debe ser único en el archivo; si no, incluir líneas de contexto |
 | Buscar una sección/fragmento | `Grep` | Útil para localizar el bloque exacto a reemplazar |
-| Crear archivo nuevo (solo MODO INIT) | `Write` | Solo para archivos que no existen todavía — nunca para sobrescribir uno existente |
+| Crear archivo nuevo (MODO INIT) | `Write` | Solo para archivos que no existen todavía — nunca para sobrescribir uno existente |
+| Escribir `CONTINUIDAD.md` (MODO B, Paso B5) | `Write` | Única excepción: se sobrescribe completo en cada cierre |
 
 ---
 
@@ -245,24 +252,64 @@ Fuera de esa excepción, y a diferencia de la versión original de Mateo Support
 
 Si el MCP de Linear no está conectado o la publicación falla, decirlo explícitamente y no bloquear el resto del cierre por eso — los cambios locales ya aplicados en B3 quedan igual.
 
-### Paso B5 — Prompt de continuidad
+### Paso B5 — Escribir CONTINUIDAD.md
 
-```
-Continuamos [NOMBRE PROYECTO].
-Archivos actualizados: [lista solo de los archivos con cambios reales]
-Project Update en Linear: [publicado / no publicado — motivo]
-Próximo paso: [acción concreta y específica].
-```
+1. Si `CONTINUIDAD.md` ya existe en la raíz del repo, léelo con `Read`. Si su objetivo (sección 1) NO se cumplió en esta sesión y tampoco se descartó, DEBE pasar al nuevo archivo: como objetivo si sigue siendo lo prioritario, o en "Fuera de alcance" si no. NUNCA se pierde un pendiente heredado en silencio.
+2. Lee `references/plantilla_continuidad.md` y llena cada sección siguiendo sus "Reglas de llenado" — con la conversación actual, el Project Update del Paso B4 y los issues de Linear del proyecto.
+3. Escribe el archivo completo con `Write` en la raíz del repo del proyecto (el de código, no el repo central de documentación si el proyecto usa ese estilo). No pide autorización aparte: el usuario ya la dio al pedir o aceptar el cierre, y el contenido se le muestra en el Paso B6.
+4. Verifica que `CONTINUIDAD.md` esté en el `.gitignore` de ese repo (`Grep`). Si no está, agrega la línea `CONTINUIDAD.md` al final con `Edit` (o crea `.gitignore` con `Write` si no existe) y avísalo en el Paso B6. `CONTINUIDAD.md` NUNCA se commitea: es de esta máquina y de esta persona.
 
 ### Paso B6 — Cierre
 
-Listar por nombre los archivos modificados y confirmar si el Project Update quedó publicado. Si nada cambió, decirlo explícitamente.
+1. Lista por nombre los archivos modificados (incluido `CONTINUIDAD.md` y `.gitignore` si se tocó) y confirma si el Project Update quedó publicado (`publicado` / `no publicado — motivo`).
+2. Muestra el contenido de `CONTINUIDAD.md` en un bloque de código, para que el usuario lo revise.
+3. Cierra con este bloque exacto:
+
+```
+Todo listo. Dos formas de seguir:
+- Ahora: escribe /clear y pega → Retoma desde CONTINUIDAD.md
+- Más adelante: abre una sesión nueva en este proyecto y pega lo mismo.
+```
+
+---
+
+## Protocolo de ejecución — MODO C (fin de tarea detectado)
+
+### Paso C1 — Reconocer la señal
+
+Cualquiera de estas señales indica que una tarea terminó:
+
+- Un issue de Linear en el que se trabajaba acaba de pasar a In Review o Done (ver `linear-transicionar-estado`).
+- El usuario cierra la tarea: "listo", "ya quedó", "eso es todo", "perfecto, gracias", o similares.
+- Estás por preguntarle al usuario "¿qué sigue?" o "¿seguimos con X?".
+- El usuario trae una tarea nueva sin relación con la que se estaba haciendo (antipatrón "kitchen sink session").
+
+NO es señal: una fase intermedia de un plan que todavía tiene fases pendientes, ni una respuesta a una pregunta dentro de la misma tarea.
+
+### Paso C2 — Sugerir el cierre (una línea)
+
+Al final de tu respuesta, agrega una sola línea:
+
+```
+Esta tarea terminó. ¿Cierro el hilo (documentación, Project Update en Linear y CONTINUIDAD.md) para que hagas /clear?
+```
+
+Si la señal fue una tarea nueva sin relación, usa en cambio: `Esto es una tarea distinta. ¿Cierro primero el hilo actual para arrancarla con /clear?`
+
+### Paso C3 — Actuar según la respuesta
+
+- **Sí:** ejecuta el MODO B completo (Paso B1 en adelante).
+- **No, o el usuario sigue trabajando sin responder:** continúa con lo que pidió sin volver a sugerir el cierre hasta que termine la siguiente tarea. NUNCA insistas dos veces por la misma tarea.
+
+**Reglas del MODO C:**
+- NUNCA ejecutar el MODO B sin un sí explícito.
+- La sugerencia reemplaza a la pregunta "¿qué sigue?", no se suma a ella: el siguiente issue va en `CONTINUIDAD.md` como objetivo de la próxima sesión.
 
 ---
 
 ## Reglas de operación
 
-1. **Nunca reescribir un archivo existente completo** — solo `Edit` quirúrgico. `Write` solo se usa para crear un archivo que no existía (MODO INIT).
+1. **Nunca reescribir un archivo existente completo** — solo `Edit` quirúrgico. `Write` solo se usa para crear un archivo que no existía (MODO INIT), con una única excepción: `CONTINUIDAD.md` SIEMPRE se sobrescribe completo en el Paso B5.
 2. **Nunca ejecutar un Edit sin autorización explícita** del usuario — salvo que el usuario haya elegido el modo "sin confirmación" en el Paso 4 de MODO A, cuyo consentimiento cubre todos los cambios de esa ejecución.
 3. **Siempre leer los archivos con `Read`** antes de empezar y antes de cada `Edit`.
 4. **El tipo de versión lo determina el protocolo** (Paso 2) — no la percepción del cambio.
@@ -273,6 +320,7 @@ Listar por nombre los archivos modificados y confirmar si el Project Update qued
 9. **Nunca insertar saltos de línea manuales a mitad de una oración o viñeta** — cada párrafo, viñeta o celda de tabla que se escriba o edite va en una sola línea de texto, sin cortar la oración a la mitad con un salto de línea. Esto aplica sin importar el editor (Claude Code o Cursor) ni el archivo (README, CHANGELOG, DOC técnico, etc.).
 10. **MODO B siempre intenta publicar el Project Update en Linear**, incluso si no hubo cambios locales que documentar (el avance puede ser puramente de estado de issues, sin cambio de documentación).
 11. **Si el proyecto no tiene documentación y no se puede confirmar la ubicación con el usuario**, no inventar una ruta — preguntar antes de crear nada (MODO INIT).
+12. **MODO B siempre termina escribiendo `CONTINUIDAD.md`**, aunque no haya cambios de documentación ni Project Update publicado.
 
 ---
 
