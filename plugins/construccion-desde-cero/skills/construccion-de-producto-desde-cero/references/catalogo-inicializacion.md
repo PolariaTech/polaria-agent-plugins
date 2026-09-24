@@ -19,7 +19,7 @@ Referencia del Paso 9 de la skill `construccion-de-producto-desde-cero`. Dice, s
 | Protocolo | Software | n8n | n8n con IA | Cómo se ejecuta en el proyecto |
 |---|---|---|---|---|
 | Construcción de Producto desde Cero v1.1 | Sí | Sí | Sí | Plugin `construccion-desde-cero`, instalado a nivel de usuario (ya está corriendo). |
-| Estándares de Diseño de Workflows N8N v1.0 | — | Sí | Sí | Van dentro de la constitución de spec-kit (Paso 10). Documento en Drive: `00_PROTOCOLOS/07_AGENTES_IA_N8N/RECURSOS/`. |
+| Estándares de Diseño de Workflows N8N v2.0 | — | Sí | Sí | Van dentro de la constitución de spec-kit (Paso 10). Documento en Drive: `00_PROTOCOLOS/07_AGENTES_IA_N8N/RECURSOS/`. |
 | Construcción de Agentes de IA en N8N v1.0.0 | — | — | Sí | Sus fases de diseño van en el plan (Paso 11) y su checklist de producción antes de activar. Documento en Drive: `00_PROTOCOLOS/07_AGENTES_IA_N8N/`. |
 | Gate de Calidad Técnica Pre-Merge v1.2 | Sí | Solo su excepción para n8n, mientras no exista el gate n8n | Ídem | Plugin `gate-calidad-tecnica`. |
 | Gate de calidad para n8n | — | Pendiente (no existe todavía) | Pendiente | Mientras no exista, se usa la excepción para n8n del Gate de Calidad Técnica. |
