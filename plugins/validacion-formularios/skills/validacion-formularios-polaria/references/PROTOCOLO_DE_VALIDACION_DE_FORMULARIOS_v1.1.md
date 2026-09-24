@@ -106,7 +106,7 @@ flowchart TD
 |---|---|
 | El backend no responde al validar | Se espera un máximo de 15 s y se muestra "No se pudo validar la información. Reintentar." con opción de reintentar. Los datos capturados se quedan en el formulario; nunca se asume éxito sin una respuesta 2xx real. |
 | El dev no puede completar el schema en el momento | Se pausa: no se pasa al Paso 2. El schema se guarda con cada dato faltante marcado `PENDIENTE`. |
-| El frontend y el backend viven en repos distintos | El schema vive en `schemas/` del repo donde está el formulario. En el otro repo, la skill lo lee de ahí o del issue de Linear, y cada repo construye y prueba solo sus capas. La prueba de contrato se hace en cada repo con el mismo valor límite del schema. |
+| El frontend y el backend viven en repos distintos | El schema vive en `schemas/` del repo donde está el formulario. En el otro repo, la skill lo busca primero entre las carpetas del workspace (empezando por el repo de flujos, el que tiene `flujo` en el nombre) y, si no lo encuentra, lo lee de la ruta que dé el dev o del issue de Linear. Cada repo construye y prueba solo sus capas. La prueba de contrato se hace en cada repo con el mismo valor límite del schema. |
 | Se descubre en producción un campo sin las capas que su schema pedía | Se trata como hallazgo por severidad: **Crítico** (afecta precio, cobro o pérdida irreversible de datos) → hotfix en ≤24 h; **Alto** (dato inconsistente pero recuperable a mano) → ≤5 días hábiles; **Medio/Bajo** (cosmético) → siguiente sprint. Siempre se corrige con este protocolo y con una prueba de regresión de ese caso. |
 
 ## 6. Los 5 niveles
@@ -165,4 +165,4 @@ Si una validación ya desplegada rompe algo en producción, se revierte el despl
 
 v1.1 · pendiente de aprobación · Responsable Técnico · próxima revisión: cada 6 meses, o antes si cambia la forma de construir formularios en Polaria
 
-_Historial: v1.0 (14/09/2026) con el stack fijo en Next.js/NestJS/Prisma y la revisión final en "Revisión de Pares". v1.1 (23/09/2026): se ejecuta con el plugin `validacion-formularios` (skill + hook del schema), sirve para cualquier stack (la skill detecta las librerías de cada repo y el dev las confirma), la revisión final pasa al Gate de Calidad Técnica antes del `push`, y el documento pasa al formato "Cómo funciona"._
+_Historial: v1.0 (14/09/2026) con el stack fijo en Next.js/NestJS/Prisma y la revisión final en "Revisión de Pares". v1.1 (23/09/2026): se ejecuta con el plugin `validacion-formularios` (skill + hook del schema), sirve para cualquier stack (la skill detecta las librerías de cada repo y el dev las confirma), la revisión final pasa al Gate de Calidad Técnica antes del `push`, y el documento pasa al formato "Cómo funciona". Ajuste del 24/09/2026 (plugin 1.2.0): si el repo no tiene el schema, la skill lo busca en el repo de flujos y en las demás carpetas del workspace antes de entrevistar al dev, para no crear un schema duplicado._

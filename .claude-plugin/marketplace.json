@@ -46,7 +46,7 @@
       "displayName": "Validacion de Formularios (Polaria)",
       "source": "validacion-formularios",
       "description": "Ejecuta el Protocolo de Validacion de Formularios v1.1 de Polaria: entrevista del schema, 5 niveles con el stack del repo, pruebas y checklist manual; hook que avisa si el schema queda incompleto.",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "author": { "name": "Polaria Tech" },
       "keywords": ["formularios", "validacion", "schema", "polaria"],
       "defaultEnabled": false

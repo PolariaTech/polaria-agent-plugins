@@ -11,10 +11,10 @@ Ejecuta `references/PROTOCOLO_DE_VALIDACION_DE_FORMULARIOS_v1.1.md`, la fuente d
 
 ## Paso 1 — Schema (Paso 1 del protocolo)
 
-1. Busca si ya existe `schemas/schema_<formulario>.md` en el repo.
-   - **Existe:** léelo. Pregunta al dev qué campos son nuevos o modificados en este cambio, entrevista solo esos campos con el orden de la plantilla, y actualiza la fila "Campos nuevos o modificados" y la versión del schema. Los Pasos 2 a 5 de esta skill aplican solo a esos campos (regla de alcance incremental, sección 4 del protocolo).
+1. Busca `schemas/schema_<formulario>.md` en este orden y detente en el primero que lo tenga: (1) este repo; (2) si este repo no tiene la carpeta `schemas/` o no está el schema, un repo cuyo nombre contenga `flujo` entre las demás carpetas del workspace (en Cursor, las otras raíces del workspace; si no hay varias, las carpetas hermanas de este repo); (3) cualquier otra carpeta del workspace o carpeta hermana que tenga ese schema. Si lo encontraste fuera de este repo, dile al dev de dónde lo leíste. Solo si no aparece en ninguno cuenta como "No existe".
+   - **Existe:** léelo. Si está en otro repo, cualquier actualización se escribe en ese mismo archivo, no en una copia en este repo. Pregunta al dev qué campos son nuevos o modificados en este cambio, entrevista solo esos campos con el orden de la plantilla, y actualiza la fila "Campos nuevos o modificados" y la versión del schema. Los Pasos 2 a 5 de esta skill aplican solo a esos campos (regla de alcance incremental, sección 4 del protocolo).
    - **No existe:** abre `references/PLANTILLA_SCHEMA_DE_CAMPOS_v1.1.md` y aplica su sección "Instrucciones para el Asistente de IA" tal cual: el orden de las preguntas, una pregunta a la vez, el nombre y la ubicación del archivo, y la regla de "cero relleno".
-2. Si el formulario vive en otro repo (el backend en un repo y el formulario en otro): pide al dev la ruta del schema en ese repo o el issue de Linear que lo tiene, y léelo de ahí. NUNCA lo vuelvas a entrevistar desde cero.
+2. Si el formulario vive en otro repo (el backend en un repo y el formulario en otro) y la búsqueda del punto 1 no encontró el schema: pide al dev la ruta del schema en ese repo o el issue de Linear que lo tiene, y léelo de ahí. NUNCA lo vuelvas a entrevistar desde cero.
 3. Muéstrale al dev el archivo completo y créalo en disco solo cuando lo apruebe explícitamente.
 4. Si al escribirlo el hook avisa que quedó texto de plantilla entre corchetes, repregunta ese dato al dev. NUNCA lo completes tú.
 5. Si el dev no puede completar algún dato ahora (Excepción 2 del protocolo): guarda el schema con ese dato marcado `PENDIENTE`, dile que el trabajo queda pausado hasta completarlo y detente.
