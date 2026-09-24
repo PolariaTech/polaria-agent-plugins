@@ -1,0 +1,13 @@
+{
+  "name": "gate-calidad-n8n",
+  "displayName": "Gate de Calidad N8N (Polaria)",
+  "version": "1.0.0",
+  "description": "Revisa la copia DEV de un workflow de n8n antes de publicarlo: script con los criterios mecanicos de los Estandares N8N, subagente revisor aislado para los de juicio, veredicto y reporte en Linear; hook que bloquea publish_workflow del MCP de n8n sin veredicto, y verificacion del JSON en git despues de publicar. Trae el conector MCP de n8n de Polaria.",
+  "author": {
+    "name": "Polaria Tech",
+    "url": "https://polaria.tech"
+  },
+  "homepage": "https://github.com/PolariaTech/polaria-agent-plugins",
+  "keywords": ["gate", "n8n", "workflows", "calidad", "polaria"],
+  "defaultEnabled": false
+}

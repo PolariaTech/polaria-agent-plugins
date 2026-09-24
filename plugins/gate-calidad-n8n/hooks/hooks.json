@@ -1,0 +1,16 @@
+{
+  "description": "Bloquea publish_workflow del MCP de n8n sin veredicto del Gate de Calidad N8N de las últimas 24 horas.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__.*n8n.*__publish_workflow$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/verificar-publicacion.js\""
+          }
+        ]
+      }
+    ]
+  }
+}

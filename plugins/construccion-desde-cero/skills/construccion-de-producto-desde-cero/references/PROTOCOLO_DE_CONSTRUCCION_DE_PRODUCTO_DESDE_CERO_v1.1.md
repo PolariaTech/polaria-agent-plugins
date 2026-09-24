@@ -133,7 +133,7 @@ Responsable de la iniciativa ejecuta `/speckit.tasks` para descomponer el plan e
 
 **Paso 13**
 
-Responsable de la iniciativa (o quien el Responsable Técnico asigne, si no es la misma persona que construye) ejecuta la construcción real de las tareas — código o workflow n8n según el medio declarado en el Paso 5. Cada cambio pasa por el Gate de Calidad Técnica antes del `push`. Si el medio es n8n, el workflow se versiona en `workflows/` y, mientras no exista un gate propio para n8n, se revisa con la excepción para n8n del Gate de Calidad Técnica. En n8n se puede, como piloto, escribir el workflow como código con el Workflow SDK de n8n y crearlo en la instancia con el MCP de n8n.
+Responsable de la iniciativa (o quien el Responsable Técnico asigne, si no es la misma persona que construye) ejecuta la construcción real de las tareas — código o workflow n8n según el medio declarado en el Paso 5. Cada cambio de código pasa por el Gate de Calidad Técnica antes del `push`. Si el medio es n8n, cada workflow pasa por el Gate de Calidad N8N antes de publicarse y se versiona en `workflows/`. En n8n se puede, como piloto, escribir el workflow como código con el Workflow SDK de n8n y crearlo en la instancia con el MCP de n8n.
 
 **Criterio de salida:**
 

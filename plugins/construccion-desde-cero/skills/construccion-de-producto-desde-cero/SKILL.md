@@ -66,8 +66,8 @@ Verifica si el repo ya tiene una constitución de `spec-kit` (`.specify/memory/c
 
 Esta skill no construye. Confirma que las tareas del Paso 12 están listas y recuérdale al Responsable de la iniciativa que:
 
-- Cada cambio pasa por el Gate de Calidad Técnica (`gate-calidad-tecnica-pre-merge-polaria`) antes del `push`.
-- **Si el medio es n8n:** el workflow se versiona en `workflows/`, y mientras no exista un gate propio para n8n se revisa con la excepción para n8n de ese Gate.
+- Cada cambio de código pasa por el Gate de Calidad Técnica (`gate-calidad-tecnica-pre-merge-polaria`) antes del `push`.
+- **Si el medio es n8n:** cada workflow pasa por el Gate de Calidad N8N (`gate-calidad-n8n-polaria`) antes de publicarse y se versiona en `workflows/`.
 - **Piloto n8n con Workflow SDK** (opcional): el workflow se escribe como código en `workflows/<nombre>.ts` siguiendo la referencia del SDK (`get_workflow_sdk_reference` del MCP de n8n), se valida con `validate_workflow` y se crea con `create_workflow_from_code`. Confirma con el Responsable de la iniciativa antes de crear o actualizar nada en la instancia de n8n: es visible para el equipo.
 
 ## Paso 14 — Convergencia

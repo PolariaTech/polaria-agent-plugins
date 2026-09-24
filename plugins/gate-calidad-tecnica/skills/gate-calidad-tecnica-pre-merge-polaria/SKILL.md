@@ -1,6 +1,6 @@
 ---
 name: gate-calidad-tecnica-pre-merge-polaria
-description: Ejecuta el gate de calidad técnica de Polaria sobre los commits locales de un cambio, ANTES de hacer push o abrir PR, despachando un revisor aislado. Úsala SIEMPRE que un dev diga que terminó un cambio, pida revisar un diff/rama/PR, pregunte "¿puedo subir esto?", "revisa esto antes de hacer push", "terminé el cambio, ¿está listo?", "¿puedo mergear esto?", "ya corregí el hallazgo de la auditoría", o pegue un diff pidiendo el segundo par de revisión — y SIEMPRE que pida "haz push" o "sube los cambios" sin veredicto del gate, o un push quede bloqueado por el hook — incluso si no menciona "gate de calidad" o "revisión de pares" por nombre. Aplica a todo cambio sin excepción, incluyendo issues Urgent. No la uses para la validación de "Done" (comportamiento funcional, cubierta por otro protocolo), ni para auditar un sistema completo (eso es `auditoria-tecnica-polaria`), ni para publicar el resultado en GitHub/Linear sin que el dev lo pida.
+description: Ejecuta el gate de calidad técnica de Polaria sobre los commits locales de un cambio, ANTES de hacer push o abrir PR, despachando un revisor aislado. Úsala SIEMPRE que un dev diga que terminó un cambio, pida revisar un diff/rama/PR, pregunte "¿puedo subir esto?", "revisa esto antes de hacer push", "terminé el cambio, ¿está listo?", "¿puedo mergear esto?", "ya corregí el hallazgo de la auditoría", o pegue un diff pidiendo el segundo par de revisión — y SIEMPRE que pida "haz push" o "sube los cambios" sin veredicto del gate, o un push quede bloqueado por el hook — incluso si no menciona "gate de calidad" o "revisión de pares" por nombre. Aplica a todo cambio sin excepción, incluyendo issues Urgent. No la uses para la validación de "Done" (comportamiento funcional, cubierta por otro protocolo), ni para auditar un sistema completo (eso es `auditoria-tecnica-polaria`), ni para workflows de n8n (eso es `gate-calidad-n8n-polaria`), ni para publicar el resultado en GitHub/Linear sin que el dev lo pida.
 ---
 
 # Skill: Gate de Calidad Técnica Pre-Merge
@@ -24,7 +24,7 @@ Si el dev te da un número de PR ya abierto (cambio publicado antes de esta vers
 - **Salida de pruebas:** si el dev ya corrió las pruebas en otro entorno (CI, staging) porque no se pueden correr en local, pide esa salida real (Excepción de la sección 5).
 - **Formularios:** si el diff toca un formulario o su validación, trae el checklist de prueba manual y la salida de pruebas que se publicaron en el issue de Linear (`list_comments`), o pídeselos al dev. Busca el schema `schemas/schema_<formulario>.md` en este orden y detente en el primero que lo tenga: (1) este repo; (2) si este repo no tiene la carpeta `schemas/` o no está el schema, un repo cuyo nombre contenga `flujo` entre las demás carpetas del workspace (en Cursor, las otras raíces del workspace; si no hay varias, las carpetas hermanas de este repo); (3) cualquier otra carpeta del workspace o carpeta hermana que tenga ese schema; (4) si no aparece, pídele al dev la ruta o el issue de Linear que lo tiene. Si lo encontraste fuera de este repo, dile al dev de dónde lo leíste y pasa su contenido completo. Todo va en `<contexto>`: el subagente no tiene acceso a Linear ni a otros repos (criterio 7).
 
-**Workflow n8n fuera de git** (Excepción de la sección 5): pide el JSON exportado antes y después del cambio y pásale al subagente esa diferencia como `<code_diff>`. No hay marca ni `push` en este caso: el reporte va al issue de Linear antes de activar el workflow.
+**Workflow n8n:** no se revisa con este gate. Si el cambio es un workflow de n8n, usa `gate-calidad-n8n-polaria` (plugin `gate-calidad-n8n`).
 
 Si el diff está vacío o no es código, responde exactamente `ERROR: No se detectó un diff de código válido para auditar en Polaria.` y detente (Excepción de la sección 5).
 
@@ -64,7 +64,7 @@ El hook de la IA o el `pre-push` de git se disparan cuando el commit que se va a
 
 - Si no puedes ejecutar la revisión: dile al dev que escala al Responsable, quien decide si otro dev revisa manualmente o se espera.
 - Si el dev no está de acuerdo con un `[FAIL]`: ver el tercer punto del Paso 3. Si la duda es real, que consulte al Responsable; esta skill no decide eso por él.
-- Pruebas que no se pueden correr en local, workflow n8n fuera de git, o diff inválido: ver el Paso 1.
+- Pruebas que no se pueden correr en local o diff inválido: ver el Paso 1. Workflow n8n: ver el Paso 1.
 
 ## Si hay un problema después del merge (sección 9 del protocolo — Rollback)
 

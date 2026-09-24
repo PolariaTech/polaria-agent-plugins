@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeMCPExecution": [
+      {
+        "command": "node \"${CURSOR_PLUGIN_ROOT}/hooks/verificar-publicacion.js\"",
+        "matcher": "publish_workflow",
+        "failClosed": true
+      }
+    ]
+  }
+}

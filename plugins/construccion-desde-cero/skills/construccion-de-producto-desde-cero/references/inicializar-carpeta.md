@@ -83,7 +83,7 @@ Espera su confirmación explícita antes de crear cualquier archivo.
 }
 ```
 
-   Agrega `"validacion-formularios@polaria-agent-plugins": true` solo si el catálogo dice que aplica. Si el archivo ya existe, agrega estas claves sin borrar las que tenga.
+   Si el medio es n8n: cambia `gate-calidad-tecnica` por `"gate-calidad-n8n@polaria-agent-plugins": true`, y deja también `gate-calidad-tecnica` solo si el repo tendrá código además de `workflows/` (sección 3 del catálogo). Agrega `"validacion-formularios@polaria-agent-plugins": true` solo si el catálogo dice que aplica. Si el archivo ya existe, agrega estas claves sin borrar las que tenga.
 3. Dile al Responsable que el marketplace y los plugins se activan cuando cada persona abre la carpeta en Claude Code y confía en ella ("trust"). Hasta entonces no se cargan.
 
 **Si el editor es Cursor:**

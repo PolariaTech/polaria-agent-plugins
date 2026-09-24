@@ -6,7 +6,7 @@
     "url": "https://polaria.tech"
   },
   "description": "Plugins internos de Polaria para Claude Code: auditoria tecnica, protocolos y herramientas de agentes reutilizables entre repos.",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "metadata": {
     "pluginRoot": "./plugins"
   },
@@ -36,7 +36,7 @@
       "displayName": "Gate de Calidad Tecnica Pre-Merge (Polaria)",
       "source": "gate-calidad-tecnica",
       "description": "Revisa cada cambio antes del push con un subagente revisor aislado y bloquea el git push sin veredicto (hook para Claude Code y Cursor).",
-      "version": "1.4.0",
+      "version": "1.4.1",
       "author": { "name": "Polaria Tech" },
       "keywords": ["gate", "code-review", "calidad", "pre-merge", "polaria"],
       "defaultEnabled": false
@@ -56,9 +56,19 @@
       "displayName": "Construccion de Producto desde Cero (Polaria)",
       "source": "construccion-desde-cero",
       "description": "Lleva una iniciativa nueva desde la idea hasta Versionamiento e inicializa la carpeta del proyecto (git, spec-kit, plugins, docs/) para software o n8n. Instalar a nivel de usuario.",
-      "version": "1.1.1",
+      "version": "1.1.2",
       "author": { "name": "Polaria Tech" },
       "keywords": ["construccion-desde-cero", "inicializar-proyecto", "spec-kit", "n8n", "polaria"],
+      "defaultEnabled": false
+    },
+    {
+      "name": "gate-calidad-n8n",
+      "displayName": "Gate de Calidad N8N (Polaria)",
+      "source": "gate-calidad-n8n",
+      "description": "Revisa la copia DEV de un workflow de n8n antes de publicarlo (script + subagente revisor aislado + veredicto en Linear) y bloquea publish_workflow del MCP de n8n sin veredicto.",
+      "version": "1.0.0",
+      "author": { "name": "Polaria Tech" },
+      "keywords": ["gate", "n8n", "workflows", "calidad", "polaria"],
       "defaultEnabled": false
     }
   ]

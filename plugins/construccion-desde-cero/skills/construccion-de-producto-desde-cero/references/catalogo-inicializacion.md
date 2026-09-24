@@ -2,7 +2,7 @@
 
 Referencia del Paso 9 de la skill `construccion-de-producto-desde-cero`. Dice, según el medio declarado en el Paso 5, qué protocolos aplican, qué plugins se habilitan, qué documentación se prepara y qué estructura lleva la carpeta. El procedimiento que lo usa está en `inicializar-carpeta.md`.
 
-**Mantenimiento:** este catálogo se actualiza cada vez que se publica o cambia un protocolo o plugin que aplica a proyectos nuevos (regla de `.claude/rules/entrega-protocolos.md` del repo de metodología). Última revisión: 23/09/2026.
+**Mantenimiento:** este catálogo se actualiza cada vez que se publica o cambia un protocolo o plugin que aplica a proyectos nuevos (regla de `.claude/rules/entrega-protocolos.md` del repo de metodología). Última revisión: 24/09/2026.
 
 ## 1. Medios
 
@@ -19,10 +19,10 @@ Referencia del Paso 9 de la skill `construccion-de-producto-desde-cero`. Dice, s
 | Protocolo | Software | n8n | n8n con IA | Cómo se ejecuta en el proyecto |
 |---|---|---|---|---|
 | Construcción de Producto desde Cero v1.1 | Sí | Sí | Sí | Plugin `construccion-desde-cero`, instalado a nivel de usuario (ya está corriendo). |
-| Estándares de Diseño de Workflows N8N v2.0 | — | Sí | Sí | Van dentro de la constitución de spec-kit (Paso 10). Documento en Drive: `00_PROTOCOLOS/07_AGENTES_IA_N8N/RECURSOS/`. |
+| Estándares de Diseño de Workflows N8N v2.1 | — | Sí | Sí | Van dentro de la constitución de spec-kit (Paso 10); sus Criterios de aceptación los revisa el plugin `gate-calidad-n8n`. Documento en Drive: `00_PROTOCOLOS/07_AGENTES_IA_N8N/RECURSOS/`. |
 | Construcción de Agentes de IA en N8N v1.0.0 | — | — | Sí | Sus fases de diseño van en el plan (Paso 11) y su checklist de producción antes de activar. Documento en Drive: `00_PROTOCOLOS/07_AGENTES_IA_N8N/`. |
-| Gate de Calidad Técnica Pre-Merge v1.2 | Sí | Solo su excepción para n8n, mientras no exista el gate n8n | Ídem | Plugin `gate-calidad-tecnica`. |
-| Gate de calidad para n8n | — | Pendiente (no existe todavía) | Pendiente | Mientras no exista, se usa la excepción para n8n del Gate de Calidad Técnica. |
+| Gate de Calidad Técnica Pre-Merge v1.2 | Sí | Solo si el repo tiene código además de `workflows/` | Ídem | Plugin `gate-calidad-tecnica`. |
+| Gate de Calidad N8N v1.0 | — | Sí | Sí | Plugin `gate-calidad-n8n` (trae el conector MCP de n8n). |
 | Validación de Formularios v1.1 | Solo si hay formularios que guardan datos | Solo si el workflow construye formularios propios que guardan datos | Ídem | Plugin `validacion-formularios`. |
 | Auditoría Técnica de Software y Workflows v1.2 | Sí | Sí | Sí | Plugin `auditoria-tecnica` (requiere spec-kit con las extensiones `bug` y `assess`). |
 | Versionamiento v1.1 | Sí | Sí | Sí | Skill `versionamiento-polaria`, todavía sin plugin: se anota en `AGENTS.md` como pendiente de instalar. |
@@ -35,7 +35,8 @@ Marketplace: `polaria-agent-plugins` (`PolariaTech/polaria-agent-plugins` en Git
 
 | Plugin | Software | n8n / n8n con IA |
 |---|---|---|
-| `gate-calidad-tecnica` | Sí | Sí (por su excepción para n8n) |
+| `gate-calidad-tecnica` | Sí | Solo si el repo tiene código además de `workflows/` (su `pre-push` bloquea todo push sin veredicto) |
+| `gate-calidad-n8n` | — | Sí |
 | `auditoria-tecnica` | Sí | Sí |
 | `gestion-linear` | Sí | Sí |
 | `validacion-formularios` | Solo si hay formularios que guardan datos | Solo si el workflow construye formularios propios |
@@ -120,6 +121,6 @@ Además, según el medio:
 | Medio | Carpeta extra | Para qué |
 |---|---|---|
 | Software | Ninguna al inicializar | La estructura del código sale del plan (Paso 11). |
-| n8n / n8n con IA | `workflows/` | Los workflows versionados en git: el JSON exportado, o el `.ts` del Workflow SDK si se usa el piloto. Así el Gate aplica con su flujo normal de `push`. |
+| n8n / n8n con IA | `workflows/` | Los workflows versionados en git: el JSON exportado, o el `.ts` del Workflow SDK si se usa el piloto. El Gate de Calidad N8N verifica ahí el JSON publicado (criterio 23). |
 
 Si el editor es Cursor: no se crea `.claude/`. Cursor lee `AGENTS.md`, y spec-kit con `--integration cursor-agent` crea sus comandos en la carpeta que usa para Cursor (no verificado todavía en un proyecto real: revisa qué creó con `git status`). Los plugins de la sección 3 se instalan desde la interfaz de Cursor con alcance de proyecto; no existe un archivo del repo que los declare, así que su lista queda en "Pendientes de instalación" de `AGENTS.md`.
