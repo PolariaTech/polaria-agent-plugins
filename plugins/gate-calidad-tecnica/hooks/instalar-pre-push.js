@@ -61,6 +61,8 @@ function instalar(directorio) {
   for (const script of ['verificar-gate.js', 'registrar-veredicto.js']) {
     fs.copyFileSync(path.join(__dirname, script), path.join(carpetaGate, script));
   }
+  // Los scripts son CommonJS: sin esto heredan el "type": "module" del package.json del repo y fallan.
+  fs.writeFileSync(path.join(carpetaGate, 'package.json'), '{ "type": "commonjs" }\n');
 
   if (path.relative(directorioComun, directorioHooks).startsWith('..')) {
     terminar(
