@@ -70,7 +70,7 @@ process.stdin.on('data', (fragmento) => (entrada += fragmento));
 process.stdin.on('end', () => {
   let archivo;
   try {
-    const evento = JSON.parse(entrada);
+    const evento = JSON.parse(entrada.replace(/^\uFEFF/, ''));
     esCursor = evento.hook_event_name === 'postToolUse';
     const parametros = evento.tool_input || {};
     const ruta = parametros.file_path || parametros.path || parametros.target_file || evento.file_path || '';

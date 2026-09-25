@@ -97,7 +97,7 @@ process.stdin.on('data', (fragmento) => (entrada += fragmento));
 process.stdin.on('end', () => {
   let directorio = process.cwd();
   try {
-    const evento = JSON.parse(entrada);
+    const evento = JSON.parse(entrada.replace(/^\uFEFF/, ''));
     esCursor = evento.hook_event_name === 'sessionStart';
     const raiz = evento.workspace_roots && evento.workspace_roots[0] && rutaDelSistema(evento.workspace_roots[0]);
     directorio = evento.cwd || process.env.CURSOR_PROJECT_DIR || raiz || directorio;

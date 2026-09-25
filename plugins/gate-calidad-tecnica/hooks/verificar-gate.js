@@ -18,11 +18,11 @@ const path = require('path');
 const VEREDICTOS_QUE_PERMITEN_PUSH = /^VEREDICTO: (APROBADO|RECHAZADO_JUSTIFICADO)\s*$/;
 const SHA_VACIO = /^0+$/;
 
-let esCursor = false;
+// Cursor define CURSOR_VERSION: así responde JSON aunque el evento llegue ilegible.
+let esCursor = Boolean(process.env.CURSOR_VERSION);
 let respondido = false;
 
-// Sale solo cuando stdout terminó de vaciarse: con process.exit() justo después de write(), un pipe
-// asíncrono puede cerrarse vacío y Cursor (failClosed) lo toma como "returned no output" y corta el comando.
+// Sale solo cuando stdout terminó de vaciarse, para que Cursor siempre reciba el JSON.
 function responder(respuestaCursor, codigo) {
   if (respondido) return;
   respondido = true;
@@ -111,7 +111,7 @@ function procesar(finDeEntrada) {
   if (respondido) return;
   let evento;
   try {
-    evento = JSON.parse(entrada);
+    evento = JSON.parse(entrada.replace(/^\uFEFF/, ''));
   } catch {
     // Si el agente no cierra stdin, se decide apenas llega un JSON completo; si nunca llega, se deja pasar.
     if (finDeEntrada) permitir(); // Evento ilegible: no es responsabilidad de este hook decidir.

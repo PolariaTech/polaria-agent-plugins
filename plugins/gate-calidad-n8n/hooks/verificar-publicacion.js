@@ -35,7 +35,7 @@ process.stdin.on('data', (fragmento) => (entrada += fragmento));
 process.stdin.on('end', () => {
   let evento;
   try {
-    evento = JSON.parse(entrada);
+    evento = JSON.parse(entrada.replace(/^\uFEFF/, ''));
   } catch {
     bloquear('Gate de Calidad N8N: no se pudo leer el evento del hook; no se publica sin verificar el veredicto.');
   }

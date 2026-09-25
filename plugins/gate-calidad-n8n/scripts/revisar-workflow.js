@@ -58,7 +58,7 @@ function leerArgumentos() {
 function leerWorkflow(archivo) {
   let datos;
   try {
-    datos = JSON.parse(fs.readFileSync(archivo, 'utf8'));
+    datos = JSON.parse(fs.readFileSync(archivo, 'utf8').replace(/^\uFEFF/, ''));
   } catch (error) {
     salirConUso(`No se pudo leer ${archivo} como JSON: ${error.message}`);
   }

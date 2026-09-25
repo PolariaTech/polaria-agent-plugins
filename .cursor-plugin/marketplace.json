@@ -33,7 +33,7 @@
       "displayName": "Gate de Calidad Tecnica Pre-Merge (Polaria)",
       "source": "gate-calidad-tecnica",
       "description": "Revisa cada cambio antes del push con un subagente revisor aislado y bloquea el git push sin veredicto (hook para Claude Code y Cursor).",
-      "version": "1.4.2",
+      "version": "1.4.3",
       "author": { "name": "Polaria Tech" },
       "keywords": ["gate", "code-review", "calidad", "pre-merge", "polaria"]
     },
@@ -42,7 +42,7 @@
       "displayName": "Validacion de Formularios (Polaria)",
       "source": "validacion-formularios",
       "description": "Ejecuta el Protocolo de Validacion de Formularios v1.1 de Polaria: entrevista del schema, 5 niveles con el stack del repo, pruebas y checklist manual; hook que avisa si el schema queda incompleto.",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "author": { "name": "Polaria Tech" },
       "keywords": ["formularios", "validacion", "schema", "polaria"]
     },
@@ -60,7 +60,7 @@
       "displayName": "Gate de Calidad N8N (Polaria)",
       "source": "gate-calidad-n8n",
       "description": "Revisa la copia DEV de un workflow de n8n antes de publicarlo (script + subagente revisor aislado + veredicto en Linear) y bloquea publish_workflow del MCP de n8n sin veredicto.",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": { "name": "Polaria Tech" },
       "keywords": ["gate", "n8n", "workflows", "calidad", "polaria"]
     }
