@@ -1,8 +1,8 @@
 {
   "name": "gate-calidad-tecnica",
   "displayName": "Gate de Calidad Tecnica Pre-Merge (Polaria)",
-  "version": "1.4.5",
-  "description": "Revisa cada cambio antes del push con un subagente revisor aislado (7 criterios, incluye test de regresion y ejecucion real de pruebas) y bloquea el git push sin veredicto con un hook del agente y un pre-push de git que se instala solo.",
+  "version": "1.5.0",
+  "description": "Revisa cada cambio antes del push con un subagente revisor aislado y de solo lectura (8 criterios: incluye test de regresion, ejecucion real de pruebas y build de despliegue) y bloquea el git push sin veredicto con un hook del agente y un pre-push de git que se instala solo. Trae el MCP de Vercel (temporal, se reemplazara por AWS).",
   "author": {
     "name": "Polaria Tech",
     "url": "https://polaria.tech"
@@ -11,5 +11,6 @@
   "keywords": ["gate", "code-review", "calidad", "pre-merge", "polaria"],
   "skills": ["./skills"],
   "agents": ["./agents"],
-  "hooks": "./hooks/cursor-hooks.json"
+  "hooks": "./hooks/cursor-hooks.json",
+  "mcpServers": "./mcp.json"
 }

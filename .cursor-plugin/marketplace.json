@@ -32,8 +32,8 @@
       "name": "gate-calidad-tecnica",
       "displayName": "Gate de Calidad Tecnica Pre-Merge (Polaria)",
       "source": "gate-calidad-tecnica",
-      "description": "Revisa cada cambio antes del push con un subagente revisor aislado y bloquea el git push sin veredicto (hook para Claude Code y Cursor).",
-      "version": "1.4.5",
+      "description": "Revisa cada cambio antes del push con un subagente revisor aislado y de solo lectura (8 criterios, incluye build de despliegue) y bloquea el git push sin veredicto (hook para Claude Code y Cursor). Trae el MCP de Vercel (temporal).",
+      "version": "1.5.0",
       "author": { "name": "Polaria Tech" },
       "keywords": ["gate", "code-review", "calidad", "pre-merge", "polaria"]
     },
