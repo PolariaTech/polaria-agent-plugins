@@ -1,6 +1,6 @@
 ---
 name: linear-transicionar-estado
-description: "Gestiona el estado de issues de Linear a lo largo del ciclo de vida real del trabajo, para cualquier proyecto de un equipo — el equipo POLARIA (prefijo POL-) es el ejemplo/default, fácil de reemplazar por otro equipo (ver \"Configuración rápida\"). Actívala en estos momentos, sin esperar a que el usuario lo pida explícitamente salvo el primero: (1) el usuario dice \"vamos a trabajar en POL-X\" / \"sigamos con POL-X\" / \"retomemos POL-X\" → mueve a In Progress si no lo está; (2) el trabajo sobre un issue en curso llega al punto de probar/validar → In Review; (3) aparece algo que impide seguir → Blocked, comenta la causa y enlaza blockedBy; (4) se decide que el issue quedó resuelto → comenta cómo se resolvió y qué pruebas pasó, y solo después mueve a Done; (5) el issue es duplicado de otro → Duplicate, vinculado al original; (6) se pausa un issue en curso por falta de capacidad → regresa a Backlog con motivo. Actívala también cuando el usuario mencione un identificador de issue junto con verbos como \"trabajar\", \"seguir\", \"retomar\", \"probar\", \"validar\", \"bloqueado por\", \"cerrar\", \"duplicado\", o \"marcar como listo\"."
+description: "Gestiona el estado de issues de Linear a lo largo del ciclo de vida real del trabajo, para cualquier proyecto de un equipo — el equipo POLARIA (prefijo POL-) es el ejemplo/default, fácil de reemplazar por otro equipo (ver \"Configuración rápida\"). Actívala en estos momentos, sin esperar a que el usuario lo pida explícitamente salvo el primero: (1) el usuario dice \"vamos a trabajar en POL-X\" / \"sigamos con POL-X\" / \"retomemos POL-X\" → mueve a In Progress si no lo está; (2) el trabajo sobre un issue en curso termina el desarrollo y está a punto de correr la primera prueba de cualquier tipo (automatizada, manual, smoke test, ejecución en un ambiente) → In Review ANTES de correrla, no después; (3) aparece algo que impide seguir → Blocked, comenta la causa y enlaza blockedBy; (4) se decide que el issue quedó resuelto → actualiza la documentación del proyecto con los cambios del issue, comenta cómo se resolvió y qué pruebas pasó, y solo después mueve a Done; (5) el issue es duplicado de otro → Duplicate, vinculado al original; (6) se pausa un issue en curso por falta de capacidad → regresa a Backlog con motivo. Actívala también cuando el usuario mencione un identificador de issue junto con verbos como \"trabajar\", \"seguir\", \"retomar\", \"probar\", \"validar\", \"bloqueado por\", \"cerrar\", \"duplicado\", o \"marcar como listo\"."
 compatibility: "Requiere MCP de Linear conectado. Los nombres de herramienta varían por cliente — ver tabla abajo."
 ---
 
@@ -71,14 +71,18 @@ Los nombres de los estados pueden variar entre equipos de Linear. No los des por
 
 ## MODO PRUEBAS
 
-**Cuándo:** el trabajo sobre un issue en curso llega al punto de validar o probar lo implementado.
+**Cuándo:** el desarrollo terminó y estás a punto de correr la primera prueba de cualquier tipo — pruebas automatizadas, prueba manual, smoke test, `curl` contra un endpoint, ejecución de un workflow en un ambiente. Mueve el issue **antes** de correr esa primera prueba, nunca durante ni después.
+
+`In Review` significa "en pruebas": el issue está siendo validado. No significa "terminado, falta revisión humana". Si ya corriste pruebas y el issue sigue en `In Progress`, muévelo a `In Review` en ese mismo momento, sin esperar a terminar la batería.
+
+Ejemplos del momento exacto: en un cambio de código, después del último commit de desarrollo y antes de correr `npm test`; en un workflow de n8n, después de `publish_workflow` y antes del primer smoke test.
 
 1. `get_issue` para confirmar el estado actual — evita mover algo que ya esté en `In Review`, `Blocked` o `Done`.
 2. `save_issue` con `state: "In Review"`.
 3. Confirmar: `POL-X → In Review`.
 4. Escribir las pruebas correspondientes a lo implementado (o extender las existentes si ya hay batería de pruebas para ese módulo) y ejecutarlas.
 5. Reportar el resultado de forma concreta: qué se probó, qué pasó y qué falló — nunca "todo funcionó" sin mostrar la evidencia (casos ejecutados y su resultado real).
-6. Si todas las pruebas pasaron: sugerir pasar a MODO CIERRE. No mover el issue a `Done` automáticamente — la decisión final de cerrar es del usuario.
+6. Si todas las pruebas pasaron sin hallazgos: sugerir en una sola línea documentar los cambios y cerrar el issue (MODO CIERRE). No mover el issue a `Done` automáticamente — la decisión final de cerrar es del usuario.
 7. Si alguna prueba falló o reveló un impedimento real: no sugerir el cierre. Señalarlo explícitamente y, si el impedimento detiene el trabajo, aplicar MODO BLOQUEO en su lugar.
 
 ---
@@ -137,9 +141,12 @@ No se continúa trabajando en un issue marcado Canceled.
 
 **Cuándo:** se decide que un issue quedó resuelto.
 
-1. `save_comment` documentando **primero**, antes de tocar el estado: cómo se resolvió (qué cambió, dónde) y qué pruebas pasó.
-2. Solo después: `save_issue` con `state: "Done"`.
-3. Confirmar: `POL-X → Done` (mencionar que el comentario de resolución ya quedó publicado).
+1. Documentar en el proyecto **todos** los cambios hechos dentro de este issue: aplica la skill `doc-updater` en MODO A para que la documentación del proyecto (README, CHANGELOG, ADRs, glosario y el resto de los artefactos que correspondan) refleje cada cambio. No sigas al paso 2 hasta que esa documentación esté actualizada.
+2. `save_comment` documentando, antes de tocar el estado, todos los cambios realizados: cada cambio con qué cambió y dónde (archivo, workflow, versión publicada, commit), cómo se resolvió el problema, qué pruebas pasó con su resultado y qué documentación se actualizó. No cierres con un comentario que omita alguno de los cambios hechos.
+3. Solo después: `save_issue` con `state: "Done"`.
+4. Confirmar: `POL-X → Done` (mencionar que la documentación y el comentario de resolución ya quedaron publicados).
+
+Orden obligatorio: documentación del proyecto → comentario de resolución → `Done`. Mientras la documentación esté pendiente, el issue se queda en `In Review`.
 
 Si el estado actual permite validación de 4 ojos (Metodología de Trabajo v1.2 §7 — alguien distinto al dev valida en In Review) y hay un segundo miembro disponible, confirma que esa validación ya ocurrió antes de mover a Done. Si hoy no hay un segundo humano disponible en el proyecto, el mismo Responsable puede autovalidarse — pero debe dejarlo explícito en el comentario de resolución (p. ej. "Autovalidado — no hay un segundo miembro disponible en este proyecto").
 
@@ -153,7 +160,7 @@ Si el estado actual permite validación de 4 ojos (Metodología de Trabajo v1.2 
 - Si `get_issue` muestra que el issue ya está en el estado destino, no repitas la transición.
 - MODO PRUEBAS nunca sugiere el cierre sin haber escrito y ejecutado pruebas primero, ni reporta "todo funcionó" sin evidencia concreta de los casos ejecutados.
 - MODO BLOQUEO siempre lleva comentario **y** relación `blockedBy` — nunca uno sin el otro.
-- MODO CIERRE siempre comenta antes de mover a Done — nunca al revés.
+- MODO CIERRE siempre documenta el proyecto y comenta antes de mover a Done — nunca al revés.
 - MODO DUPLICADO siempre lleva la relación estructurada **y** un comentario señalando el issue canónico.
 - MODO PAUSA → BACKLOG siempre lleva un comentario con el motivo — nunca una regresión silenciosa.
 - MODO CANCELADO siempre lleva un comentario con el motivo — nunca una cancelación silenciosa.

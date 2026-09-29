@@ -1,7 +1,7 @@
 {
   "name": "gestion-linear",
   "displayName": "Gestion de Linear (Polaria)",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Paquete de skills para gestionar el ciclo de vida de proyectos e issues de Linear del equipo Polaria: crear/cerrar proyectos, crear issues, transicionar estados, mantener la documentacion asociada al dia y dejar CONTINUIDAD.md listo al cerrar cada sesion. Trae el conector MCP de Linear.",
   "author": {
     "name": "Polaria Tech",
