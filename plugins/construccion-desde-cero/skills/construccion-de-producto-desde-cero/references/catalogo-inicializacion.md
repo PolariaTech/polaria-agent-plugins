@@ -19,10 +19,10 @@ Referencia del Paso 9 de la skill `construccion-de-producto-desde-cero`. Dice, s
 | Protocolo | Software | n8n | n8n con IA | Cómo se ejecuta en el proyecto |
 |---|---|---|---|---|
 | Construcción de Producto desde Cero v1.1 | Sí | Sí | Sí | Plugin `construccion-desde-cero`, instalado a nivel de usuario (ya está corriendo). |
-| Estándares de Diseño de Workflows N8N v2.1 | — | Sí | Sí | Van dentro de la constitución de spec-kit (Paso 10); sus Criterios de aceptación los revisa el plugin `gate-calidad-n8n`. Documento en Drive: `00_PROTOCOLOS/07_AGENTES_IA_N8N/RECURSOS/`. |
+| Estándares de Diseño de Workflows N8N v2.2 | — | Sí | Sí | Van dentro de la constitución de spec-kit (Paso 10); sus Criterios de aceptación los revisa el plugin `gate-calidad-n8n`. Documento en Drive: `00_PROTOCOLOS/07_AGENTES_IA_N8N/RECURSOS/`. |
 | Construcción de Agentes de IA en N8N v1.0.0 | — | — | Sí | Sus fases de diseño van en el plan (Paso 11) y su checklist de producción antes de activar. Documento en Drive: `00_PROTOCOLOS/07_AGENTES_IA_N8N/`. |
 | Gate de Calidad Técnica Pre-Merge v1.2 | Sí | Solo si el repo tiene código además de `workflows/` | Ídem | Plugin `gate-calidad-tecnica`. |
-| Gate de Calidad N8N v1.0 | — | Sí | Sí | Plugin `gate-calidad-n8n` (trae el conector MCP de n8n). |
+| Gate de Calidad N8N v1.1 | — | Sí | Sí | Plugin `gate-calidad-n8n` (trae el conector MCP de n8n). La primera vez que corre, la skill guía a cada persona para crear su clave de la API de n8n de solo lectura. |
 | Validación de Formularios v1.1 | Solo si hay formularios que guardan datos | Solo si el workflow construye formularios propios que guardan datos | Ídem | Plugin `validacion-formularios`. |
 | Auditoría Técnica de Software y Workflows v1.2 | Sí | Sí | Sí | Plugin `auditoria-tecnica` (requiere spec-kit con las extensiones `bug` y `assess`). |
 | Versionamiento v1.1 | Sí | Sí | Sí | Skill `versionamiento-polaria`, todavía sin plugin: se anota en `AGENTS.md` como pendiente de instalar. |
