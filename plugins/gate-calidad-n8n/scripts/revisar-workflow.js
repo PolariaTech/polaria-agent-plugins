@@ -1,15 +1,21 @@
 #!/usr/bin/env node
 // Script del plugin gate-calidad-n8n: revisa de forma determinista los criterios mecánicos del
-// Gate de Calidad N8N sobre el JSON descargado de un workflow (menú del workflow → Download).
-// No reemplaza al subagente revisor-workflow-n8n: marca REVISAR donde hace falta juicio y le
-// entrega los hallazgos que necesita para decidir.
+// Gate de Calidad N8N sobre el JSON descargado de un workflow (descargar-workflow.js o menú del
+// workflow → Download). No reemplaza al subagente revisor-workflow-n8n: marca REVISAR donde hace
+// falta juicio y le entrega los hallazgos que necesita para decidir.
 //
 // Uso:
 //   node revisar-workflow.js antes   --json <archivo> [--repo <ruta>] [--error-handler-id <id>] [--descripcion <texto>]
+//   node revisar-workflow.js texto   --json <copia DEV> --publicado <producción> --workflow-id <ID de producción>
+//                                    --version-publicada <activeVersionId> [--repo <ruta>] [--mapa-dev <idProd>=<idDev>,...] [--registrar no]
 //   node revisar-workflow.js despues --json <workflows/archivo.json> --version-publicada <versionId> [--repo <ruta>]
+//                                    [--dev <JSON de la copia DEV verificada>] [--mapa-dev <idProd>=<idDev>,...]
 //
-// Estados: PASS, FAIL, REVISAR (lo decide el subagente) y N/A. Sale siempre con 0 salvo error de uso.
+// Estados: PASS, FAIL, REVISAR (lo decide el subagente) y N/A. Sale con 0 salvo error de uso (1).
+// El modo texto (sección 5.1 del protocolo) decide si el cambio es de solo texto: si lo demuestra,
+// registra él mismo la marca EXENTO_TEXTO y sale con 0; si no, sale con 3 y se corre el Gate completo.
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
@@ -38,20 +44,36 @@ const SNAKE_CASE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
 const PREFIJO_TIPO = /^(str|int|num|bool|arr|obj|dict|list)_/;
 
 function salirConUso(mensaje) {
-  process.stderr.write(`${mensaje}\nUso: node revisar-workflow.js <antes|despues> --json <archivo> [--repo <ruta>] [--error-handler-id <id>] [--descripcion <texto>] [--version-publicada <versionId>]\n`);
+  process.stderr.write(`${mensaje}\nUso: node revisar-workflow.js <antes|texto|despues> --json <archivo> [--repo <ruta>] [--error-handler-id <id>] [--descripcion <texto>] [--publicado <archivo>] [--workflow-id <id>] [--version-publicada <versionId>] [--dev <archivo>] [--mapa-dev <idProd>=<idDev>,...] [--registrar no]\n`);
   process.exit(1);
+}
+
+// --mapa-dev: parejas <ID de producción>=<ID de la copia DEV> de los sub-workflows a los que apunta la
+// copia DEV. Solo se toleran en el workflowId de un executeWorkflow o toolWorkflow, y solo con forma de
+// ID de n8n, para que nadie declare como "pareja" un cambio de texto o de código.
+const ID_N8N = /^[A-Za-z0-9]{16}$/;
+function leerParejas(texto) {
+  const parejas = new Set();
+  for (const pareja of (texto || '').split(',').map((p) => p.trim()).filter(Boolean)) {
+    const [produccion, dev, ...sobra] = pareja.split('=');
+    if (sobra.length || !ID_N8N.test(produccion || '') || !ID_N8N.test(dev || '')) salirConUso(`Pareja de --mapa-dev inválida: ${pareja} (formato <ID de producción>=<ID de la copia DEV>, IDs de 16 caracteres de n8n).`);
+    parejas.add(`${produccion}=${dev}`);
+  }
+  return parejas;
 }
 
 function leerArgumentos() {
   const [modo, ...resto] = process.argv.slice(2);
-  if (modo !== 'antes' && modo !== 'despues') salirConUso('Falta el modo: antes o despues.');
+  if (!['antes', 'texto', 'despues'].includes(modo)) salirConUso('Falta el modo: antes, texto o despues.');
   const opciones = { modo };
   for (let i = 0; i < resto.length; i += 2) {
     if (!resto[i].startsWith('--') || resto[i + 1] === undefined) salirConUso(`Argumento inválido: ${resto[i]}`);
     opciones[resto[i].slice(2)] = resto[i + 1];
   }
   if (!opciones.json) salirConUso('Falta --json.');
+  if (modo === 'texto') for (const requerido of ['publicado', 'workflow-id', 'version-publicada']) if (!opciones[requerido]) salirConUso(`Falta --${requerido}.`);
   opciones.repo = path.resolve(opciones.repo || process.cwd());
+  opciones.parejas = leerParejas(opciones['mapa-dev']);
   return opciones;
 }
 
@@ -62,7 +84,7 @@ function leerWorkflow(archivo) {
   } catch (error) {
     salirConUso(`No se pudo leer ${archivo} como JSON: ${error.message}`);
   }
-  if (datos.workflow && datos.workflow.nodes) salirConUso(`${archivo} es una respuesta del MCP de n8n, que no trae el pin data. Usa el JSON del menú del workflow → Download.`);
+  if (datos.workflow && datos.workflow.nodes) salirConUso(`${archivo} es una respuesta del MCP de n8n, que no trae el pin data. Usa descargar-workflow.js o el JSON del menú del workflow → Download.`);
   const workflow = datos;
   if (!Array.isArray(workflow.nodes)) salirConUso(`${archivo} no parece un workflow de n8n (no tiene "nodes").`);
   return workflow;
@@ -494,8 +516,240 @@ function revisarDespues(workflow, opciones) {
     const changelog = path.join(opciones.repo, 'CHANGELOG.md');
     if (!fs.existsSync(changelog) || !fs.readFileSync(changelog, 'utf8').includes(publicada)) fallas.push(`\`CHANGELOG.md\` no cita \`${publicada}\``);
   }
-  r[23] = fallas.length ? ['FAIL', `${fallas.join('; ')}.`] : ['PASS', `\`${esperado}\` con el \`versionId\` publicado, citado en el commit y en \`CHANGELOG.md\`.`];
+  if (opciones.dev) {
+    // Lo publicado tiene que ser lo que se verificó: el JSON de git contra el de la copia DEV revisada.
+    // Las credenciales no cuentan: P5 pide cambiarlas a las de producción después de importar.
+    const dev = leerWorkflow(opciones.dev);
+    const marca = leerMarca(workflow.id, opciones.repo);
+    if (marca && marca.version_dev && dev.versionId !== marca.version_dev) fallas.push(`\`--dev\` es la versión \`${dev.versionId}\` de la copia DEV, no la revisada (\`${marca.version_dev}\`)`);
+    const distintas = compararWorkflows(dev, workflow, opciones.parejas, { sinCredenciales: true }).filter((d) => !d.tolerada);
+    if (distintas.length) fallas.push(`lo publicado no es la copia DEV verificada (${distintas.length} diferencia(s): ${distintas.slice(0, 5).map((d) => `${d.donde} ${d.ruta}`).join('; ')})`);
+  }
+  r[23] = fallas.length ? ['FAIL', `${fallas.join('; ')}.`] : ['PASS', `\`${esperado}\` con el \`versionId\` publicado, citado en el commit y en \`CHANGELOG.md\`${opciones.dev ? ', idéntico a la copia DEV verificada' : ''}.`];
   return { resultados: r, hallazgos: [] };
+}
+
+function leerMarca(workflowId, repo) {
+  try {
+    const lineas = fs.readFileSync(path.join(require('./marca').carpetaGate(repo), `${workflowId}.md`), 'utf8').split(/\r?\n/);
+    return Object.fromEntries(lineas.filter((l) => l.includes(': ')).map((l) => [l.slice(0, l.indexOf(': ')), l.slice(l.indexOf(': ') + 2).trim()]));
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Comparación entre la copia DEV y producción (modo texto y criterio 23 con --dev).
+
+// Campos que no cuentan como diferencia: son propios de cada copia o solo de presentación.
+const CLAVES_IGNORADAS = new Set(['position', 'cachedResultName', 'cachedResultUrl']);
+const PARAMETROS_DE_NOTA_IGNORADOS = new Set(['width', 'height', 'color']);
+
+function diferenciasEntre(antes, despues, ruta, salida) {
+  if (typeof antes === 'string' && typeof despues === 'string') {
+    if (antes !== despues) salida.push({ ruta, antes, despues, clase: 'texto' });
+    return;
+  }
+  if (antes === undefined || despues === undefined || typeof antes !== typeof despues || Array.isArray(antes) !== Array.isArray(despues) || (antes === null) !== (despues === null)) {
+    salida.push({ ruta, antes, despues, clase: 'estructura' });
+    return;
+  }
+  if (Array.isArray(antes)) {
+    if (antes.length !== despues.length) salida.push({ ruta, antes: `${antes.length} elementos`, despues: `${despues.length} elementos`, clase: 'estructura' });
+    else antes.forEach((valor, i) => diferenciasEntre(valor, despues[i], [...ruta, i], salida));
+    return;
+  }
+  if (antes && typeof antes === 'object') {
+    for (const clave of new Set([...Object.keys(antes), ...Object.keys(despues)])) {
+      if (CLAVES_IGNORADAS.has(clave)) continue;
+      if (clave === 'name' && ruta.includes('credentials')) continue; // La credencial se compara por id.
+      diferenciasEntre(antes[clave], despues[clave], [...ruta, clave], salida);
+    }
+    return;
+  }
+  if (antes !== despues) salida.push({ ruta, antes, despues, clase: 'valor' });
+}
+
+const rutaLegible = (ruta) => ruta.map((p) => (typeof p === 'number' ? `[${p}]` : `.${p}`)).join('').replace(/^\./, '');
+
+// Devuelve cada diferencia entre producción (antes) y la copia DEV (despues). Ignora lo que siempre
+// difiere entre copias (id, nombre, tags, versionId, meta, descripción, posición en el canvas).
+function compararWorkflows(dev, produccion, parejas, { sinCredenciales = false } = {}) {
+  const salida = [];
+  const agregar = (donde, nodo, lista) => lista.forEach((d) => salida.push({ ...d, donde, nodo, partes: d.ruta, ruta: rutaLegible(d.ruta) }));
+  // El pin data no se compara: es de la copia DEV, para probar, y no llega a producción (el modo texto
+  // revisa aparte que no traiga claves). El id interno de cada nodo tampoco: n8n lo genera en cada copia,
+  // y las conexiones y $('...') usan el nombre.
+  for (const clave of ['connections', 'settings']) {
+    const lista = [];
+    diferenciasEntre(produccion[clave] || {}, dev[clave] || {}, [], lista);
+    agregar(clave, null, lista);
+  }
+  const nodosProduccion = new Map(produccion.nodes.map((n) => [n.name, n]));
+  const nodosDev = new Map(dev.nodes.map((n) => [n.name, n]));
+  for (const nombre of new Set([...nodosProduccion.keys(), ...nodosDev.keys()])) {
+    const antes = nodosProduccion.get(nombre);
+    const despues = nodosDev.get(nombre);
+    if (!antes || !despues) {
+      salida.push({ donde: `nodo \`${nombre}\``, nodo: null, ruta: '', antes: antes ? 'existe' : 'no existe', despues: despues ? 'existe' : 'no existe', clase: 'estructura' });
+      continue;
+    }
+    const lista = [];
+    const sinNombre = (n) => {
+      const copia = { ...n, notes: n.notes || '' }; // Agregar una nota donde no había es un cambio de texto.
+      delete copia.name;
+      delete copia.id;
+      if (sinCredenciales) delete copia.credentials;
+      if (n.type === 'n8n-nodes-base.stickyNote' && n.parameters) {
+        copia.parameters = { ...n.parameters };
+        for (const clave of PARAMETROS_DE_NOTA_IGNORADOS) delete copia.parameters[clave];
+      }
+      return copia;
+    };
+    diferenciasEntre(sinNombre(antes), sinNombre(despues), [], lista);
+    agregar(`nodo \`${nombre}\``, { antes, despues }, lista);
+  }
+  // Una pareja DEV solo se tolera en el workflowId de un executeWorkflow o toolWorkflow.
+  const apuntaASubWorkflow = (d) => d.nodo && /\.(executeWorkflow|toolWorkflow)$/.test(d.nodo.despues.type) && d.partes[0] === 'parameters' && d.partes[1] === 'workflowId';
+  for (const d of salida) d.tolerada = d.clase === 'texto' && apuntaASubWorkflow(d) && parejas.has(`${d.antes}=${d.despues}`);
+  return salida;
+}
+
+const normalizarTexto = (texto) => sinAcentos(String(texto)).toLowerCase().replace(/\s+/g, ' ').trim();
+const LITERALES = /'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)"|`((?:[^`\\]|\\.)*)`/g;
+const TIPOS_IA = /@n8n\/n8n-nodes-langchain\.|n8n-nodes-base\.openAi$/;
+const CAMPOS_CODIGO = ['code', 'ok', 'retryable', 'schema_version', 'status', 'intent', 'type'];
+const UPPER_SNAKE = /^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$/;
+const NO_ES_LENGUAJE = [/https?:\/\//i, /\bwww\./i, /^[\w.%+-]+@[\w.-]+\.[a-z]{2,}$/i, /^[-+]?\d+([.,]\d+)?$/, /^\s*[{[]/, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, /^(true|false|null)$/i];
+
+const esValorSetLiteral = (nodo, ruta) => nodo.type === 'n8n-nodes-base.set' && ruta.length === 5 && ruta[0] === 'parameters' && ruta[1] === 'assignments' && ruta[2] === 'assignments' && ruta[4] === 'value';
+
+// Textos de un workflow donde un texto viejo puede funcionar como contrato: condiciones, expresiones,
+// código, prompts, queries. Quedan fuera las notas y los valores literales de Edit Fields (son mensajes).
+function textosDeContrato(workflow) {
+  const textos = [];
+  for (const nodo of workflow.nodes || []) {
+    if (nodo.type === 'n8n-nodes-base.stickyNote') continue;
+    const recorrer = (valor, ruta) => {
+      if (typeof valor === 'string') {
+        const literalDeSet = esValorSetLiteral(nodo, ruta) && !valor.startsWith('=');
+        if (!literalDeSet) textos.push({ nodo: nodo.name, texto: valor, esCodigo: valor.startsWith('=') || /^(jsCode|pythonCode|functionCode|code)$/.test(ruta[ruta.length - 1]) || TIPOS_IA.test(nodo.type) });
+      } else if (Array.isArray(valor)) valor.forEach((v, i) => recorrer(v, [...ruta, i]));
+      else if (valor && typeof valor === 'object') for (const [clave, v] of Object.entries(valor)) if (!CLAVES_IGNORADAS.has(clave)) recorrer(v, [...ruta, clave]);
+    };
+    recorrer(nodo.parameters || {}, ['parameters']);
+  }
+  return textos;
+}
+
+// ¿El texto viejo aparece donde algo podría compararlo? Busca en las dos direcciones, sin mayúsculas
+// ni acentos: el texto viejo dentro de otro texto, y cualquier literal de 8+ caracteres dentro del viejo
+// (atrapa `.includes('No encontre informacion')`).
+function usosComoContrato(textoViejo, fuentes) {
+  const viejo = normalizarTexto(textoViejo);
+  const usos = [];
+  for (const { origen, textos } of fuentes) {
+    for (const { nodo, texto, esCodigo } of textos) {
+      const completo = normalizarTexto(texto);
+      const literales = esCodigo ? [...texto.matchAll(LITERALES)].map((m) => m[1] || m[2] || m[3] || '') : [texto];
+      if ((viejo && completo.includes(viejo)) || literales.some((l) => normalizarTexto(l).length >= 8 && viejo.includes(normalizarTexto(l)))) usos.push(`${origen} → \`${nodo}\``);
+    }
+  }
+  return [...new Set(usos)];
+}
+
+function textosDeOtrosWorkflows(repo, idsPropios, nombrePropio) {
+  const carpeta = path.join(repo, 'workflows');
+  if (!fs.existsSync(carpeta)) return null;
+  const fuentes = [];
+  for (const archivo of fs.readdirSync(carpeta).filter((a) => a.endsWith('.json'))) {
+    let otro;
+    try { otro = JSON.parse(fs.readFileSync(path.join(carpeta, archivo), 'utf8').replace(/^﻿/, '')); } catch { continue; }
+    if (!Array.isArray(otro.nodes) || idsPropios.includes(otro.id) || nombreDeProduccion(otro.name || '') === nombrePropio) continue;
+    fuentes.push({ origen: `workflows/${archivo}`, textos: textosDeContrato(otro) });
+  }
+  return fuentes;
+}
+
+// Decide una diferencia de texto: null si es permitida, o el motivo del rechazo.
+function motivoDeRechazo(d, dev, fuentes) {
+  if (d.tolerada) return null;
+  if (d.clase !== 'texto' || !d.nodo) return d.clase === 'texto' ? `cambia un texto en \`${d.donde}\`, que no es una ubicación permitida` : 'diferencia estructural';
+  const { antes: nodoAntes, despues: nodo } = d.nodo;
+  const ruta = d.partes;
+  const nuevos = [d.despues];
+  const secretoOPersonal = () => {
+    if (nuevos.some((t) => PATRONES_SECRETO.some((p) => p.test(t)))) return 'el texto nuevo tiene forma de clave o token (criterio 12)';
+    const viejosContacto = new Set([...(d.antes.match(CORREO) || []), ...(d.antes.match(TELEFONO) || [])]);
+    const nuevosContacto = [...(d.despues.match(CORREO) || []), ...(d.despues.match(TELEFONO) || [])].filter((c) => !viejosContacto.has(c));
+    return nuevosContacto.length ? `el texto nuevo agrega un correo o teléfono (${lista(nuevosContacto)}; criterio 12)` : null;
+  };
+
+  if (d.ruta === 'notes' || (nodo.type === 'n8n-nodes-base.stickyNote' && d.ruta === 'parameters.content')) return secretoOPersonal();
+  if (!esValorSetLiteral(nodo, ruta)) return `\`${d.ruta}\` no es una ubicación permitida (solo valores literales de Edit Fields, notas de nodo y notas adhesivas)`;
+
+  const asignacion = (n) => n.parameters.assignments.assignments[ruta[3]];
+  const actual = asignacion(nodo);
+  const anterior = asignacion(nodoAntes);
+  if (actual.type !== 'string' || anterior.type !== 'string') return 'la asignación no es de tipo string';
+  if (d.antes.startsWith('=') || d.despues.startsWith('=')) return 'es una expresión: cambiar su texto puede cambiar la lógica';
+  if (CAMPOS_CODIGO.includes(actual.name)) return `el campo \`${actual.name}\` es un código del contrato entre workflows`;
+  if (UPPER_SNAKE.test(d.antes.trim()) || UPPER_SNAKE.test(d.despues.trim())) return 'el valor tiene forma de código (UPPER_SNAKE_CASE)';
+  for (const valor of [d.antes, d.despues]) {
+    if (!/\s/.test(valor.trim()) || NO_ES_LENGUAJE.some((p) => p.test(valor.trim()))) return `\`${valor.slice(0, 60)}\` no parece un texto para personas (URL, correo, número, JSON, ID o una sola palabra)`;
+  }
+  const secreto = secretoOPersonal();
+  if (secreto) return secreto;
+
+  const { salientes } = construirGrafo(dev);
+  const porNombre = new Map(dev.nodes.map((n) => [n.name, n]));
+  const siguientesIA = ((salientes.get(nodo.name) || {}).main || []).flat().map((x) => porNombre.get(x && x.node)).filter((n) => n && TIPOS_IA.test(n.type));
+  if (siguientesIA.length) return `el nodo prepara la entrada de ${lista(siguientesIA.map((n) => n.name))}: su texto es parte de un prompt`;
+  const campo = new RegExp(`\\b${actual.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+  const lectoresIA = dev.nodes.filter((n) => TIPOS_IA.test(n.type) && textosDe(n.parameters).some((t) => campo.test(t)));
+  if (lectoresIA.length) return `el campo \`${actual.name}\` lo lee ${lista(lectoresIA.map((n) => n.name))}: su texto es parte de un prompt`;
+
+  const usos = usosComoContrato(d.antes, fuentes);
+  if (usos.length) return `el texto viejo se usa como contrato en ${usos.join(', ')}`;
+  return null;
+}
+
+function revisarTexto(dev, opciones) {
+  const publicado = leerWorkflow(opciones.publicado);
+  const bloqueos = [];
+  if (publicado.versionId !== opciones['version-publicada']) bloqueos.push(`la base de comparación no es la versión publicada: su \`versionId\` es \`${publicado.versionId || 'sin versionId'}\` y el publicado es \`${opciones['version-publicada']}\``);
+  if (publicado.id && publicado.id !== opciones['workflow-id']) bloqueos.push(`\`--publicado\` es el workflow \`${publicado.id}\`, no el de producción \`${opciones['workflow-id']}\``);
+  if (dev.name !== `${nombreDeProduccion(publicado.name || '')} - DEV`) bloqueos.push(`\`${dev.name}\` no es la copia DEV de \`${publicado.name}\``);
+  const fuentesRepo = textosDeOtrosWorkflows(opciones.repo, [publicado.id, dev.id].filter(Boolean), nombreDeProduccion(publicado.name || ''));
+  if (PATRONES_SECRETO.some((p) => p.test(JSON.stringify(dev.pinData || {})))) bloqueos.push('el pin data de la copia DEV contiene un texto con forma de clave o token (criterio 12)');
+  if (fuentesRepo === null) bloqueos.push(`no existe \`workflows/\` en ${opciones.repo}: sin los demás workflows no se puede buscar el texto viejo en ellos`);
+  const fuentes = [{ origen: 'este workflow', textos: textosDeContrato(dev) }, ...(fuentesRepo || [])];
+
+  const diferencias = compararWorkflows(dev, publicado, opciones.parejas);
+  for (const d of diferencias) d.motivo = motivoDeRechazo(d, dev, fuentes);
+  const cambios = diferencias.filter((d) => !d.tolerada);
+  if (!cambios.length) bloqueos.push('la copia DEV no tiene diferencias con producción: no hay nada que publicar');
+  const rechazadas = diferencias.filter((d) => d.motivo);
+  return { publicado, diferencias, bloqueos, exento: !bloqueos.length && !rechazadas.length };
+}
+
+function imprimirTexto(dev, { publicado, diferencias, bloqueos, exento }, opciones) {
+  const corto = (v) => {
+    const texto = typeof v === 'string' ? v : JSON.stringify(v);
+    return `\`${(texto === undefined ? '—' : texto.length > 90 ? `${texto.slice(0, 87)}...` : texto).replace(/\|/g, '\\|').replace(/\n/g, ' ').replace(/`/g, "'")}\``;
+  };
+  const salida = [
+    `## Verificación de cambio de solo texto — \`${dev.name}\``, '',
+    `versionId de la copia DEV: \`${dev.versionId || 'sin versionId'}\` · producción: \`${publicado.versionId || 'sin versionId'}\` (publicada: \`${opciones['version-publicada']}\`)`, '',
+  ];
+  if (diferencias.length) {
+    salida.push('| # | Dónde | Campo | Antes (producción) | Después (copia DEV) | Veredicto |', '|---|---|---|---|---|---|');
+    diferencias.forEach((d, i) => salida.push(`| ${i + 1} | ${d.donde} | \`${d.ruta || '—'}\` | ${corto(d.antes)} | ${corto(d.despues)} | ${d.tolerada ? 'Pareja DEV declarada' : d.motivo ? `Rechazada: ${d.motivo.replace(/\|/g, '\\|')}` : 'Permitida'} |`));
+  }
+  if (opciones.parejas.size) salida.push('', `Parejas DEV declaradas (--mapa-dev): ${lista([...opciones.parejas])}.`);
+  if (bloqueos.length) salida.push('', ...bloqueos.map((b) => `- Bloqueo: ${b}.`));
+  salida.push('', exento ? 'Resultado: EXENTO_TEXTO — no hace falta el revisor aislado (sección 5.1 del protocolo).' : 'Resultado: NO EXENTO — corre el Gate completo (Pasos 2 a 4).');
+  process.stdout.write(`${salida.join('\n')}\n`);
 }
 
 const NOMBRES_CRITERIOS = {
@@ -516,4 +770,23 @@ function imprimir(workflow, { resultados, hallazgos }, modo) {
 
 const opciones = leerArgumentos();
 const workflow = leerWorkflow(opciones.json);
-imprimir(workflow, opciones.modo === 'antes' ? revisarAntes(workflow, opciones) : revisarDespues(workflow, opciones), opciones.modo);
+if (opciones.modo === 'texto') {
+  const resultado = revisarTexto(workflow, opciones);
+  // La marca se registra antes de imprimir: si no se puede escribir, la salida nunca dice "exento".
+  // --registrar no es solo para probar el script: sin marca no se puede publicar.
+  let registro = '\nSin marca registrada (--registrar no): solo diagnóstico, no permite publicar.';
+  if (resultado.exento && opciones.registrar !== 'no') {
+    const sha256 = crypto.createHash('sha256').update(fs.readFileSync(opciones.json)).digest('hex');
+    try {
+      require('./marca').escribirMarca(opciones['workflow-id'], 'EXENTO_TEXTO', { version_dev: workflow.versionId, dev_id: workflow.id, sha256 }, opciones.repo);
+    } catch {
+      salirConUso(`No se pudo registrar la marca: ${opciones.repo} no es un repo git. No hay exención.`);
+    }
+    registro = `\nVEREDICTO: EXENTO_TEXTO registrado para el workflow ${opciones['workflow-id']} (copia DEV ${workflow.versionId}, sha256 ${sha256}).`;
+  }
+  imprimirTexto(workflow, resultado, opciones);
+  if (!resultado.exento) process.exit(3);
+  process.stdout.write(`${registro}\n`);
+} else {
+  imprimir(workflow, opciones.modo === 'antes' ? revisarAntes(workflow, opciones) : revisarDespues(workflow, opciones), opciones.modo);
+}

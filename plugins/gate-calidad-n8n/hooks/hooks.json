@@ -1,5 +1,5 @@
 {
-  "description": "Bloquea publish_workflow del MCP de n8n sin veredicto del Gate de Calidad N8N de las últimas 24 horas.",
+  "description": "Bloquea publish_workflow del MCP de n8n sin veredicto del Gate de Calidad N8N de las últimas 24 horas, o si la copia DEV cambió después del veredicto.",
   "hooks": {
     "PreToolUse": [
       {

@@ -2,6 +2,10 @@
 
 *Polaria | Técnico*
 
+| Versión | Creado por | Aprobado por | Fecha |
+|---|---|---|---|
+| v2.2 | Responsable Metodología | Responsable Metodología | 06/10/2026 |
+
 ## Glosario
 
 | Término | Significado |
@@ -19,9 +23,9 @@
 | Pin data | Datos de entrada fijados en un nodo para repetir una prueba sin llamar al sistema de origen. Solo se usa en ejecuciones manuales. |
 | Idempotencia | Propiedad de un workflow que, si recibe dos veces el mismo evento, produce el mismo resultado que si lo hubiera recibido una sola vez. |
 | `versionId` | Identificador que n8n asigna a cada versión guardada de un workflow; aparece dentro del JSON exportado. |
-| JSON exportado (o descargado) | El archivo que baja n8n desde el menú del workflow → **Download**. Trae nodos, conexiones, settings, tags, pin data y `versionId`. |
+| JSON exportado (o descargado) | El JSON completo de un workflow: nodos, conexiones, settings, tags, pin data y `versionId`. Lo baja el script `descargar-workflow.js` del Gate de Calidad N8N por la API de n8n, o el menú del workflow → **Download**. |
 | Copia DEV (copia de desarrollo) | Copia del workflow donde se construye y prueba un cambio antes de pasarlo a producción (P5). |
-| Veredicto | Resultado del Gate de Calidad N8N: `APROBADO`, `RECHAZADO` o `RECHAZADO_JUSTIFICADO` (rechazado, con cada `FAIL` justificado por escrito como falso positivo). |
+| Veredicto | Resultado del Gate de Calidad N8N: `APROBADO`, `RECHAZADO`, `RECHAZADO_JUSTIFICADO` (rechazado, con cada `FAIL` justificado por escrito como falso positivo) o `EXENTO_TEXTO` (el script del gate demostró que el cambio es de solo texto). |
 | Perfil | Conjunto de reglas que depende del hosting de n8n. El vigente es n8n Cloud, plan Starter. |
 
 ## 1. Contexto
@@ -48,11 +52,11 @@ Quien construye trabaja en la copia de desarrollo del workflow (4.2, P5) aplican
 
 **Paso 2**
 
-Quien construye descarga el JSON de la copia de desarrollo (menú del workflow → **Download**) y la revisa con el Gate de Calidad N8N contra los Criterios de aceptación "antes de publicar". El reporte va al issue de Linear.
+Quien construye revisa la copia de desarrollo con el Gate de Calidad N8N contra los Criterios de aceptación "antes de publicar" (el gate descarga el JSON). Si el cambio es de solo texto, el script del gate lo demuestra y no hace falta el revisor (sección 5.1 del Gate). El reporte va al issue de Linear.
 
 **Criterio de salida:**
 
-- El veredicto del gate es `APROBADO`, o `RECHAZADO_JUSTIFICADO` con la justificación de cada `FAIL`, y el reporte completo está en Linear.
+- El veredicto del gate es `APROBADO`, `RECHAZADO_JUSTIFICADO` con la justificación de cada `FAIL`, o `EXENTO_TEXTO`, y el reporte completo está en Linear.
 
 **Paso 3**
 
@@ -198,7 +202,7 @@ Los tres niveles son obligatorios; no son alternativas.
 | Regla | Por qué existe |
 |---|---|
 | Cada workflow tiene su JSON en `workflows/` del repo del proyecto, con el nombre del workflow en minúsculas y guiones (ej. `workflows/rag-indexar-manual-de-usuario-supabase.json`). | Git es el único historial que no depende del plan de n8n y permite comparar versiones. |
-| El mismo día de cada publicación, quien publicó exporta el JSON (menú del workflow → **Download**), reemplaza el archivo en `workflows/` y hace commit. | Si el JSON del repo no coincide con lo publicado, git deja de servir como respaldo. |
+| El mismo día de cada publicación, quien publicó exporta el JSON del workflow de producción (`node <raíz del plugin gate-calidad-n8n>/scripts/descargar-workflow.js <ID> --salida workflows/<archivo>.json` o menú del workflow → **Download**), reemplaza el archivo en `workflows/` y hace commit. | Si el JSON del repo no coincide con lo publicado, git deja de servir como respaldo. |
 | El commit y la entrada del `CHANGELOG.md` del proyecto citan el `versionId` publicado. | Relaciona cada cambio de git con la versión exacta de n8n. |
 
 #### N10. Entornos
@@ -234,7 +238,7 @@ Los tres niveles son obligatorios; no son alternativas.
 
 ### 4.2 Perfil n8n Cloud, plan Starter (vigente)
 
-El plan Starter incluye 2.500 ejecuciones al mes, guarda el historial de ejecuciones 1 día y no tiene entornos, integración con git, API pública ni auditoría de seguridad. Estas reglas compensan esos límites.
+El plan Starter incluye 2.500 ejecuciones al mes, guarda el historial de ejecuciones 1 día y no tiene entornos, integración con git ni auditoría de seguridad. Sí tiene API pública (**Settings → n8n API**), con claves de permisos configurables. Estas reglas compensan esos límites.
 
 | # | Regla | Por qué existe |
 |---|---|---|
@@ -244,7 +248,7 @@ El plan Starter incluye 2.500 ejecuciones al mes, guarda el historial de ejecuci
 | P4 | La lógica reutilizable o pesada va en sub-workflows. | Los sub-workflows no consumen ejecuciones del plan: modularizar no cuesta. |
 | P5 | Entornos: la copia de desarrollo se llama igual que la de producción más ` - DEV`, lleva el tag `desarrollo` y nunca se publica; se prueba solo con ejecuciones manuales. Para pasar a producción: descargar el JSON de la copia DEV, importarlo en el workflow de producción (menú del workflow → **Import from File**), verificar las credenciales de cada nodo y publicar. Después se aplica N9. | Starter no tiene entornos; las ejecuciones manuales no cuentan para el plan. |
 | P6 | Como el historial dura 1 día, el Error Handler envía la información completa de N7 en la propia notificación, sin depender de que el enlace a la ejecución siga vivo. | Un error de un viernes ya no tiene ejecución que revisar el lunes. |
-| P7 | Como Starter no tiene API ni auditoría de seguridad, la verificación de N8 se hace sobre el JSON exportado, dentro de los Criterios de aceptación. | Es el único punto donde se puede revisar la seguridad de forma sistemática en este plan. |
+| P7 | Como Starter no tiene auditoría de seguridad, la verificación de N8 se hace sobre el JSON exportado, dentro de los Criterios de aceptación. | Es el único punto donde se puede revisar la seguridad de forma sistemática en este plan. |
 
 ## Criterios de aceptación
 
@@ -279,7 +283,7 @@ El plan Starter incluye 2.500 ejecuciones al mes, guarda el historial de ejecuci
 
 | # | Criterio | Falla si… |
 |---|---|---|
-| 23 | Git | El `versionId` del JSON en `workflows/` no coincide con el que muestra n8n para la versión publicada, el archivo no sigue el nombre de N9, o el commit y el `CHANGELOG.md` no citan ese `versionId`. |
+| 23 | Git | El `versionId` del JSON en `workflows/` no coincide con el que muestra n8n para la versión publicada, el archivo no sigue el nombre de N9, o el commit y el `CHANGELOG.md` no citan ese `versionId`, o lo publicado no es la copia DEV que revisó el gate (sin contar nombre, tags, descripción, posición en el canvas, id interno de los nodos, pin data, credenciales ni los IDs de las copias DEV a las que apunta). |
 
 Aplicación: el criterio 8 no aplica al propio Error Handler y el criterio 9 solo aplica a él; los criterios 5 y 7 solo aplican a workflows con trigger de evento. Quedan fuera de la revisión, por no poder verificarse sobre el JSON, la tabla de reintentos de N7 (salvo el Retry On Fail de HTTP Request, criterio 22), las notas de nodo de N12 y P4.
 
@@ -288,12 +292,6 @@ Aplicación: el criterio 8 no aplica al propio Error Handler y el criterio 9 sol
 | Protocolo | Cuándo se activa |
 |---|---|
 | Protocolo de Construcción de Producto desde Cero | Paso 10: estos estándares son la base de la constitución de spec-kit de todo proyecto n8n. |
-| Gate de Calidad N8N | Pasos 2 y 3: evalúa los Criterios de aceptación antes y después de publicar. |
+| Gate de Calidad N8N v1.1 | Pasos 2 y 3: evalúa los Criterios de aceptación antes y después de publicar, o demuestra que el cambio es de solo texto. |
 | Guía de Documentación | N12: estructura del documento técnico en `docs/`. |
 | Protocolo de Construcción de Agentes de IA en N8N | Cuando el workflow incluye agentes de IA. |
-
-## Versión y revisión
-
-v2.1 · aprobada el 24/09/2026 · Responsable Técnico · próxima revisión: al cambiar de plan o de hosting de n8n, o a los 6 meses de aprobada.
-
-_Historial: v2.0 (24/09/2026) núcleo común, perfil Cloud Starter y 19 criterios. v2.1: el Paso 2 pasa al Gate de Calidad N8N; 4 criterios nuevos tomados de la auditoría de seguridad de n8n y de linters de workflows (nodos de riesgo, SQL con expresiones, nodos sueltos, reintentos HTTP); ramas If/Switch en el criterio 10; nodos con verbo en español (N2) y tag `desarrollo` de la copia DEV en el criterio 2; la entrada del `CHANGELOG.md` se escribe en el Paso 1; el Error Handler tiene repo propio (N4); el criterio de git pasa del 19 al 23._

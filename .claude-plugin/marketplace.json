@@ -56,7 +56,7 @@
       "displayName": "Construccion de Producto desde Cero (Polaria)",
       "source": "construccion-desde-cero",
       "description": "Lleva una iniciativa nueva desde la idea hasta Versionamiento e inicializa la carpeta del proyecto (git, spec-kit, plugins, docs/) para software o n8n. Instalar a nivel de usuario.",
-      "version": "1.1.2",
+      "version": "1.1.3",
       "author": { "name": "Polaria Tech" },
       "keywords": ["construccion-desde-cero", "inicializar-proyecto", "spec-kit", "n8n", "polaria"],
       "defaultEnabled": false
@@ -65,8 +65,8 @@
       "name": "gate-calidad-n8n",
       "displayName": "Gate de Calidad N8N (Polaria)",
       "source": "gate-calidad-n8n",
-      "description": "Revisa la copia DEV de un workflow de n8n antes de publicarlo (script + subagente revisor aislado + veredicto en Linear) y bloquea publish_workflow del MCP de n8n sin veredicto.",
-      "version": "1.0.1",
+      "description": "Revisa la copia DEV de un workflow de n8n antes de publicarlo (descarga por API + exencion de solo texto por script + subagente revisor aislado + veredicto en Linear) y bloquea publish_workflow del MCP de n8n sin veredicto.",
+      "version": "1.1.0",
       "author": { "name": "Polaria Tech" },
       "keywords": ["gate", "n8n", "workflows", "calidad", "polaria"],
       "defaultEnabled": false
