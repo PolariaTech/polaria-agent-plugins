@@ -8,6 +8,8 @@
 //   actualizados en cada sesión.
 // - Escribe <hooks>/pre-push, que ejecuta esa copia. Nunca pisa un pre-push ajeno ni escribe
 //   dentro del repo versionado (core.hooksPath de husky u otro): en esos casos solo avisa.
+// - Solo instala en repos de software (es-repo-de-software.js). En cualquier otro repo no instala
+//   nada y borra lo que haya dejado una instalación anterior: su pre-push y <git-common-dir>/polaria-gate/.
 //
 // Nunca bloquea la sesión: siempre sale con 0. Los avisos van por stdout en Claude Code (entran
 // al contexto) y por stderr en Cursor (su stdout debe ser JSON).
@@ -15,6 +17,7 @@
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { esRepoDeSoftware } = require('./es-repo-de-software');
 
 const MARCA_HOOK = 'polaria-gate-calidad-tecnica';
 const CONTENIDO_PRE_PUSH = [
@@ -48,17 +51,32 @@ function instalar(directorio) {
 
   let directorioComun;
   let directorioHooks;
+  let raizDelRepo;
   try {
     directorioComun = path.resolve(directorio, git('rev-parse', '--git-common-dir'));
     directorioHooks = path.resolve(directorio, git('rev-parse', '--git-path', 'hooks'));
+    raizDelRepo = git('rev-parse', '--show-toplevel');
   } catch {
     terminar(); // No es un repo git: no hay push que proteger.
   }
 
-  // Los scripts se copian aunque el pre-push no se pueda instalar: la skill los usa igual.
   const carpetaGate = path.join(directorioComun, 'polaria-gate');
+  const prePush = path.join(directorioHooks, 'pre-push');
+
+  if (!esRepoDeSoftware(raizDelRepo)) {
+    // Repo de documentación, de plugins o de workflows n8n: el gate no aplica.
+    try {
+      if (fs.readFileSync(prePush, 'utf8').includes(MARCA_HOOK)) fs.unlinkSync(prePush);
+    } catch {
+      // No hay pre-push: nada que borrar.
+    }
+    fs.rmSync(carpetaGate, { recursive: true, force: true });
+    terminar();
+  }
+
+  // Los scripts se copian aunque el pre-push no se pueda instalar: la skill los usa igual.
   fs.mkdirSync(carpetaGate, { recursive: true });
-  for (const script of ['verificar-gate.js', 'registrar-veredicto.js']) {
+  for (const script of ['verificar-gate.js', 'registrar-veredicto.js', 'es-repo-de-software.js']) {
     fs.copyFileSync(path.join(__dirname, script), path.join(carpetaGate, script));
   }
   // Los scripts son CommonJS: sin esto heredan el "type": "module" del package.json del repo y fallan.
@@ -72,7 +90,6 @@ function instalar(directorio) {
     );
   }
 
-  const prePush = path.join(directorioHooks, 'pre-push');
   let actual = null;
   try {
     actual = fs.readFileSync(prePush, 'utf8');

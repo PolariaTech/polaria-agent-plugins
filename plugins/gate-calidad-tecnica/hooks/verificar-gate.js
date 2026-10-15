@@ -10,10 +10,20 @@
 // git pre-push (--git-pre-push, instalado por instalar-pre-push.js): recibe por stdin una línea
 //   "<ref local> <sha local> <ref remota> <sha remota>" por cada ref; salida distinta de 0 = bloquea.
 //   Cubre el push que la IA no ve: terminal, panel de Git del editor o una IA sin el plugin cargado.
+// En un repo que no es de software (es-repo-de-software.js) deja pasar siempre: el gate no aplica.
 
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+
+// Si falta el módulo (copia incompleta en .git/polaria-gate/), se asume repo de software: bloquear
+// de más es preferible a dejar pasar un cambio de código sin revisión.
+let esRepoDeSoftware = () => true;
+try {
+  ({ esRepoDeSoftware } = require('./es-repo-de-software'));
+} catch {
+  // Se queda la versión que siempre verifica.
+}
 
 const VEREDICTOS_QUE_PERMITEN_PUSH = /^VEREDICTO: (APROBADO|RECHAZADO_JUSTIFICADO)\s*$/;
 const SHA_VACIO = /^0+$/;
@@ -60,9 +70,10 @@ function mensajeSinVeredicto(commit) {
 
 // git ejecuta el hook desde la raíz del repo; cada línea de stdin es una ref que se va a publicar.
 function verificarPrePushDeGit(entrada) {
-  const directorioGit = path.resolve(
-    execFileSync('git', ['rev-parse', '--git-dir'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
-  );
+  const git = (...argumentos) =>
+    execFileSync('git', argumentos, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+  if (!esRepoDeSoftware(git('rev-parse', '--show-toplevel'))) process.exit(0);
+  const directorioGit = path.resolve(git('rev-parse', '--git-dir'));
   for (const linea of entrada.split(/\r?\n/)) {
     const [refLocal, shaLocal] = linea.trim().split(/\s+/);
     if (!refLocal || !shaLocal) continue;
@@ -95,12 +106,15 @@ function verificarEventoDelAgente(evento) {
 
   let commitActual;
   let directorioGit;
+  let raizDelRepo;
   try {
     commitActual = git('rev-parse', 'HEAD');
     directorioGit = path.resolve(directorio, git('rev-parse', '--git-dir'));
+    raizDelRepo = git('rev-parse', '--show-toplevel');
   } catch {
     return permitir(); // Fuera de un repo git: el push fallará solo, no hay nada que verificar.
   }
+  if (!esRepoDeSoftware(raizDelRepo)) return permitir();
 
   if (tieneVeredicto(directorioGit, commitActual)) return permitir();
   return bloquear(mensajeSinVeredicto(commitActual));
