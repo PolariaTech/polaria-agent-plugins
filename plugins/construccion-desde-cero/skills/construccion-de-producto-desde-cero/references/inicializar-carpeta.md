@@ -78,7 +78,8 @@ Espera su confirmación explícita antes de crear cualquier archivo.
   "enabledPlugins": {
     "gate-calidad-tecnica@polaria-agent-plugins": true,
     "auditoria-tecnica@polaria-agent-plugins": true,
-    "gestion-linear@polaria-agent-plugins": true
+    "gestion-linear@polaria-agent-plugins": true,
+    "nomenclatura-credenciales@polaria-agent-plugins": true
   }
 }
 ```

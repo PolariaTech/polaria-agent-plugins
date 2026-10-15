@@ -1,0 +1,13 @@
+{
+  "name": "nomenclatura-credenciales",
+  "displayName": "Nomenclatura de Credenciales (Polaria)",
+  "version": "1.0.0",
+  "description": "Pone nombre a cada cuenta, cuenta de prueba o demo, API key, token, credencial de n8n o cuenta de servicio nueva segun el Protocolo de Nomenclatura de Credenciales v1.0, y dice donde registrarla sin exponer el secreto.",
+  "author": {
+    "name": "Polaria Tech",
+    "url": "https://polaria.tech"
+  },
+  "homepage": "https://github.com/PolariaTech/polaria-agent-plugins",
+  "keywords": ["credenciales", "nomenclatura", "secretos", "cuentas", "polaria"],
+  "defaultEnabled": false
+}

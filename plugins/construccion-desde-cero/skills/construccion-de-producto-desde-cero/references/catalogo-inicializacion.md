@@ -2,7 +2,7 @@
 
 Referencia del Paso 9 de la skill `construccion-de-producto-desde-cero`. Dice, según el medio declarado en el Paso 5, qué protocolos aplican, qué plugins se habilitan, qué documentación se prepara y qué estructura lleva la carpeta. El procedimiento que lo usa está en `inicializar-carpeta.md`.
 
-**Mantenimiento:** este catálogo se actualiza cada vez que se publica o cambia un protocolo o plugin que aplica a proyectos nuevos (regla de `.claude/rules/entrega-protocolos.md` del repo de metodología). Última revisión: 24/09/2026.
+**Mantenimiento:** este catálogo se actualiza cada vez que se publica o cambia un protocolo o plugin que aplica a proyectos nuevos (regla de `.claude/rules/entrega-protocolos.md` del repo de metodología). Última revisión: 15/10/2026.
 
 ## 1. Medios
 
@@ -27,6 +27,7 @@ Referencia del Paso 9 de la skill `construccion-de-producto-desde-cero`. Dice, s
 | Auditoría Técnica de Software y Workflows v1.2 | Sí | Sí | Sí | Plugin `auditoria-tecnica` (requiere spec-kit con las extensiones `bug` y `assess`). |
 | Versionamiento v1.1 | Sí | Sí | Sí | Skill `versionamiento-polaria`, todavía sin plugin: se anota en `AGENTS.md` como pendiente de instalar. |
 | Flujo Linear — Ciclo de Vida | Sí | Sí | Sí | Plugin `gestion-linear`. |
+| Nomenclatura de Credenciales v1.0 | Sí | Sí | Sí | Plugin `nomenclatura-credenciales`. Se activa sola al crear una cuenta, cuenta de prueba o demo, API key, token, credencial de n8n o cuenta de servicio. |
 | Guía de Documentación Extendida v2.0 | Sí | Sí | Sí | `docs/CHECKLIST_DOCUMENTACION.md` (sección 5) y la skill `doc-updater` del plugin `gestion-linear`. |
 
 ## 3. Plugins a habilitar
@@ -40,6 +41,7 @@ Marketplace: `polaria-agent-plugins` (`PolariaTech/polaria-agent-plugins` en Git
 | `auditoria-tecnica` | Sí | Sí |
 | `gestion-linear` | Sí | Sí |
 | `validacion-formularios` | Solo si hay formularios que guardan datos | Solo si el workflow construye formularios propios |
+| `nomenclatura-credenciales` | Sí | Sí |
 
 `construccion-desde-cero` no se habilita en el proyecto: ya está instalado a nivel de usuario.
 

@@ -5,7 +5,7 @@
     "url": "https://polaria.tech"
   },
   "description": "Plugins internos de Polaria para Cursor: auditoria tecnica, protocolos y herramientas de agentes reutilizables entre repos.",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "metadata": {
     "pluginRoot": "./plugins"
   },
@@ -51,7 +51,7 @@
       "displayName": "Construccion de Producto desde Cero (Polaria)",
       "source": "construccion-desde-cero",
       "description": "Lleva una iniciativa nueva desde la idea hasta Versionamiento e inicializa la carpeta del proyecto (git, spec-kit, plugins, docs/) para software o n8n. Instalar a nivel de usuario.",
-      "version": "1.1.3",
+      "version": "1.1.4",
       "author": { "name": "Polaria Tech" },
       "keywords": ["construccion-desde-cero", "inicializar-proyecto", "spec-kit", "n8n", "polaria"]
     },
@@ -63,6 +63,15 @@
       "version": "1.1.0",
       "author": { "name": "Polaria Tech" },
       "keywords": ["gate", "n8n", "workflows", "calidad", "polaria"]
+    },
+    {
+      "name": "nomenclatura-credenciales",
+      "displayName": "Nomenclatura de Credenciales (Polaria)",
+      "source": "nomenclatura-credenciales",
+      "description": "Aplica el Protocolo de Nomenclatura de Credenciales v1.0 de Polaria: nombra cada cuenta, cuenta de prueba o demo, API key, token, credencial de n8n o cuenta de servicio nueva y dice donde registrarla sin exponer el secreto.",
+      "version": "1.0.0",
+      "author": { "name": "Polaria Tech" },
+      "keywords": ["credenciales", "nomenclatura", "secretos", "cuentas", "polaria"]
     }
   ]
 }
