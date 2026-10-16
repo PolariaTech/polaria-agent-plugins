@@ -20,7 +20,7 @@
 
 ## 1. Contexto
 
-Aplica cada vez que alguien crea una credencial en cualquier aplicativo de Polaria o de un cliente: una cuenta de una persona real, una cuenta de prueba o de demo, una API key, un token, una credencial de n8n o una cuenta de servicio. Lo usan quien desarrolla, el Responsable Técnico, quien muestra demos a clientes o prospectos, y las IAs que crean credenciales. Existe porque hoy cada quien nombra las credenciales a su manera: no se distingue a simple vista qué es de prueba y qué es real, en n8n hay credenciales como "Supabase account 2" que se pueden conectar por error a producción, el mismo cliente aparece con nombres distintos en cada herramienta y nadie sabe qué cuentas existen ni dónde están sus contraseñas.
+Aplica cada vez que alguien crea una credencial en cualquier aplicativo de Polaria o de un cliente: una cuenta de prueba o de demo, una API key, un token, una credencial de n8n o una cuenta de servicio. No aplica a las cuentas de personas reales (del equipo de Polaria o del cliente): cada persona usa el correo que ella misma proporciona y este protocolo no le pone nombre. Lo usan quien desarrolla, el Responsable Técnico, quien muestra demos a clientes o prospectos, y las IAs que crean credenciales. Existe porque hoy cada quien nombra las credenciales a su manera: no se distingue a simple vista qué es de prueba y qué es real, en n8n hay credenciales como "Supabase account 2" que se pueden conectar por error a producción, el mismo cliente aparece con nombres distintos en cada herramienta y nadie sabe qué cuentas existen ni dónde están sus contraseñas.
 
 ## 2. Objetivo
 
@@ -30,11 +30,10 @@ Que cualquier persona, técnica o no, sepa al leer el nombre de una credencial a
 
 Lo aplica quien crea la credencial. Si la crea una IA, la skill `nomenclatura-credenciales-polaria` arma el nombre y recuerda dónde registrarla; se instala en cada repo de código desde `polaria-agent-plugins`.
 
-**Paso 1 — Identificar el tipo.** Quien crea la credencial decide cuál de estos cuatro tipos es:
+**Paso 1 — Identificar el tipo.** Quien crea la credencial decide cuál de estos tres tipos es:
 
 | Tipo | Formato | Ejemplo |
 |---|---|---|
-| Cuenta de una persona real (de Polaria o del cliente) | `nombre.apellido@[dominio-del-aplicativo]` | `nombre.apellido@polaria.tech` |
 | Cuenta de prueba o de demo dentro de un cliente real | `[prueba\|demo].[rol][N][.cliente]@[dominio-del-aplicativo]` (N y cliente solo cuando aplican, ver Paso 3) | `prueba.operador.aguacates@polaria.tech` |
 | Cuenta de prueba o de demo en un entorno de prueba (el cliente, la empresa y la cuenta también son de prueba) | `[prueba\|demo].[rol][N]@[dominio-del-aplicativo]` | `prueba.operador@polaria.tech` |
 | API key, token, credencial de n8n o cuenta de servicio | `[aplicativo]-[servicio]-[ambiente]-[cliente]` | `mateosupport-postgres-produccion-polaria` |
@@ -43,7 +42,6 @@ Lo aplica quien crea la credencial. Si la crea una IA, la skill `nomenclatura-cr
 
 **Paso 3 — Armar el nombre.** Quien crea la credencial arma el nombre con el formato del Paso 1 y con estas reglas de cada segmento:
 
-- **Persona real:** sin rol ni cliente; el rol se le asigna dentro del aplicativo. Si ya existe alguien con el mismo nombre y apellido en ese dominio, la segunda persona agrega la inicial de su segundo apellido (`nombre.apellidoinicial`). La primera no cambia.
 - **Prueba o demo:** el rol se escribe tal como existe en el aplicativo, sin abreviar. Si hay varios del mismo rol, se numeran desde el segundo: `operador`, `operador2`, `operador3`. El cliente se omite si el aplicativo tiene un solo cliente (`prueba.operador@nara.com`) o si la cuenta vive en un entorno de prueba, porque ahí no hay cliente real que nombrar.
 - **Key, token, n8n o cuenta de servicio:** el aplicativo va pegado, sin guion interno (`mateosupport`). El servicio es la herramienta a la que se conecta (`postgres`, `supabase`, `openai`, `whatsapp`). El ambiente va siempre y en palabra completa. El cliente va siempre; si el aplicativo es propio, se pone `polaria`, y si todo el entorno es de prueba, se pone `prueba` (`wms-supabase-prueba-prueba`).
 - **Todos:** minúsculas, sin tildes, sin ñ y sin espacios.
@@ -56,24 +54,20 @@ Lo aplica quien crea la credencial. Si la crea una IA, la skill `nomenclatura-cr
 |---|---|
 | Cuenta de prueba o de demo | En el Google Sheet de cuentas de prueba o de demo del aplicativo, en la carpeta de credenciales. Si el aplicativo todavía no tiene uno, se crea como copia de la "Plantilla registro de cuentas (prueba/demo)". |
 | API key, token, credencial de n8n o cuenta de servicio | En el `.xlsx` cifrado con contraseña de la carpeta de credenciales. Solo el Responsable Metodología tiene la contraseña: quien crea la key se la entrega en persona o en una llamada, nunca por chat ni por correo, y el Responsable Metodología la anota. |
-| Cuenta de una persona real | No se registra: la contraseña es solo de esa persona. |
 
 **Paso 6 — Desactivar al terminar.** Cuando un cliente o un proyecto termina, el Responsable Técnico desactiva sus cuentas de prueba y de demo, las marca como desactivadas en el Sheet del aplicativo, revoca sus keys y tokens, y le avisa al Responsable Metodología, que los marca como revocados en el `.xlsx`.
 
 ```mermaid
 flowchart TD
     A["Se necesita una credencial nueva"] --> B{"¿Qué tipo es?"}
-    B -- "Persona real" --> C["nombre.apellido@dominio"]
     B -- "Prueba o demo<br/>en un cliente real" --> D["Consultar o asignar slug<br/>en el Registro de slugs"]
     B -- "Prueba o demo<br/>en entorno de prueba" --> E
     B -- "Key, token, n8n<br/>o cuenta de servicio" --> D
     D --> E["Armar el nombre<br/>con el formato del tipo"]
-    C --> F["Crear la credencial"]
-    E --> F
+    E --> F["Crear la credencial"]
     F --> G{"¿Dónde se registra?"}
     G -- "Prueba o demo" --> H["Google Sheet del aplicativo"]
     G -- "Key, token, n8n<br/>o cuenta de servicio" --> I[".xlsx cifrado"]
-    G -- "Persona real" --> J["No se registra"]
     H --> K["Al terminar el cliente o proyecto:<br/>desactivar y revocar"]
     I --> K
 ```
@@ -82,7 +76,7 @@ flowchart TD
 
 | Regla | Por qué existe |
 |---|---|
-| En producción, cada persona usa su propia cuenta (`nombre.apellido@`). Nunca se crea una cuenta de rol compartida para trabajar con datos reales. | Con una cuenta compartida no se sabe quién hizo qué, y no se le puede quitar el acceso a una sola persona cuando se va. |
+| En producción, cada persona usa su propia cuenta, con el correo que ella proporciona. Nunca se crea una cuenta de rol compartida para trabajar con datos reales. | Con una cuenta compartida no se sabe quién hizo qué, y no se le puede quitar el acceso a una sola persona cuando se va. |
 | `prueba` y `demo` se escriben siempre en palabra completa, nunca abreviados (`qa`, `test`, `dm`). | Cualquier persona, aunque no sea técnica, debe entender al leer el correo que la cuenta no es real. |
 | Nunca se usa un dominio ajeno ni inventado (ej. `@test.com`, `@gmail.com`), y el aplicativo nunca envía correos a cuentas de prueba o de demo. | Un dominio ajeno puede entregar el correo a una persona real. Estas cuentas no tienen buzón: los correos rebotan, y muchos rebotes dañan la reputación del remitente y pueden suspender el envío de correos de todo el aplicativo. |
 | El slug de un cliente es la palabra más distintiva de su nombre (Aguacates de Puebla → `aguacates`); se agrega otra palabra solo si ya existe ese slug en el registro (Aguacates del Norte → `aguacatesnorte`). El slug de un aplicativo es su nombre completo pegado (Mateo Support → `mateosupport`). Nunca es una sigla y, una vez asignado, no cambia. | Una sigla nadie la entiende meses después. Si el slug cambia, el mismo cliente queda con dos nombres en las herramientas y se pierde el rastro de sus credenciales. |
