@@ -73,7 +73,9 @@ editores.
 
 Fuente de verdad de este contenido: `PROTOCOLOS_NUEVOS/AUDITORIA/` del repo de metodologia
 (`METODOLOGIA`) para `auditoria-tecnica`, `PROTOCOLOS_EXISTENTES/GATE_DE_CALIDAD_TECNICA_PRE_MERGE/skill/`
-para `gate-calidad-tecnica`, `PROTOCOLOS_EXISTENTES/PROTOCOLO_DE_VALIDACION_DE_FORMULARIOS/skill/` (mas el protocolo y `SCHEMAS_FORMULARIOS/PLANTILLA_SCHEMA_DE_CAMPOS_v1.1.md` copiados a `references/`) para `validacion-formularios`, `PROTOCOLOS_NUEVOS/PROTOCOLO_DE_CONSTRUCCION_DE_PRODUCTO_DESDE_CERO/skill/` (mas el protocolo copiado a `references/`) para `construccion-desde-cero`, `PROTOCOLOS_NUEVOS/GATE_DE_CALIDAD_N8N/skill/` (mas el protocolo y los Estandares N8N copiados a `references/`) para `gate-calidad-n8n`, `PROTOCOLOS_APROBADOS/PROTOCOLO_NOMENCLATURA_CREDENCIALES/skill/` (mas el protocolo copiado a `references/`) para `nomenclatura-credenciales`, y `~/.cursor/skills/` (revisadas y generalizadas el
-17/09/2026) para `gestion-linear`. Cualquier cambio se hace en la fuente y se vuelve a
-publicar aqui — este repo es el destino de distribucion, nunca donde se edita el contenido
-primero.
+para `gate-calidad-tecnica`, `PROTOCOLOS_EXISTENTES/PROTOCOLO_DE_VALIDACION_DE_FORMULARIOS/skill/` (mas el protocolo y `SCHEMAS_FORMULARIOS/PLANTILLA_SCHEMA_DE_CAMPOS_v1.1.md` copiados a `references/`) para `validacion-formularios`, `PROTOCOLOS_NUEVOS/PROTOCOLO_DE_CONSTRUCCION_DE_PRODUCTO_DESDE_CERO/skill/` (mas el protocolo copiado a `references/`) para `construccion-desde-cero`, `PROTOCOLOS_NUEVOS/GATE_DE_CALIDAD_N8N/skill/` (mas el protocolo y los Estandares N8N copiados a `references/`) para `gate-calidad-n8n`, `PROTOCOLOS_APROBADOS/PROTOCOLO_NOMENCLATURA_CREDENCIALES/skill/` (mas el protocolo copiado a `references/`) para `nomenclatura-credenciales`, y este mismo repo para `gestion-linear` (nacio de
+`~/.cursor/skills/`, revisadas y generalizadas el 17/09/2026, pero desde 1.1.1 se edita
+directo en `plugins/gestion-linear/` y esa copia local quedo desactualizada; historial en
+`plugins/gestion-linear/CHANGELOG.md`). Para el resto de plugins, cualquier cambio se hace en
+la fuente y se vuelve a publicar aqui — este repo es el destino de distribucion, nunca donde
+se edita el contenido primero.

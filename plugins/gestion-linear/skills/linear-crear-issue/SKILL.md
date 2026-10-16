@@ -1,6 +1,6 @@
 ---
 name: linear-crear-issue
-description: "Crea issues en Linear con estructura 5W2H + estimación autónoma para cualquier proyecto de un equipo — trae los IDs (team, labels, estados) del equipo POLARIA como ejemplo/default en su sección \"Configuración rápida\", fáciles de reemplazar para adaptarla a otro equipo o workspace de Linear. Pregunta en qué proyecto trabajar y a quién asignar (en vez de asumir siempre el mismo proyecto activo y su lead) — todo lo demás (estimación, estructura 5W2H, preview antes de crear) funciona igual. Actívala cuando el usuario diga frases como \"crea un issue\", \"registra un requerimiento\", \"abre un ticket\", \"crea un bug\", \"reporta un problema en Linear\", \"agrega un feature\", o cualquier variación que implique crear un issue en Linear."
+description: "Crea issues en Linear con estructura 5W2H + estimación autónoma para cualquier proyecto de un equipo — trae los IDs (team, labels, estados) del equipo POLARIA como ejemplo/default en su sección \"Configuración rápida\", fáciles de reemplazar para adaptarla a otro equipo o workspace de Linear. Pregunta en qué proyecto trabajar y a quién asignar (en vez de asumir siempre el mismo proyecto activo y su lead) — todo lo demás (estimación, estructura 5W2H con sección de Especificación técnica verificable, preview antes de crear) funciona igual. Actívala cuando el usuario diga frases como \"crea un issue\", \"registra un requerimiento\", \"abre un ticket\", \"crea un bug\", \"reporta un problema en Linear\", \"agrega un feature\", o cualquier variación que implique crear un issue en Linear. Actívala también para agregar la Especificación técnica a un issue que ya existe, solo cuando el usuario lo pide explícitamente: \"agrega la sección de specs a POL-X\", \"agrégale la especificación técnica a POL-X\", \"ponle criterios de aceptación a POL-X\"."
 compatibility: "Requiere MCP de Linear conectado. Los nombres de herramienta varían por cliente — ver tabla de mapeo abajo."
 ---
 
@@ -67,6 +67,7 @@ Con el contexto recuperado, construye internamente:
 - **Tipo:** Bug / Feature / Improvement — inferido del contexto. Un issue lleva un único label de Tipo, salvo que resolverlo genuinamente requiera trabajo de otro tipo (p. ej. un Bug cuya solución real exige una Feature) — en ese caso, ambos labels, y dilo explícitamente en el preview.
 - **Prioridad:** Urgent / High / Medium / Low — inferida del contexto, usando el árbol de decisión de Metodología de Trabajo v1.2 si está disponible.
 - **Descripción 5W2H:** ver estructura obligatoria abajo.
+- **Especificación técnica:** DEBES abrir `references/especificacion-tecnica.md` y aplicarlo tal cual — decide la versión (completa / mínima / no aplica), llena la plantilla con sus reglas y pasa su validación antes del preview.
 - **Estimación:** motor de estimación (más abajo). No preguntes nada al usuario para estimar.
 
 No preguntes nada de esto todavía. Construye primero.
@@ -84,6 +85,7 @@ Prioridad:  [Urgent / High / Medium / Low]
 Proyecto:   [proyecto confirmado en el Paso 1]
 Estado:     Backlog
 Asignado a: [persona confirmada en el Paso 1]
+Especificación: [completa / mínima / no aplica (Question)] — [motivo en una línea]
 
 ─────────────────────────────────────
 DESCRIPCIÓN (Markdown — así queda en el campo description de Linear)
@@ -118,6 +120,10 @@ DESCRIPCIÓN (Markdown — así queda en el campo description de Linear)
 
 [Limitaciones de tiempo, dependencias, o "Ninguna"]
 
+## 📐 Especificación técnica
+
+[Plantilla completa o mínima de references/especificacion-tecnica.md, ya validada — se omite solo en Question]
+
 ---
 
 ## ⏱️ Estimación
@@ -137,7 +143,7 @@ DESCRIPCIÓN (Markdown — así queda en el campo description de Linear)
 **Razones:** [por qué esa talla]
 **Riesgos:** [dependencias externas, incertidumbre, o "ninguno relevante"] · **Recomendación:** [dividir issue: sí/no — motivo si aplica]
 
-[Información faltante: solo si aplica]
+[Información faltante: solo si aplica — incluye cada _Pendiente_ de la Especificación técnica]
 ─────────────────────────────────────
 
 ¿Confirmas? (sí / ajusta X cosa)
@@ -180,6 +186,20 @@ Después de crear, confirmar con:
 
 ---
 
+## Agregar la Especificación técnica a un issue existente
+
+**Cuándo:** SOLO cuando el usuario lo pide explícitamente sobre un issue concreto ("agrega la sección de specs a POL-X", "agrégale la especificación técnica a POL-X", "ponle criterios de aceptación a POL-X"). Los issues creados antes de esta versión NUNCA se migran por iniciativa propia, ni en lote.
+
+1. `get_issue` sobre POL-X: descripción completa y comentarios.
+2. Si la descripción ya tiene `## 📐 Especificación técnica`, dilo y pregunta si quiere reemplazarla — no la dupliques.
+3. Construye la sección aplicando `references/especificacion-tecnica.md` tal cual (versión, plantilla, reglas y validación), con el contexto del issue, sus comentarios, la conversación y la documentación del repo.
+4. Muestra un preview SOLO de la sección (más la línea `Especificación: [completa / mínima] — [motivo]` y la "Información faltante" si hay `_Pendiente_`) y pide confirmación.
+5. Con confirmación: `save_issue` con la descripción original **intacta** más la sección insertada justo antes del `---` que precede a `## ⏱️ Estimación`; si el issue no tiene esa sección, al final de la descripción. NUNCA reescribas ni reformatees el resto de la descripción.
+6. `save_comment` en el issue: `Se agregó la sección 📐 Especificación técnica ([completa / mínima]).`
+7. Confirma: `✅ Especificación agregada a POL-X — [N] criterios de aceptación`.
+
+---
+
 ## Estructura 5W2H — guía de redacción
 
 Igual que la versión original: markdown real, headers `##` con emoji fijo, blockquote de metadatos al inicio, tabla de estimación al final. No cambies los emojis ni el orden entre issues.
@@ -193,8 +213,9 @@ Por defecto, el operador identificado en "Primer uso" (o ya conocido de esta ses
 ### `## 🔧 Flujo Principal (How)` — lista numerada, nunca checklist.
 ### `## ⚠️ Flujos Alternativos / Reglas de Negocio` — casos borde, excepciones conocidas.
 ### `## 🚧 Restricciones` — dependencias bloqueantes, limitaciones, fechas.
+### `## 📐 Especificación técnica` — requisitos, criterios de aceptación verificables y fuera de alcance; plantilla y reglas en `references/especificacion-tecnica.md`.
 
-Después de Restricciones va un `---` separando el cuerpo 5W2H de la estimación.
+Después de la Especificación técnica (o de Restricciones, en un `Question`) va un `---` separando el cuerpo de la estimación.
 
 ---
 
@@ -211,7 +232,7 @@ Infiere cada factor desde la documentación y el historial disponibles del proye
 - **Experiencia/similitud:** ¿ya se hizo algo parecido en este proyecto?
 - **Claridad de la solución:** ¿ya está indicado el camino, o hay que descubrirlo?
 - **Investigación:** ¿toca tecnología/integración nueva para el proyecto?
-- **Complejidad:** ¿cuántas capas toca? ¿riesgo de romper algo cercano?
+- **Complejidad:** ¿cuántas capas toca? ¿riesgo de romper algo cercano? La cantidad de criterios de aceptación y de componentes afectados de la Especificación técnica entra aquí: más criterios y más componentes = más complejidad.
 - **Dependencias:** ¿accesos, credenciales, validación de terceros?
 - **Validación:** ¿pruebas manuales relevantes?
 
@@ -236,7 +257,7 @@ Tiempo = implementación (con IA) + investigación (si aplica) + pruebas/validac
 **Verificación obligatoria antes de mostrar el preview:** la talla se deriva del rango de horas ya calculado, buscándolo en esta tabla — nunca al revés (nunca elegir la talla primero por sensación de tamaño y luego justificarla con un rango). Si el rango cruza dos filas, usa la fila de la cifra más alta. Antes de escribir la sección de estimación del preview, relee el rango contra esta tabla una vez más y confirma que la talla coincide exactamente.
 
 ### Confianza
-Alta = precedente claro + solución definida. Media = parcialmente parecido o con punto abierto. Baja = nuevo/incierto/con dependencias externas → usa rango.
+Alta = precedente claro + solución definida. Media = parcialmente parecido o con punto abierto. Baja = nuevo/incierto/con dependencias externas → usa rango. Cada `_Pendiente_` de la Especificación técnica baja la confianza un nivel (nunca por debajo de Baja).
 
 ### Regla para dividir
 Sugiere dividir si: la estimación cae en ≥XL, mezcla varias tareas distintas, combina investigación + implementación grande + validación amplia, depende de múltiples cambios en distintas capas, o no se puede explicar como una sola entrega verificable.
@@ -250,6 +271,8 @@ Sugiere dividir si: la estimación cae en ≥XL, mezcla varias tareas distintas,
 | Ver proyecto/lead | `get_project` | "Muéstrame el proyecto X y su responsable" |
 | Buscar contexto (Claude.ai) | `project_knowledge_search` | — |
 | Crear el issue | `save_issue` | "Crea un issue en [proyecto] con estos datos: ..." |
+| Leer un issue existente | `get_issue` | "Muéstrame POL-X" |
+| Editar la descripción / comentar | `save_issue` / `save_comment` | "Actualiza la descripción de POL-X con: ..." |
 
 ---
 
@@ -262,4 +285,7 @@ Sugiere dividir si: la estimación cae en ≥XL, mezcla varias tareas distintas,
 - **Nunca crear** sin mostrar el preview y recibir confirmación.
 - **Un único label de Tipo, salvo la excepción documentada** (Bug que requiere Feature/Improvement genuinos) — dilo explícitamente cuando aplique.
 - **Siempre llenar el campo nativo `estimate`** además de la sección de estimación en la descripción.
+- **SIEMPRE incluir la Especificación técnica** (completa o mínima) salvo en `Question`, y NUNCA mostrar el preview sin haber pasado su validación (`references/especificacion-tecnica.md`, sección 4).
+- **NUNCA inventar un valor** de la Especificación técnica — lo que no se sabe va como `_Pendiente_` y en "Información faltante".
+- **NUNCA agregar la Especificación técnica a un issue existente** sin que el usuario lo pida explícitamente para ese issue.
 - Si el MCP de Linear no está conectado, avisar antes de intentar crear.

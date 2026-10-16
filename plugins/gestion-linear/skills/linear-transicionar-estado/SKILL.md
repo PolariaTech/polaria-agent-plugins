@@ -1,6 +1,6 @@
 ---
 name: linear-transicionar-estado
-description: "Gestiona el estado de issues de Linear a lo largo del ciclo de vida real del trabajo, para cualquier proyecto de un equipo — el equipo POLARIA (prefijo POL-) es el ejemplo/default, fácil de reemplazar por otro equipo (ver \"Configuración rápida\"). Actívala en estos momentos, sin esperar a que el usuario lo pida explícitamente salvo el primero: (1) el usuario dice \"vamos a trabajar en POL-X\" / \"sigamos con POL-X\" / \"retomemos POL-X\" → mueve a In Progress si no lo está; (2) el trabajo sobre un issue en curso termina el desarrollo y está a punto de correr la primera prueba de cualquier tipo (automatizada, manual, smoke test, ejecución en un ambiente) → In Review ANTES de correrla, no después; (3) aparece algo que impide seguir → Blocked, comenta la causa y enlaza blockedBy; (4) se decide que el issue quedó resuelto → actualiza la documentación del proyecto con los cambios del issue, comenta cómo se resolvió y qué pruebas pasó, y solo después mueve a Done; (5) el issue es duplicado de otro → Duplicate, vinculado al original; (6) se pausa un issue en curso por falta de capacidad → regresa a Backlog con motivo. Actívala también cuando el usuario mencione un identificador de issue junto con verbos como \"trabajar\", \"seguir\", \"retomar\", \"probar\", \"validar\", \"bloqueado por\", \"cerrar\", \"duplicado\", o \"marcar como listo\"."
+description: "Gestiona el estado de issues de Linear a lo largo del ciclo de vida real del trabajo, para cualquier proyecto de un equipo — el equipo POLARIA (prefijo POL-) es el ejemplo/default, fácil de reemplazar por otro equipo (ver \"Configuración rápida\"). Actívala en estos momentos, sin esperar a que el usuario lo pida explícitamente salvo el primero: (1) el usuario dice \"vamos a trabajar en POL-X\" / \"sigamos con POL-X\" / \"retomemos POL-X\" → mueve a In Progress si no lo está; (2) el trabajo sobre un issue en curso termina el desarrollo y está a punto de correr la primera prueba de cualquier tipo (automatizada, manual, smoke test, ejecución en un ambiente) → In Review ANTES de correrla, no después; (3) aparece algo que impide seguir → Blocked, comenta la causa y enlaza blockedBy; (4) se decide que el issue quedó resuelto → actualiza la documentación del proyecto con los cambios del issue, comenta cómo se resolvió y qué pruebas pasó, y solo después mueve a Done (si el issue tiene Especificación técnica, prueba y cierra contra su tabla de criterios de aceptación); (5) el issue es duplicado de otro → Duplicate, vinculado al original; (6) se pausa un issue en curso por falta de capacidad → regresa a Backlog con motivo. Actívala también cuando el usuario mencione un identificador de issue junto con verbos como \"trabajar\", \"seguir\", \"retomar\", \"probar\", \"validar\", \"bloqueado por\", \"cerrar\", \"duplicado\", o \"marcar como listo\"."
 compatibility: "Requiere MCP de Linear conectado. Los nombres de herramienta varían por cliente — ver tabla abajo."
 ---
 
@@ -39,6 +39,15 @@ Los nombres de los estados pueden variar entre equipos de Linear. No los des por
 | Cambiar estado / relación `blockedBy` / `duplicateOf` | `save_issue` |
 | Dejar comentario | `save_comment` |
 
+## Issues con Especificación técnica
+
+Desde `gestion-linear` 1.2.0, `linear-crear-issue` agrega a los issues una sección `## 📐 Especificación técnica` con una tabla de criterios de aceptación (# | Criterio | Cómo se verifica | Resultado esperado | Dónde corre) y una lista "Fuera de alcance". Los issues anteriores no la tienen y no se migran.
+
+- **Si el issue NO tiene esa sección:** todos los modos funcionan exactamente como están descritos, sin los pasos marcados "(con Especificación técnica)".
+- **Si el issue la tiene:** se aplican además los pasos marcados "(con Especificación técnica)" en MODO INICIO, MODO PRUEBAS y MODO CIERRE, y la regla de cambio de alcance de abajo.
+
+**Cambio de alcance (con Especificación técnica):** si durante el trabajo cambia un requisito o un criterio (p. ej. el tamaño objetivo de una imagen), DEBES editar la sección del issue con `save_issue` y dejar un `save_comment` con el valor anterior, el nuevo y el motivo. NUNCA cambies un criterio en silencio, ni lo des por cumplido contra un valor distinto al escrito.
+
 ---
 
 ## MODO INICIO
@@ -47,6 +56,7 @@ Los nombres de los estados pueden variar entre equipos de Linear. No los des por
 
 1. Extraer el identificador del issue.
 2. `get_issue` para ver el estado actual.
+   - **(con Especificación técnica)** Si algún requisito o criterio de aceptación dice `_Pendiente_`, NO muevas el issue a `In Progress`: lista lo que falta y quién lo define, y pregunta al usuario. Sigue con el paso 3 solo cuando el valor esté definido (editándolo en la sección con la regla de cambio de alcance) o el usuario decida explícitamente empezar igual — en ese caso déjalo escrito en un `save_comment`.
 3. Si el estado no es `In Progress`: `save_issue` con `state: "In Progress"`.
 4. Si ya estaba en `In Progress`: no hacer nada.
 5. Confirmar en una línea: `POL-X → In Progress` (omitir si ya estaba ahí).
@@ -56,6 +66,7 @@ Los nombres de los estados pueden variar entre equipos de Linear. No los des por
    - Leer esos documentos relevantes al área que toca el issue.
    - Si el repo no tiene `CLAUDE.md` ni `README.md` que lo indiquen, preguntar al usuario antes de proponer el plan en vez de adivinar.
 7. Proponer un plan breve de implementación — qué se va a cambiar, en qué archivos/módulos, y por qué, fundamentado en lo leído en el paso 6 — y esperar autorización explícita del usuario antes de empezar a implementar. No escribas ni modifiques nada todavía; este paso es de alcance, no de ejecución.
+   - **(con Especificación técnica)** El plan DEBE partir de "Componentes afectados" y apuntar a cumplir cada criterio de la tabla. Si la "Fuente de verdad" es un archivo del repo, léelo en el paso 6 — si contradice el issue, manda el archivo. NUNCA incluyas en el plan nada listado en "Fuera de alcance".
 
 ---
 
@@ -81,7 +92,9 @@ Ejemplos del momento exacto: en un cambio de código, después del último commi
 2. `save_issue` con `state: "In Review"`.
 3. Confirmar: `POL-X → In Review`.
 4. Escribir las pruebas correspondientes a lo implementado (o extender las existentes si ya hay batería de pruebas para ese módulo) y ejecutarlas.
+   - **(con Especificación técnica)** Cada fila de la tabla de criterios de aceptación es un caso obligatorio: ejecuta exactamente lo de "Cómo se verifica", en "Dónde corre", y compara contra "Resultado esperado". PUEDES agregar pruebas extra, pero NUNCA reemplazar un criterio por otra prueba.
 5. Reportar el resultado de forma concreta: qué se probó, qué pasó y qué falló — nunca "todo funcionó" sin mostrar la evidencia (casos ejecutados y su resultado real).
+   - **(con Especificación técnica)** El reporte DEBE ser la tabla de criterios con dos columnas más: resultado real (✅ / ❌) y evidencia (comando con su salida, log o enlace al CI). Un criterio que no se pudo ejecutar va ❌ con el motivo, nunca ✅.
 6. Si todas las pruebas pasaron sin hallazgos: sugerir en una sola línea documentar los cambios y cerrar el issue (MODO CIERRE). No mover el issue a `Done` automáticamente — la decisión final de cerrar es del usuario.
 7. Si alguna prueba falló o reveló un impedimento real: no sugerir el cierre. Señalarlo explícitamente y, si el impedimento detiene el trabajo, aplicar MODO BLOQUEO en su lugar.
 
@@ -143,6 +156,8 @@ No se continúa trabajando en un issue marcado Canceled.
 
 1. Documentar en el proyecto **todos** los cambios hechos dentro de este issue: aplica la skill `doc-updater` en MODO A para que la documentación del proyecto (README, CHANGELOG, ADRs, glosario y el resto de los artefactos que correspondan) refleje cada cambio. No sigas al paso 2 hasta que esa documentación esté actualizada.
 2. `save_comment` documentando, antes de tocar el estado, todos los cambios realizados: cada cambio con qué cambió y dónde (archivo, workflow, versión publicada, commit), cómo se resolvió el problema, qué pruebas pasó con su resultado y qué documentación se actualizó. No cierres con un comentario que omita alguno de los cambios hechos.
+   - **(con Especificación técnica)** Antes del comentario, verifica la tabla de criterios del último MODO PRUEBAS. Si algún criterio quedó ❌ o sin evidencia, NO sigas: dilo y deja el issue en `In Review`. Solo continúa si el usuario excluye explícitamente ese criterio — en ese caso la exclusión, con su motivo y quién la decidió, DEBE quedar escrita en el comentario.
+   - **(con Especificación técnica)** El comentario DEBE incluir la tabla de criterios con su resultado (✅ / ❌ excluido) y su evidencia.
 3. Solo después: `save_issue` con `state: "Done"`.
 4. Confirmar: `POL-X → Done` (mencionar que la documentación y el comentario de resolución ya quedaron publicados).
 
@@ -161,6 +176,9 @@ Si el estado actual permite validación de 4 ojos (Metodología de Trabajo v1.2 
 - MODO PRUEBAS nunca sugiere el cierre sin haber escrito y ejecutado pruebas primero, ni reporta "todo funcionó" sin evidencia concreta de los casos ejecutados.
 - MODO BLOQUEO siempre lleva comentario **y** relación `blockedBy` — nunca uno sin el otro.
 - MODO CIERRE siempre documenta el proyecto y comenta antes de mover a Done — nunca al revés.
+- (con Especificación técnica) MODO INICIO NUNCA mueve a In Progress con un `_Pendiente_` sin decisión explícita del usuario; MODO PRUEBAS SIEMPRE ejecuta cada criterio de la tabla y reporta por criterio; MODO CIERRE NUNCA mueve a Done con un criterio ❌ o sin evidencia salvo exclusión explícita escrita en el comentario.
+- (con Especificación técnica) Un criterio o requisito NUNCA cambia en silencio — edición de la sección + comentario con valor anterior, nuevo y motivo.
+- Esta skill NUNCA agrega la Especificación técnica a un issue que no la tiene; eso lo hace `linear-crear-issue` cuando el usuario lo pide explícitamente.
 - MODO DUPLICADO siempre lleva la relación estructurada **y** un comentario señalando el issue canónico.
 - MODO PAUSA → BACKLOG siempre lleva un comentario con el motivo — nunca una regresión silenciosa.
 - MODO CANCELADO siempre lleva un comentario con el motivo — nunca una cancelación silenciosa.
