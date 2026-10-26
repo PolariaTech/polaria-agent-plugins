@@ -1,0 +1,469 @@
+{
+  "formato": "polaria.schema-formulario",
+  "version_formato": "1.0",
+  "exportacion": {
+    "fecha": "2026-09-24T15:00:00-05:00",
+    "archivo_origen": "SINTETICO — schema_sintetico_modal_simple.md (datos inventados para pruebas)",
+    "ruta_origen": "SINTETICO — no existe en flujos",
+    "version_portal": "0.0.0-sintetico",
+    "hash_origen": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "datos_formulario": {
+    "id": "sintetico_modal_simple",
+    "formulario": "Crear bodega (sintético)",
+    "proyecto_repo": "polaria-wms-web",
+    "protocolo_referencia": "PROTOCOLO_DE_VALIDACION_DE_FORMULARIOS_v1.1.md",
+    "campos_nuevos_o_modificados": "Todos (formulario sintético)",
+    "vive_en_modal": {
+      "valor": "si",
+      "detalle": null,
+      "texto_original": "Sí"
+    },
+    "tiene_prellenado": {
+      "valor": "no",
+      "detalle": null,
+      "texto_original": "No"
+    },
+    "responsable": "Desarrollador frontend (sintético)",
+    "fecha_creacion": {
+      "valor": "2026-09-24",
+      "texto_original": "24/09/2026"
+    }
+  },
+  "tabla_1_validacion": [
+    {
+      "campo": "Nombre",
+      "campo_id": "nombre",
+      "tipo_dato": {
+        "categoria": "texto",
+        "solo_lectura": false,
+        "texto_original": "Texto"
+      },
+      "obligatorio": {
+        "valor": "si",
+        "detalle": null,
+        "texto_original": "Sí"
+      },
+      "rango_limite": {
+        "minimo": null,
+        "maximo": null,
+        "longitud_maxima": 60,
+        "texto_original": "varchar(60)"
+      },
+      "valor_por_defecto": null,
+      "unico": {
+        "valor": "no",
+        "detalle": null,
+        "texto_original": "No"
+      },
+      "depende_de": {
+        "campos": [],
+        "texto_original": "—"
+      },
+      "regla_dependencia": null,
+      "mensajes_error": {
+        "mensajes": [
+          "El nombre es obligatorio."
+        ],
+        "texto_original": "El nombre es obligatorio."
+      },
+      "capas": {
+        "front": true,
+        "back": true,
+        "bd": true,
+        "texto_original": "Front, Back, BD"
+      }
+    },
+    {
+      "campo": "Ciudad",
+      "campo_id": "ciudad",
+      "tipo_dato": {
+        "categoria": "seleccion",
+        "solo_lectura": false,
+        "texto_original": "Selección (lista)"
+      },
+      "obligatorio": {
+        "valor": "si",
+        "detalle": null,
+        "texto_original": "Sí"
+      },
+      "rango_limite": {
+        "minimo": null,
+        "maximo": null,
+        "longitud_maxima": null,
+        "texto_original": "—"
+      },
+      "valor_por_defecto": null,
+      "unico": {
+        "valor": "no",
+        "detalle": null,
+        "texto_original": "No"
+      },
+      "depende_de": {
+        "campos": [],
+        "texto_original": "—"
+      },
+      "regla_dependencia": null,
+      "mensajes_error": {
+        "mensajes": [],
+        "texto_original": "—"
+      },
+      "capas": {
+        "front": true,
+        "back": true,
+        "bd": true,
+        "texto_original": "Front, Back, BD"
+      }
+    },
+    {
+      "campo": "Capacidad (m³)",
+      "campo_id": "capacidad_m3",
+      "tipo_dato": {
+        "categoria": "numero_decimal",
+        "solo_lectura": false,
+        "texto_original": "Número decimal"
+      },
+      "obligatorio": {
+        "valor": "no",
+        "detalle": null,
+        "texto_original": "No"
+      },
+      "rango_limite": {
+        "minimo": null,
+        "maximo": null,
+        "longitud_maxima": null,
+        "texto_original": "> 0"
+      },
+      "valor_por_defecto": null,
+      "unico": {
+        "valor": "no",
+        "detalle": null,
+        "texto_original": "No"
+      },
+      "depende_de": {
+        "campos": [],
+        "texto_original": "—"
+      },
+      "regla_dependencia": null,
+      "mensajes_error": {
+        "mensajes": [],
+        "texto_original": "—"
+      },
+      "capas": {
+        "front": true,
+        "back": true,
+        "bd": true,
+        "texto_original": "Front, Back, BD"
+      }
+    },
+    {
+      "campo": "Código",
+      "campo_id": "codigo",
+      "tipo_dato": {
+        "categoria": "texto",
+        "solo_lectura": true,
+        "texto_original": "Texto (solo lectura)"
+      },
+      "obligatorio": {
+        "valor": "no",
+        "detalle": null,
+        "texto_original": "No"
+      },
+      "rango_limite": {
+        "minimo": null,
+        "maximo": null,
+        "longitud_maxima": null,
+        "texto_original": "—"
+      },
+      "valor_por_defecto": null,
+      "unico": {
+        "valor": "no",
+        "detalle": null,
+        "texto_original": "No"
+      },
+      "depende_de": {
+        "campos": [],
+        "texto_original": "—"
+      },
+      "regla_dependencia": null,
+      "mensajes_error": {
+        "mensajes": [],
+        "texto_original": "—"
+      },
+      "capas": {
+        "front": true,
+        "back": true,
+        "bd": true,
+        "texto_original": "Front, Back, BD"
+      }
+    },
+    {
+      "campo": "Observaciones",
+      "campo_id": "observaciones",
+      "tipo_dato": {
+        "categoria": "texto_largo",
+        "solo_lectura": false,
+        "texto_original": "Texto largo"
+      },
+      "obligatorio": {
+        "valor": "no",
+        "detalle": null,
+        "texto_original": "No"
+      },
+      "rango_limite": {
+        "minimo": null,
+        "maximo": null,
+        "longitud_maxima": 500,
+        "texto_original": "Máx 500 caracteres"
+      },
+      "valor_por_defecto": null,
+      "unico": {
+        "valor": "no",
+        "detalle": null,
+        "texto_original": "No"
+      },
+      "depende_de": {
+        "campos": [],
+        "texto_original": "—"
+      },
+      "regla_dependencia": null,
+      "mensajes_error": {
+        "mensajes": [],
+        "texto_original": "—"
+      },
+      "capas": {
+        "front": true,
+        "back": true,
+        "bd": true,
+        "texto_original": "Front, Back, BD"
+      }
+    }
+  ],
+  "tabla_2_interaccion": [
+    {
+      "campo": "Nombre",
+      "campo_id": "nombre",
+      "orden_tabulacion": {
+        "tipo": "posicion",
+        "posicion": 1,
+        "texto_original": "1"
+      },
+      "deshabilitado": {
+        "valor": "no",
+        "detalle": null,
+        "texto_original": "No"
+      },
+      "foco_automatico": {
+        "tiene": true,
+        "momento": "al abrir el modal",
+        "texto_original": "Sí, al abrir el modal"
+      }
+    },
+    {
+      "campo": "Ciudad",
+      "campo_id": "ciudad",
+      "orden_tabulacion": {
+        "tipo": "posicion",
+        "posicion": 2,
+        "texto_original": "2"
+      },
+      "deshabilitado": {
+        "valor": "no",
+        "detalle": null,
+        "texto_original": "No"
+      },
+      "foco_automatico": {
+        "tiene": false,
+        "momento": null,
+        "texto_original": "—"
+      }
+    },
+    {
+      "campo": "Capacidad (m³)",
+      "campo_id": "capacidad_m3",
+      "orden_tabulacion": {
+        "tipo": "posicion",
+        "posicion": 3,
+        "texto_original": "3"
+      },
+      "deshabilitado": {
+        "valor": "no",
+        "detalle": null,
+        "texto_original": "No"
+      },
+      "foco_automatico": {
+        "tiene": false,
+        "momento": null,
+        "texto_original": "—"
+      }
+    },
+    {
+      "campo": "Código",
+      "campo_id": "codigo",
+      "orden_tabulacion": {
+        "tipo": "fuera_de_tab",
+        "posicion": null,
+        "texto_original": "tabIndex=-1"
+      },
+      "deshabilitado": {
+        "valor": "si",
+        "detalle": "siempre, readOnly",
+        "texto_original": "Sí (siempre, readOnly)"
+      },
+      "foco_automatico": {
+        "tiene": false,
+        "momento": null,
+        "texto_original": "—"
+      }
+    },
+    {
+      "campo": "Observaciones",
+      "campo_id": "observaciones",
+      "orden_tabulacion": {
+        "tipo": "relativo",
+        "posicion": null,
+        "texto_original": "Siguiente"
+      },
+      "deshabilitado": {
+        "valor": "condicional",
+        "detalle": "mientras se envía",
+        "texto_original": "Sí mientras se envía"
+      },
+      "foco_automatico": {
+        "tiene": false,
+        "momento": null,
+        "texto_original": "—"
+      }
+    }
+  ],
+  "tabla_3_prellenado": null,
+  "prueba_nivel_2": {
+    "acceso": {
+      "rol": "Administrador de cuenta",
+      "ruta": "/inventario/bodegas",
+      "pasos_abrir": [
+        {
+          "accion": "clic",
+          "localizador": {
+            "testid": null,
+            "rol": "button",
+            "nombre": "Nueva bodega",
+            "texto_original": "button \"Nueva bodega\""
+          },
+          "valor": null,
+          "texto_original": "clic button \"Nueva bodega\""
+        },
+        {
+          "accion": "esperar",
+          "localizador": {
+            "testid": null,
+            "rol": "dialog",
+            "nombre": "Crear bodega",
+            "texto_original": "dialog \"Crear bodega\""
+          },
+          "valor": null,
+          "texto_original": "esperar dialog \"Crear bodega\""
+        }
+      ],
+      "registro_requerido": null,
+      "archivos_formulario": [
+        "src/features/inventario/components/BodegaCrearModal.tsx"
+      ]
+    },
+    "botones": {
+      "guardar": {
+        "testid": null,
+        "rol": "button",
+        "nombre": "Guardar",
+        "texto_original": "button \"Guardar\""
+      },
+      "cancelar": {
+        "testid": null,
+        "rol": "button",
+        "nombre": "Cancelar",
+        "texto_original": "button \"Cancelar\""
+      },
+      "descarte_confirmar": {
+        "testid": null,
+        "rol": "button",
+        "nombre": "Descartar",
+        "texto_original": "button \"Descartar\""
+      },
+      "descarte_seguir_editando": {
+        "testid": null,
+        "rol": "button",
+        "nombre": "Seguir editando",
+        "texto_original": "button \"Seguir editando\""
+      },
+      "advertencia_confirmar": null
+    },
+    "campos": [
+      {
+        "campo": "Nombre",
+        "campo_id": "nombre",
+        "localizador": {
+          "testid": "field-nombre",
+          "rol": null,
+          "nombre": null,
+          "texto_original": "testid=field-nombre"
+        },
+        "valor_de_prueba": "Bodega Prueba"
+      },
+      {
+        "campo": "Ciudad",
+        "campo_id": "ciudad",
+        "localizador": {
+          "testid": null,
+          "rol": "combobox",
+          "nombre": "Ciudad",
+          "texto_original": "combobox \"Ciudad\""
+        },
+        "valor_de_prueba": null
+      },
+      {
+        "campo": "Capacidad (m³)",
+        "campo_id": "capacidad_m3",
+        "localizador": {
+          "testid": "field-capacidad",
+          "rol": null,
+          "nombre": null,
+          "texto_original": "testid=field-capacidad"
+        },
+        "valor_de_prueba": "150"
+      },
+      {
+        "campo": "Código",
+        "campo_id": "codigo",
+        "localizador": {
+          "testid": "field-codigo",
+          "rol": null,
+          "nombre": null,
+          "texto_original": "testid=field-codigo"
+        },
+        "valor_de_prueba": null
+      },
+      {
+        "campo": "Observaciones",
+        "campo_id": "observaciones",
+        "localizador": {
+          "testid": null,
+          "rol": "textbox",
+          "nombre": "Observaciones",
+          "texto_original": "textbox \"Observaciones\""
+        },
+        "valor_de_prueba": "Nota de prueba"
+      }
+    ]
+  },
+  "notas_justificaciones": "Schema sintético para las pruebas del runner de Nivel 2. No corresponde a ningún formulario real.",
+  "version_revision": {
+    "version_schema": "v1.1",
+    "fecha_aprobacion": {
+      "valor": null,
+      "texto_original": "Pendiente"
+    },
+    "aprobado_por": "Pendiente de aprobación",
+    "proxima_revision": "No aplica (sintético)"
+  },
+  "advertencias": []
+}

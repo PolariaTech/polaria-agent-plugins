@@ -1,0 +1,172 @@
+{
+  "formato": "polaria.schema-formulario",
+  "version_formato": "1.0",
+  "exportacion": {
+    "fecha": "2026-09-24T15:00:00-05:00",
+    "archivo_origen": "SINTETICO — schema_sintetico_sin_tabla_4.md (datos inventados para pruebas)",
+    "ruta_origen": "SINTETICO — no existe en flujos",
+    "version_portal": "0.0.0-sintetico",
+    "hash_origen": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "datos_formulario": {
+    "id": "sintetico_sin_tabla_4",
+    "formulario": "Crear zona (sintético)",
+    "proyecto_repo": "polaria-wms-web",
+    "protocolo_referencia": "PROTOCOLO_DE_VALIDACION_DE_FORMULARIOS_v1.1.md",
+    "campos_nuevos_o_modificados": "Todos (formulario sintético)",
+    "vive_en_modal": {
+      "valor": "no",
+      "detalle": null,
+      "texto_original": "No"
+    },
+    "tiene_prellenado": {
+      "valor": "no",
+      "detalle": null,
+      "texto_original": "No"
+    },
+    "responsable": "Desarrollador frontend (sintético)",
+    "fecha_creacion": {
+      "valor": "2026-09-24",
+      "texto_original": "24/09/2026"
+    }
+  },
+  "tabla_1_validacion": [
+    {
+      "campo": "Nombre de la zona",
+      "campo_id": "nombre_de_la_zona",
+      "tipo_dato": {
+        "categoria": "texto",
+        "solo_lectura": false,
+        "texto_original": "Texto"
+      },
+      "obligatorio": {
+        "valor": "si",
+        "detalle": null,
+        "texto_original": "Sí"
+      },
+      "rango_limite": {
+        "minimo": null,
+        "maximo": null,
+        "longitud_maxima": 40,
+        "texto_original": "varchar(40)"
+      },
+      "valor_por_defecto": null,
+      "unico": {
+        "valor": "no",
+        "detalle": null,
+        "texto_original": "No"
+      },
+      "depende_de": {
+        "campos": [],
+        "texto_original": "—"
+      },
+      "regla_dependencia": null,
+      "mensajes_error": {
+        "mensajes": [],
+        "texto_original": "—"
+      },
+      "capas": {
+        "front": true,
+        "back": true,
+        "bd": true,
+        "texto_original": "Front, Back, BD"
+      }
+    },
+    {
+      "campo": "Temperatura mínima",
+      "campo_id": "temperatura_minima",
+      "tipo_dato": {
+        "categoria": "numero_decimal",
+        "solo_lectura": false,
+        "texto_original": "Número decimal"
+      },
+      "obligatorio": {
+        "valor": "no",
+        "detalle": null,
+        "texto_original": "No"
+      },
+      "rango_limite": {
+        "minimo": -50,
+        "maximo": 200,
+        "longitud_maxima": null,
+        "texto_original": "-50 … 200"
+      },
+      "valor_por_defecto": null,
+      "unico": {
+        "valor": "no",
+        "detalle": null,
+        "texto_original": "No"
+      },
+      "depende_de": {
+        "campos": [],
+        "texto_original": "—"
+      },
+      "regla_dependencia": null,
+      "mensajes_error": {
+        "mensajes": [],
+        "texto_original": "—"
+      },
+      "capas": {
+        "front": true,
+        "back": true,
+        "bd": true,
+        "texto_original": "Front, Back, BD"
+      }
+    }
+  ],
+  "tabla_2_interaccion": [
+    {
+      "campo": "Nombre de la zona",
+      "campo_id": "nombre_de_la_zona",
+      "orden_tabulacion": {
+        "tipo": "posicion",
+        "posicion": 1,
+        "texto_original": "1"
+      },
+      "deshabilitado": {
+        "valor": "no",
+        "detalle": null,
+        "texto_original": "No"
+      },
+      "foco_automatico": {
+        "tiene": true,
+        "momento": "al abrir el formulario",
+        "texto_original": "Sí, al abrir el formulario"
+      }
+    },
+    {
+      "campo": "Temperatura mínima",
+      "campo_id": "temperatura_minima",
+      "orden_tabulacion": {
+        "tipo": "posicion",
+        "posicion": 2,
+        "texto_original": "2"
+      },
+      "deshabilitado": {
+        "valor": "no",
+        "detalle": null,
+        "texto_original": "No"
+      },
+      "foco_automatico": {
+        "tiene": false,
+        "momento": null,
+        "texto_original": "—"
+      }
+    }
+  ],
+  "tabla_3_prellenado": null,
+  "prueba_nivel_2": null,
+  "notas_justificaciones": "Schema sintético para las pruebas del runner de Nivel 2. No corresponde a ningún formulario real.",
+  "version_revision": {
+    "version_schema": "v1.1",
+    "fecha_aprobacion": {
+      "valor": null,
+      "texto_original": "Pendiente"
+    },
+    "aprobado_por": "Pendiente de aprobación",
+    "proxima_revision": "No aplica (sintético)"
+  },
+  "advertencias": [
+    "Tabla 4 · — · —: el schema no tiene Tabla 4; la prueba automatizada del Nivel 2 no se puede ejecutar"
+  ]
+}

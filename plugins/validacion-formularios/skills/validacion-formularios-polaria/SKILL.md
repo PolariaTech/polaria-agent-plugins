@@ -1,13 +1,13 @@
 ---
 name: validacion-formularios-polaria
-description: Construye o modifica la validación de un formulario de Polaria siguiendo el Protocolo de Validación de Formularios — primero la entrevista del schema de campos, después los 5 niveles (tipo, interacción, reglas de negocio, backend, base de datos) con el stack que ya usa el repo, las pruebas y el checklist de prueba manual. Úsala SIEMPRE que se vaya a crear, cambiar o revisar un formulario, un campo de formulario o su lógica de validación, aunque no se mencione el protocolo — por ejemplo "hay que crear el formulario de agregar producto", "agrega un campo de fecha a este formulario", "valida este formulario", "el campo precio acepta letras", "el tab no sigue el orden", "el modal se cierra y pierdo lo que escribí", "arma el schema del formulario X". No la uses para revisar un diff antes del push (eso es `gate-calidad-tecnica-pre-merge-polaria`, cuyo criterio 7 verifica este protocolo) ni para formularios que no guardan datos (un buscador, un filtro).
+description: Construye o modifica la validación de un formulario de Polaria siguiendo el Protocolo de Validación de Formularios — primero la entrevista del schema de campos, después los 5 niveles (tipo, interacción, reglas de negocio, backend, base de datos) con el stack que ya usa el repo, las pruebas y el checklist de prueba manual. Úsala SIEMPRE que se vaya a crear, cambiar o revisar un formulario, un campo de formulario o su lógica de validación, aunque no se mencione el protocolo — por ejemplo "hay que crear el formulario de agregar producto", "agrega un campo de fecha a este formulario", "valida este formulario", "el campo precio acepta letras", "el tab no sigue el orden", "el modal se cierra y pierdo lo que escribí", "arma el schema del formulario X", "verifica el Nivel 2 del formulario". No la uses para revisar un diff antes del push (eso es `gate-calidad-tecnica-pre-merge-polaria`, cuyo criterio 7 verifica este protocolo) ni para formularios que no guardan datos (un buscador, un filtro).
 ---
 
 # Skill: Validación de Formularios
 
 Ejecuta `references/PROTOCOLO_DE_VALIDACION_DE_FORMULARIOS_v1.1.md`, la fuente de verdad de cada paso, regla, excepción, nivel y prueba. Esta skill dice **cómo** ejecutarlo en un repo real; el **qué** se exige vive en ese documento, y no se repite aquí.
 
-**Instalación:** esta carpeta (`skill/`) es la copia canónica versionada dentro de la metodología de Polaria, inerte aquí. Se publica como el plugin `validacion-formularios` del marketplace `PolariaTech/polaria-agent-plugins` (skill + hook del schema, Claude Code y Cursor) y se instala en cada repo de código con `/plugin install validacion-formularios@polaria-agent-plugins` (Claude Code) o vía Team Marketplace en Cursor. Al publicar, `references/` recibe una copia del protocolo y de `PLANTILLA_SCHEMA_DE_CAMPOS_v1.1.md` (fuentes en `PROTOCOLOS_EXISTENTES/PROTOCOLO_DE_VALIDACION_DE_FORMULARIOS/` y `PROTOCOLOS_EXISTENTES/SCHEMAS_FORMULARIOS/`). Cualquier cambio se hace en la fuente y se vuelve a publicar al plugin, nunca al revés.
+**Instalación:** esta carpeta (`skill/`) es la copia canónica versionada dentro de la metodología de Polaria, inerte aquí. Se publica como el plugin `validacion-formularios` del marketplace `PolariaTech/polaria-agent-plugins` (skill, hook del schema y MCP de Playwright, Claude Code y Cursor) y se instala en cada repo de código con `/plugin install validacion-formularios@polaria-agent-plugins` (Claude Code) o vía Team Marketplace en Cursor. Al publicar, `references/` recibe una copia del protocolo y de `PLANTILLA_SCHEMA_DE_CAMPOS_v1.1.md` (fuentes en `PROTOCOLOS_NUEVOS/PROTOCOLO_DE_VALIDACION_DE_FORMULARIOS/` y `PROTOCOLOS_APROBADOS/SCHEMAS_FORMULARIOS/`). Cualquier cambio se hace en la fuente y se vuelve a publicar al plugin, nunca al revés.
 
 ## Paso 1 — Schema (Paso 1 del protocolo)
 
@@ -41,10 +41,12 @@ Por cada campo y cada capa que tenga en "Capas aplicables", construye los nivele
 
 ## Paso 5 — Checklist de prueba manual (Paso 5 del protocolo)
 
+**Nivel 2 automatizado.** Si el schema tiene Tabla 4, ofrece verificar el Nivel 2 (tabulación, foco, deshabilitados, modal, confirmación de descarte y advertencias de pre-llenado) con el runner, siguiendo `references/prueba-nivel-2.md`, en lugar de que el dev lo recorra a mano. Su checklist (C1 a C8) reemplaza los ítems del Nivel 2 del checklist de abajo, salvo los casos NO EJECUTABLE, que el dev recorre a mano. Los Niveles 1, 3, 4 y 5 siguen siendo manuales. Si el procedimiento no se puede ejecutar (no hay JSON del schema, no hay Tabla 4 o el ambiente falló), sigue con el checklist manual completo.
+
 Arma un checklist con los niveles que el schema exige, aplicados a los campos concretos de este formulario (ej. "Nivel 1: escribir `abc` en `cantidad` → no aparece nada"). Incluye solo las capas de este repo. Entrégaselo al dev: los Niveles 1 a 3 los recorre con teclado y navegador; para los Niveles 4 y 5 el ítem es la petición directa al endpoint y el intento de escritura directa en la BD, con la respuesta real citada. El dev marca PASS o FAIL en cada ítem.
 
 - **Algún FAIL:** corrige, vuelve a correr el Paso 4, y pídele al dev que repita solo el ítem que falló.
-- **Todo PASS:** ofrece publicar en el issue de Linear (`save_comment` del MCP de Linear) el checklist marcado junto con la salida de las pruebas del Paso 4. Confirma con el dev antes de publicar. Si no hay issue o no hay MCP de Linear, dale el texto listo para pegar en la descripción del PR. El Gate necesita esta evidencia para su criterio 7.
+- **Todo PASS:** ofrece publicar en el issue de Linear (`save_comment` del MCP de Linear) el checklist marcado, el del Nivel 2 automatizado si se ejecutó y la salida de las pruebas del Paso 4. Confirma con el dev antes de publicar. Si no hay issue o no hay MCP de Linear, dale el texto listo para pegar en la descripción del PR. El Gate necesita esta evidencia para su criterio 7.
 
 ## Paso 6 — Gate (Pasos 6 y 7 del protocolo)
 
@@ -63,6 +65,8 @@ Dile al dev que el cambio está listo para el Gate de Calidad Técnica, y que su
 - NUNCA des un nivel por cerrado sin verificar su "Listo cuando".
 - NUNCA reportes pruebas como pasadas sin haberlas ejecutado y citado la salida real.
 - NUNCA publiques en Linear ni en GitHub sin confirmación del dev.
+- NUNCA muestres, repitas ni guardes en un archivo del proyecto las credenciales de prueba del rol; el código del runner se genera dentro de `.git/` y se borra al terminar.
+- NUNCA ofrezcas publicar como aprobado un Nivel 2 con algún FAIL.
 - SIEMPRE usa el mensaje de error exacto del schema, igual en todas las capas.
 - NUNCA saltes un nivel por urgencia de despliegue: el protocolo no tiene excepción para eso.
 
@@ -75,4 +79,5 @@ Antes de dar por terminado un formulario con esta skill:
 - [ ] Cada nivel exigido por el schema se verificó contra su "Listo cuando".
 - [ ] Las pruebas de la sección 7 existen, se ejecutaron y la salida real quedó guardada.
 - [ ] El checklist de prueba manual quedó con todos los ítems en PASS y publicado en Linear (o entregado al dev para pegar en el PR).
+- [ ] Si se ejecutó el Nivel 2 automatizado: `summary` fue `passes` (o los NO EJECUTABLE se recorrieron a mano), el archivo con el código se borró y nada de las credenciales quedó en el chat ni en el proyecto.
 - [ ] El dev sabe que el siguiente paso es el Gate antes del `push`.
