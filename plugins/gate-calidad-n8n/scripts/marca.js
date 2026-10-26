@@ -1,6 +1,6 @@
 // Marca del veredicto del Gate de Calidad N8N: <git-common-dir>/polaria-gate-n8n/<workflowId>.md.
 // Vive dentro de .git/ (nunca se commitea). La escriben registrar-veredicto.js (APROBADO, RECHAZADO,
-// RECHAZADO_JUSTIFICADO) y revisar-workflow.js texto (EXENTO_TEXTO); la lee el hook verificar-publicacion.js.
+// RECHAZADO_JUSTIFICADO) y revisar-workflow.js texto (EXENTO_TEXTO, EXENTO_CANVAS); la lee el hook verificar-publicacion.js.
 
 const { execFileSync } = require('child_process');
 const fs = require('fs');

@@ -1,11 +1,11 @@
 ---
 name: gate-calidad-n8n-polaria
-description: Ejecuta el Gate de Calidad N8N de Polaria sobre la copia DEV de un workflow de n8n ANTES de publicarlo (descarga por la API de n8n, verificación de cambio de solo texto, script de criterios mecánicos + revisor aislado + veredicto + reporte en Linear) y verifica el JSON en git después de publicar. Úsala SIEMPRE que alguien diga que terminó o cambió un workflow, sub-workflow o el Error Handler de n8n, pregunte "¿puedo publicar esto?", "revisa el workflow antes de publicarlo", "terminé la copia DEV", "pásalo a producción", "solo cambié unos textos", "corregí las tildes del workflow", "ya lo publiqué, verifica el git", o cuando un publish_workflow quede bloqueado por el hook — incluso si no menciona "gate" por nombre. Aplica a todo cambio, incluidos los Urgent; un cambio de solo texto que el script demuestre se resuelve sin el revisor aislado. No la uses para código de un repo (eso es `gate-calidad-tecnica-pre-merge-polaria`), para diseñar o construir el workflow, ni para auditar un sistema completo (eso es `auditoria-tecnica-polaria`).
+description: Ejecuta el Gate de Calidad N8N de Polaria sobre la copia DEV de un workflow de n8n ANTES de publicarlo (descarga por la API de n8n, verificación de cambio de solo texto o de solo canvas, script de criterios mecánicos + revisor aislado + veredicto + reporte en Linear) y verifica el JSON en git después de publicar. Úsala SIEMPRE que alguien diga que terminó o cambió un workflow, sub-workflow o el Error Handler de n8n, pregunte "¿puedo publicar esto?", "revisa el workflow antes de publicarlo", "terminé la copia DEV", "pásalo a producción", "solo cambié unos textos", "corregí las tildes del workflow", "solo ordené el canvas", "agrupé los nodos", "ya lo publiqué, verifica el git", o cuando un publish_workflow quede bloqueado por el hook — incluso si no menciona "gate" por nombre. Aplica a todo cambio, incluidos los Urgent; un cambio de solo texto o de solo canvas que el script demuestre se resuelve sin el revisor aislado. No la uses para código de un repo (eso es `gate-calidad-tecnica-pre-merge-polaria`), para diseñar o construir el workflow, ni para auditar un sistema completo (eso es `auditoria-tecnica-polaria`).
 ---
 
 # Skill: Gate de Calidad N8N
 
-Ejecuta, paso a paso, `GATE_DE_CALIDAD_N8N_v1.1.md` (en `references/` del plugin; fuente de verdad de cada paso, regla y excepción). Los criterios son los Criterios de aceptación de `POLARIA_ESTANDARES_N8N_v2.2.md` (también en `references/`; la fuente vive en `PROTOCOLOS_APROBADOS/ESTANDARES_N8N/` del repo de metodología). Esta skill orquesta; **no revisa el workflow ella misma**: los criterios mecánicos los revisa `scripts/revisar-workflow.js`, la exención de solo texto la decide el mismo script en modo `texto`, y los criterios de juicio el subagente `revisor-workflow-n8n` (`agents/revisor-workflow-n8n.md`).
+Ejecuta, paso a paso, `GATE_DE_CALIDAD_N8N_v1.2.md` (en `references/` del plugin; fuente de verdad de cada paso, regla y excepción). Los criterios son los Criterios de aceptación de `POLARIA_ESTANDARES_N8N_v2.2.md` (también en `references/`; la fuente vive en `PROTOCOLOS_APROBADOS/ESTANDARES_N8N/` del repo de metodología). Esta skill orquesta; **no revisa el workflow ella misma**: los criterios mecánicos los revisa `scripts/revisar-workflow.js`, la exención de solo texto o de solo canvas la decide el mismo script en modo `texto`, y los criterios de juicio el subagente `revisor-workflow-n8n` (`agents/revisor-workflow-n8n.md`).
 
 **Instalación:** esta carpeta (`skill/`) es la copia canónica en el repo de metodología de Polaria, inerte aquí. Se publica como el plugin `gate-calidad-n8n` del marketplace `PolariaTech/polaria-agent-plugins` e incluye el conector MCP de n8n de Polaria (`.mcp.json` para Claude Code, `mcp.json` para Cursor, en la raíz del plugin). Se instala en el repo de cada proyecto n8n con `/plugin install gate-calidad-n8n@polaria-agent-plugins` (Claude Code) o vía Team Marketplace en Cursor. La raíz del plugin es la carpeta dos niveles arriba de esta skill; ahí están `scripts/` y `hooks/`. Cualquier cambio se hace en la copia canónica y se vuelve a publicar al plugin, nunca al revés.
 
@@ -29,16 +29,16 @@ Ejecuta, paso a paso, `GATE_DE_CALIDAD_N8N_v1.1.md` (en `references/` del plugin
 - **Ejecuciones** (`search_workflow_executions` de la copia DEV, últimas 24 horas): anota cuántas terminaron en `success` y en `error`. Es evidencia para el criterio 14.
 - **Sin MCP de n8n o sin Available in MCP:** pide esos datos a quien construye y anótalo para el reporte (sección 5 del protocolo).
 
-## Paso 1b — Verificación de cambio de solo texto (sección 5.1 del protocolo)
+## Paso 1b — Verificación de cambio de solo texto o de solo canvas (secciones 5.1 y 5.2 del protocolo)
 
-Corre siempre que producción tenga `activeVersionId`; nadie tiene que declarar que el cambio "es solo texto". Las condiciones de la exención están en la sección 5.1 del protocolo y las aplica el script: no las evalúes tú.
+Corre siempre que producción tenga `activeVersionId`; nadie tiene que declarar que el cambio "es solo texto" o "es solo canvas". Las condiciones de cada exención están en las secciones 5.1 y 5.2 del protocolo y las aplica el script: no las evalúes tú.
 
 1. **Parejas DEV:** si la copia DEV llama a otras copias DEV (`executeWorkflow` o `toolWorkflow`), por cada una busca con `search_workflows` el workflow cuyo nombre es el mismo sin ` - DEV` y arma `<ID de producción>=<ID de la copia DEV>`. SOLO declara parejas comprobadas así; NUNCA una que proponga quien construye sin esa comprobación.
 2. Desde la raíz del repo:
 
    `node "<raíz del plugin>/scripts/revisar-workflow.js" texto --json "<JSON de la copia DEV>" --publicado "<JSON de producción>" --workflow-id <ID de producción> --version-publicada <activeVersionId> [--mapa-dev <idProd>=<idDev>,...]`
 
-3. **Salida 0 (`EXENTO_TEXTO`):** el script ya registró la marca; NO despaches al revisor ni corras los Pasos 2 a 4. Si la última entrada del `CHANGELOG.md` no describe este cambio, detente y pídela. Publica en el issue de Linear (`save_comment`, confirmándolo antes con quien construye) la salida completa del script y esa entrada, y sigue al Paso 5. Si no confirma, recuérdale que sin el reporte en Linear no puede publicar (sección 4 del protocolo).
+3. **Salida 0 (`EXENTO_TEXTO` o `EXENTO_CANVAS`):** el script ya registró la marca; NO despaches al revisor ni corras los Pasos 2 a 4. Si la última entrada del `CHANGELOG.md` no describe este cambio, detente y pídela. Publica en el issue de Linear (`save_comment`, confirmándolo antes con quien construye) la salida completa del script y esa entrada, y sigue al Paso 5. Si no confirma, recuérdale que sin el reporte en Linear no puede publicar (sección 4 del protocolo).
 4. **Salida 3 (`NO EXENTO`):** dile en una línea qué diferencia lo impidió y sigue con el Paso 2. No intentes "arreglar" la exención.
 5. **Salida 1:** error de uso o sin repo; no hay exención ni marca. Corrige el comando y repite. NUNCA uses `--registrar no` en el gate real: solo sirve para probar el script y no deja marca.
 
@@ -47,6 +47,8 @@ Corre siempre que producción tenga `activeVersionId`; nadie tiene que declarar 
 Desde la raíz del repo:
 
 `node "<raíz del plugin>/scripts/revisar-workflow.js" antes --json "<JSON de la copia DEV>" --error-handler-id <ID> --descripcion "<descripción>"`
+
+Si el repo trae `docs/catalogo-errores.md` y `scripts/verificar-catalogo-errores.js`, la salida incluye también el paso opcional del catálogo de errores (sección 5.4): un `FAIL` ahí impide el `APROBADO`. Si el repo no tiene catálogo, el script lo marca `N/A` y sugiere crearlo; díselo a quien construye en una línea y sigue.
 
 No interpretes ni corrijas su salida: pasa al Paso 3.
 
@@ -81,14 +83,14 @@ Quien construye publica siguiendo P5 de los Estándares. Si te pide publicar a t
 Cuando quien construye diga que aplicó N9:
 
 1. Obtén el `activeVersionId` del workflow de producción con `get_workflow_details`.
-2. Corre `node "<raíz del plugin>/scripts/revisar-workflow.js" despues --json workflows/<archivo>.json --version-publicada <activeVersionId> --dev "<JSON de la copia DEV revisado en el Paso 1>" [--mapa-dev <las parejas del Paso 1b o, si no se corrió, armadas igual que en su punto 1>]`, con el JSON de la copia DEV cuyo `versionId` es el registrado en la marca. Con `--dev`, el criterio 23 también falla si lo publicado no es la copia DEV que se revisó.
+2. Corre `node "<raíz del plugin>/scripts/revisar-workflow.js" despues --json workflows/<archivo>.json --version-publicada <activeVersionId> --dev "<JSON de la copia DEV revisado en el Paso 1>" [--mapa-dev <las parejas del Paso 1b o, si no se corrió, armadas igual que en su punto 1>]`, con el JSON de la copia DEV cuyo `versionId` es el registrado en la marca. Con `--dev`, el criterio 23 también falla si lo publicado no es la copia DEV que se revisó, salvo las divergencias declaradas en `.polaria-gate-n8n/divergencias/<ID de producción>.json` (sección 5.3 del protocolo). Si el reporte avisa una declaración obsoleta o rechaza un archivo (fuera de git, sin commit o mal formado), díselo a quien construye: el archivo lo corrige él, tú no lo editas.
 3. Ofrece agregar la fila del criterio 23 al issue de Linear. Si queda en `FAIL`, dile qué falta. No es un veredicto nuevo: se corrige en git, sin volver a publicar; si lo publicado no es lo revisado, el cambio pasa de nuevo por el gate.
 
 ## Restricciones
 
-- NUNCA decidas tú un criterio ni la exención de solo texto si puedes correr el script y despachar el subagente: la independencia es la razón de ser del gate.
+- NUNCA decidas tú un criterio ni una exención (de texto o de canvas) si puedes correr el script y despachar el subagente: la independencia es la razón de ser del gate.
 - NUNCA cambies el estado de un criterio del reporte, ni conviertas un `FAIL` del script en `PASS`, ni un `NO EXENTO` en exención.
-- NUNCA escribas una marca a mano. `APROBADO` y `RECHAZADO_JUSTIFICADO` salen de `registrar-veredicto.js` tras un reporte real (y, en el segundo caso, una justificación escrita de cada `FAIL`); `EXENTO_TEXTO` solo lo escribe `revisar-workflow.js texto`.
+- NUNCA escribas una marca a mano. `APROBADO` y `RECHAZADO_JUSTIFICADO` salen de `registrar-veredicto.js` tras un reporte real (y, en el segundo caso, una justificación escrita de cada `FAIL`); `EXENTO_TEXTO` y `EXENTO_CANVAS` solo los escribe `revisar-workflow.js texto`.
 - NUNCA pidas, muestres ni guardes la clave de la API de n8n: vive solo en la variable de entorno `N8N_API_KEY` de quien construye.
 - NUNCA publiques en Linear ni en n8n sin confirmación de quien construye.
 - NUNCA publiques la copia DEV: lo que se publica es el workflow de producción después de importarle el JSON de la copia DEV (P5).
@@ -99,7 +101,7 @@ Cuando quien construye diga que aplicó N9:
 - [ ] Se comprobó la clave de la API antes de empezar, o el reporte declara el Download manual.
 - [ ] Los scripts corrieron sobre JSON descargados (por la API o a mano), no sobre una transcripción.
 - [ ] Si producción ya estaba publicada, corrió el Paso 1b antes de despachar al revisor.
-- [ ] Los `REVISAR` los decidió el subagente aislado (o el reporte declara que no hubo aislamiento), salvo `EXENTO_TEXTO`.
+- [ ] Los `REVISAR` los decidió el subagente aislado (o el reporte declara que no hubo aislamiento), salvo `EXENTO_TEXTO` y `EXENTO_CANVAS`.
 - [ ] Existe `.git/polaria-gate-n8n/<ID de producción>.md` con el veredicto.
 - [ ] El reporte completo (o la salida del modo `texto`) quedó en el issue de Linear antes de publicar.
 - [ ] Después de publicar, el criterio 23 se revisó con `--dev` y su resultado quedó en Linear.
