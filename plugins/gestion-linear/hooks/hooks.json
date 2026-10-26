@@ -1,0 +1,16 @@
+{
+  "description": "Bloquea gh pr create si la descripción del PR no vincula el issue de Linear con Refs POL-X, o si usa Closes, Fixes, Resolves o Implements.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/verificar-pr-refs.js\""
+          }
+        ]
+      }
+    ]
+  }
+}
