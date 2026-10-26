@@ -91,11 +91,11 @@ function generarCasos(schema) {
   const casos = [];
   const tabla2 = schema.tabla_2_interaccion || [];
   const tabla3 = schema.tabla_3_prellenado || [];
-  const pn2 = schema.prueba_nivel_2;
-  if (!pn2) return casos;
-  const acceso = pn2.acceso || {};
-  const botones = pn2.botones || {};
-  const camposT4 = pn2.campos || [];
+  const pruebaNivel2 = schema.prueba_nivel_2;
+  if (!pruebaNivel2) return casos;
+  const acceso = pruebaNivel2.acceso || {};
+  const botones = pruebaNivel2.botones || {};
+  const camposT4 = pruebaNivel2.campos || [];
   const localizadorDe = (campoId) => {
     const campo = camposT4.find((c) => c.campo_id === campoId);
     return campo && localizadorValido(campo.localizador) ? campo.localizador : null;
