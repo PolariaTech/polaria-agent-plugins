@@ -49,6 +49,25 @@ function normalizarRuta(ruta) {
   return String(ruta).replace(/\\/g, '/').replace(/^\.\//, '').replace(/^\/+/, '');
 }
 
+// Forma real de una ruta aunque el archivo aún no exista: resuelve el ancestro que sí existe (nombres cortos 8.3 de
+// Windows como RUNNER~1, enlaces simbólicos, junctions) y le vuelve a pegar el resto. Sin esto, git entrega la raíz
+// del repo con el nombre largo y el editor el archivo con el corto, y el archivo parece estar fuera del repo.
+function rutaReal(ruta) {
+  let actual = path.resolve(ruta);
+  const resto = [];
+  while (!fs.existsSync(actual)) {
+    const padre = path.dirname(actual);
+    if (padre === actual) return path.resolve(ruta);
+    resto.unshift(path.basename(actual));
+    actual = padre;
+  }
+  try {
+    return path.join(fs.realpathSync.native(actual), ...resto);
+  } catch {
+    return path.resolve(ruta);
+  }
+}
+
 function rutaRelativaAlRepo(raiz, rutaAbsolutaORelativa) {
   const normalizada = String(rutaAbsolutaORelativa).replace(/^\/([a-zA-Z]:)/, '$1');
   const absoluta = path.isAbsolute(normalizada) ? normalizada : path.join(raiz, normalizada);
@@ -224,6 +243,7 @@ module.exports = {
   infoDelRepo,
   issueDeRama,
   normalizarRuta,
+  rutaReal,
   rutaRelativaAlRepo,
   parsearReclamo,
   zonaCubre,

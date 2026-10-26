@@ -78,6 +78,19 @@ test('rutaRelativaAlRepo y normalizarRuta', () => {
   assert.strictEqual(lib.rutaRelativaAlRepo('/repo', 'src/a.ts'), 'src/a.ts');
 });
 
+test('rutaReal: resuelve el ancestro que existe aunque el archivo no exista y respeta lo que no puede resolver', () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const carpeta = fs.mkdtempSync(path.join(os.tmpdir(), 'ruta-real-'));
+  const real = fs.realpathSync.native(carpeta);
+  assert.strictEqual(lib.rutaReal(path.join(carpeta, 'a', 'b', 'nuevo.ts')), path.join(real, 'a', 'b', 'nuevo.ts'));
+  const enlace = path.join(carpeta, 'enlace');
+  fs.mkdirSync(path.join(carpeta, 'destino'));
+  fs.symlinkSync(path.join(carpeta, 'destino'), enlace, 'junction');
+  assert.strictEqual(lib.rutaReal(path.join(enlace, 'x.ts')), path.join(real, 'destino', 'x.ts'));
+});
+
 test('reclamosAjenos y reclamoPropio ignoran los liberados y al propio issue', () => {
   const cache = {
     reclamos: [

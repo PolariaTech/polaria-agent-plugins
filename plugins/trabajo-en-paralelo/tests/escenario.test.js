@@ -238,6 +238,17 @@ test('edición: ruta relativa en tool_input y ruta con barras de Windows', { ski
   assert.match(windows.json.systemMessage, /POL-101/);
 });
 
+test('edición: un archivo alcanzado por un enlace (junction o symlink) se resuelve al repo real', () => {
+  // Reproduce lo que pasó en el CI de Windows: el editor entrega la ruta por un camino (RUNNER~1) y git la raíz por otro.
+  const e = danielConWorktree();
+  importarReclamos(e.worktree, [RECLAMO_DE_MAURO]);
+  const enlace = path.join(e.carpeta, 'enlace-al-worktree');
+  fs.symlinkSync(e.worktree, enlace, 'junction');
+  const r = ejecutarHook('avisar-zona-ajena.js', eventoEdicion(enlace, path.join(enlace, 'src', 'auth', 'nuevo-por-enlace.ts')));
+  assert.ok(r.json, 'debía avisar aunque la ruta llegue por un enlace');
+  assert.match(r.json.systemMessage, /POL-101/);
+});
+
 test('edición: con POLARIA_PARALELO_MODO=bloquear Claude Code rechaza con código 2', () => {
   const e = danielConWorktree();
   importarReclamos(e.worktree, [RECLAMO_DE_MAURO]);

@@ -53,10 +53,11 @@ function evaluar(evento) {
   const rutaAbsoluta = path.isAbsolute(String(archivo).replace(/^\/([a-zA-Z]:)/, '$1'))
     ? String(archivo).replace(/^\/([a-zA-Z]:)/, '$1')
     : path.join(lib.directorioDelEvento(evento), archivo);
-  const directorio = directorioExistente(rutaAbsoluta);
+  const real = lib.rutaReal(rutaAbsoluta);
+  const directorio = directorioExistente(real);
   const repo = directorio && lib.infoDelRepo(directorio);
   if (!repo) return null;
-  const relativa = lib.rutaRelativaAlRepo(repo.raiz, rutaAbsoluta);
+  const relativa = lib.rutaRelativaAlRepo(lib.rutaReal(repo.raiz), real);
   if (relativa.startsWith('..') || relativa.startsWith('.git/')) return null;
 
   const cache = lib.leerCache(repo);
