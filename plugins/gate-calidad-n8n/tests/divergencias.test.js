@@ -140,3 +140,23 @@ test('sin --dev no se leen las divergencias (el criterio 23 solo compara lo publ
   assert.strictEqual(r.status, 0, r.stderr);
   assert.strictEqual(filaDeCriterio(r.stdout, 23).estado, 'PASS');
 });
+
+test('lista todas las diferencias sin declarar, no solo las primeras 5', () => {
+  const dev = orquestadorDev();
+  for (let i = 1; i <= 8; i++) dev.nodes[2].parameters[`campo${i}`] = `valor ${i}`;
+  const resultado = criterio23(prepararRepo({ declaracion: DECLARACION_COMPLETA, dev }));
+  assert.strictEqual(resultado.estado, 'FAIL');
+  assert.match(resultado.evidencia, /8 diferencia\(s\) sin declarar/);
+  for (let i = 1; i <= 8; i++) assert.match(resultado.evidencia, new RegExp(String.raw`parameters\.campo${i}\b`));
+});
+
+test('si hay más de 50 diferencias sin declarar, lista 50 y anuncia cuántas faltan', () => {
+  const dev = orquestadorDev();
+  for (let i = 1; i <= 51; i++) dev.nodes[2].parameters[`campo${i}`] = `valor ${i}`;
+  const resultado = criterio23(prepararRepo({ declaracion: DECLARACION_COMPLETA, dev }));
+  assert.strictEqual(resultado.estado, 'FAIL');
+  assert.match(resultado.evidencia, /51 diferencia\(s\) sin declarar/);
+  assert.match(resultado.evidencia, /; y 1 más\)/);
+  assert.match(resultado.evidencia, new RegExp(String.raw`parameters\.campo50\b`));
+  assert.doesNotMatch(resultado.evidencia, new RegExp(String.raw`parameters\.campo51\b`));
+});

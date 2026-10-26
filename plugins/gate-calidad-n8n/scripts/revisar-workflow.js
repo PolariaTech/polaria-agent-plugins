@@ -565,7 +565,7 @@ function revisarDespues(workflow, opciones) {
     const declaracion = leerDivergencias(workflow.id, opciones.repo);
     if (declaracion && declaracion.error) fallas.push(declaracion.error);
     const aplicada = declaracion && !declaracion.error ? aplicarDivergencias(distintas, declaracion) : { sinDeclarar: distintas, declaradas: [], obsoletas: [] };
-    if (aplicada.sinDeclarar.length) fallas.push(`lo publicado no es la copia DEV verificada (${aplicada.sinDeclarar.length} diferencia(s) sin declarar: ${aplicada.sinDeclarar.slice(0, 5).map((d) => `${d.donde} ${d.ruta}`).join('; ')})`);
+    if (aplicada.sinDeclarar.length) fallas.push(`lo publicado no es la copia DEV verificada (${aplicada.sinDeclarar.length} diferencia(s) sin declarar: ${aplicada.sinDeclarar.slice(0, LIMITE_SIN_DECLARAR).map((d) => `${d.donde} ${d.ruta}`).join('; ')}${aplicada.sinDeclarar.length > LIMITE_SIN_DECLARAR ? `; y ${aplicada.sinDeclarar.length - LIMITE_SIN_DECLARAR} más` : ''})`);
     declaradas = aplicada.declaradas;
     for (const entrada of aplicada.obsoletas) hallazgos.push(`Criterio 23: declaración obsoleta en \`${declaracion.relativa}\` (ya no coincide con ninguna diferencia real): ${entrada.descripcion}. Bórrala o corrígela.`);
   }
@@ -585,6 +585,8 @@ function revisarDespues(workflow, opciones) {
 //     "parametros": [{ "nodo": "Nombre del nodo", "ruta": "parameters.path", "valorProd": "...", "valorDev": "..." }] }
 // Las conexiones que salen de un nodo declarado en nodosSoloDev se aceptan sin listarlas una por una.
 const SECCIONES_DE_DIVERGENCIAS = ['nodosSoloDev', 'conexiones', 'parametros'];
+// Cuántas diferencias sin declarar lista el reporte: las suficientes para poder declararlas todas de una vez.
+const LIMITE_SIN_DECLARAR = 50;
 
 function leerDivergencias(workflowId, repo) {
   const relativa = path.join('.polaria-gate-n8n', 'divergencias', `${workflowId}.json`);
