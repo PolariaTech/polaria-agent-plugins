@@ -12,13 +12,18 @@
 //                                    [--dev <JSON de la copia DEV verificada>] [--mapa-dev <idProd>=<idDev>,...]
 //
 // Estados: PASS, FAIL, REVISAR (lo decide el subagente) y N/A. Sale con 0 salvo error de uso (1).
-// El modo texto (sección 5.1 del protocolo) decide si el cambio es de solo texto: si lo demuestra,
-// registra él mismo la marca EXENTO_TEXTO y sale con 0; si no, sale con 3 y se corre el Gate completo.
+// El modo texto decide si el cambio es de solo texto (sección 5.1 del protocolo) o de solo diseño del canvas
+// (sección 5.2): si lo demuestra, registra él mismo la marca EXENTO_TEXTO o EXENTO_CANVAS y sale con 0;
+// si no, sale con 3 y se corre el Gate completo.
+// En el modo despues, --dev acepta las divergencias DEV↔producción declaradas en
+// <repo>/.polaria-gate-n8n/divergencias/<ID de producción>.json (sección 5.3). En el modo antes, si el repo
+// trae docs/catalogo-errores.md y scripts/verificar-catalogo-errores.js, corre ese paso opcional (sección 5.4).
 
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { execFileSync } = require('child_process');
+const os = require('os');
+const { execFileSync, spawnSync } = require('child_process');
 
 const NOMBRE_ERROR_HANDLER = 'Polaria - Error Handler';
 const ALERTAS_VALIDAS = ['polo.alertas@polaria.tech', 'polo@polaria.tech'];
@@ -494,12 +499,46 @@ function revisarAntes(workflow, opciones) {
     r[22] = fallas.length ? ['FAIL', `${fallas.join('; ')}.`] : porConfirmar.length ? ['REVISAR', 'Confirmar que la nota justifica no reintentar (ver hallazgos).'] : ['PASS', 'HTTP Request con reintentos o sin HTTP Request.'];
   }
 
-  return { resultados: r, hallazgos };
+  return { resultados: r, hallazgos, catalogo: revisarCatalogo(workflow, opciones) };
+}
+
+// Paso opcional (sección 5.4 del protocolo): catálogo de errores del repo. Solo corre si el repo trae
+// `docs/catalogo-errores.md` y `scripts/verificar-catalogo-errores.js`; si no, queda N/A con una sugerencia y
+// no bloquea. Corre el script del propio repo sobre sus `workflows/` con la copia DEV en lugar de la de
+// producción, así el Gate rechaza un texto de error nuevo antes de publicarlo. El script del repo recibe
+// `--catalogo <ruta> --workflows <carpeta>` y sale con 0 (todo coincide), 1 (hay diferencias) u otro código (error).
+function revisarCatalogo(workflow, opciones) {
+  const catalogo = path.join(opciones.repo, 'docs', 'catalogo-errores.md');
+  const script = path.join(opciones.repo, 'scripts', 'verificar-catalogo-errores.js');
+  if (!fs.existsSync(catalogo) || !fs.existsSync(script)) {
+    return ['N/A', 'El repo no tiene `docs/catalogo-errores.md` y `scripts/verificar-catalogo-errores.js`. Sugerencia: crear un catálogo de errores con los textos que ve la persona usuaria (ejemplo: el repo de Mateo Support). Este paso no bloquea.'];
+  }
+  const temporal = fs.mkdtempSync(path.join(os.tmpdir(), 'gate-catalogo-'));
+  try {
+    const carpeta = path.join(opciones.repo, 'workflows');
+    const produccion = nombreDeProduccion(workflow.name || '');
+    for (const archivo of fs.existsSync(carpeta) ? fs.readdirSync(carpeta).filter((a) => a.endsWith('.json')) : []) {
+      let otro;
+      try { otro = JSON.parse(fs.readFileSync(path.join(carpeta, archivo), 'utf8').replace(/^﻿/, '')); } catch { continue; }
+      if (Array.isArray(otro.nodes) && nombreDeProduccion(otro.name || '') === produccion) continue; // Lo reemplaza la copia DEV.
+      fs.copyFileSync(path.join(carpeta, archivo), path.join(temporal, archivo));
+    }
+    fs.writeFileSync(path.join(temporal, 'copia-dev.json'), JSON.stringify({ ...workflow, name: produccion }));
+    const ejecucion = spawnSync(process.execPath, [script, '--catalogo', catalogo, '--workflows', temporal], { cwd: opciones.repo, encoding: 'utf8' });
+    const lineas = `${ejecucion.stdout || ''}${ejecucion.stderr || ''}`.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    if (ejecucion.status === 0) return ['PASS', (lineas[lineas.length - 1] || '').replace(/^PASS\s*[—-]\s*/, '') || 'Todos los textos de error coinciden con el catálogo.'];
+    if (ejecucion.status === 1) return ['FAIL', `El catálogo y los textos de error no coinciden: ${lineas.filter((l) => l.startsWith('- ')).slice(0, 5).map((l) => l.slice(2)).join(' · ') || lineas.join(' ')}`];
+    return ['REVISAR', `El script del catálogo terminó con error (código ${ejecucion.status}): ${lineas.slice(0, 3).join(' ') || 'sin mensaje'}`];
+  } finally {
+    fs.rmSync(temporal, { recursive: true, force: true });
+  }
 }
 
 function revisarDespues(workflow, opciones) {
   const r = {};
   const fallas = [];
+  const hallazgos = [];
+  let declaradas = [];
   const archivo = path.resolve(opciones.json);
   const esperado = `${slug(nombreDeProduccion(workflow.name || ''))}.json`;
   if (path.basename(path.dirname(archivo)) !== 'workflows') fallas.push(`el archivo no está en \`workflows/\` (${archivo})`);
@@ -523,10 +562,80 @@ function revisarDespues(workflow, opciones) {
     const marca = leerMarca(workflow.id, opciones.repo);
     if (marca && marca.version_dev && dev.versionId !== marca.version_dev) fallas.push(`\`--dev\` es la versión \`${dev.versionId}\` de la copia DEV, no la revisada (\`${marca.version_dev}\`)`);
     const distintas = compararWorkflows(dev, workflow, opciones.parejas, { sinCredenciales: true }).filter((d) => !d.tolerada);
-    if (distintas.length) fallas.push(`lo publicado no es la copia DEV verificada (${distintas.length} diferencia(s): ${distintas.slice(0, 5).map((d) => `${d.donde} ${d.ruta}`).join('; ')})`);
+    const declaracion = leerDivergencias(workflow.id, opciones.repo);
+    if (declaracion && declaracion.error) fallas.push(declaracion.error);
+    const aplicada = declaracion && !declaracion.error ? aplicarDivergencias(distintas, declaracion) : { sinDeclarar: distintas, declaradas: [], obsoletas: [] };
+    if (aplicada.sinDeclarar.length) fallas.push(`lo publicado no es la copia DEV verificada (${aplicada.sinDeclarar.length} diferencia(s) sin declarar: ${aplicada.sinDeclarar.slice(0, 5).map((d) => `${d.donde} ${d.ruta}`).join('; ')})`);
+    declaradas = aplicada.declaradas;
+    for (const entrada of aplicada.obsoletas) hallazgos.push(`Criterio 23: declaración obsoleta en \`${declaracion.relativa}\` (ya no coincide con ninguna diferencia real): ${entrada.descripcion}. Bórrala o corrígela.`);
   }
-  r[23] = fallas.length ? ['FAIL', `${fallas.join('; ')}.`] : ['PASS', `\`${esperado}\` con el \`versionId\` publicado, citado en el commit y en \`CHANGELOG.md\`${opciones.dev ? ', idéntico a la copia DEV verificada' : ''}.`];
-  return { resultados: r, hallazgos: [] };
+  const conDivergencias = declaradas.length ? ` PASS con divergencias declaradas (${declaradas.length}): ${declaradas.map((d) => `${d.donde} ${d.ruta}`.trim()).join('; ')}.` : '';
+  r[23] = fallas.length ? ['FAIL', `${fallas.join('; ')}.`] : ['PASS', `\`${esperado}\` con el \`versionId\` publicado, citado en el commit y en \`CHANGELOG.md\`${opciones.dev ? ', idéntico a la copia DEV verificada' : ''}.${conDivergencias}`];
+  return { resultados: r, hallazgos };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Divergencias DEV↔producción declaradas (sección 5.3 del protocolo, criterio 23 con --dev).
+// Algunos workflows tienen bloques que solo existen en la copia DEV, de forma intencional y permanente.
+// Se declaran en <repo>/.polaria-gate-n8n/divergencias/<ID de producción>.json, que tiene que estar en git
+// y sin cambios sin commit. Cada entrada tiene que coincidir exactamente con una diferencia real
+// (la que el script lista); toda diferencia no declarada sigue siendo FAIL.
+//   { "nodosSoloDev": ["Nombre del nodo"],
+//     "conexiones": [{ "ruta": "Origen.main[1][0].node", "valorProd": "...", "valorDev": "..." }],
+//     "parametros": [{ "nodo": "Nombre del nodo", "ruta": "parameters.path", "valorProd": "...", "valorDev": "..." }] }
+// Las conexiones que salen de un nodo declarado en nodosSoloDev se aceptan sin listarlas una por una.
+const SECCIONES_DE_DIVERGENCIAS = ['nodosSoloDev', 'conexiones', 'parametros'];
+
+function leerDivergencias(workflowId, repo) {
+  const relativa = path.join('.polaria-gate-n8n', 'divergencias', `${workflowId}.json`);
+  const ruta = path.join(repo, relativa);
+  if (!workflowId || !fs.existsSync(ruta)) return null;
+  const git = (...argumentos) => execFileSync('git', argumentos, { cwd: repo, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+  try {
+    git('ls-files', '--error-unmatch', relativa);
+  } catch {
+    return { error: `\`${relativa}\` existe pero no está en git: una divergencia declarada fuera de git no cuenta` };
+  }
+  if (git('status', '--porcelain', '--', relativa)) return { error: `\`${relativa}\` tiene cambios sin commit: una divergencia declarada tiene que estar commiteada` };
+  let datos;
+  try {
+    datos = JSON.parse(fs.readFileSync(ruta, 'utf8').replace(/^\uFEFF/, ''));
+  } catch (error) {
+    return { error: `no se pudo leer \`${relativa}\` como JSON: ${error.message}` };
+  }
+  const formato = (detalle) => ({ error: `\`${relativa}\` no tiene el formato esperado: ${detalle}` });
+  if (!datos || typeof datos !== 'object' || Array.isArray(datos)) return formato('debe ser un objeto');
+  const desconocidas = Object.keys(datos).filter((clave) => !SECCIONES_DE_DIVERGENCIAS.includes(clave));
+  if (desconocidas.length) return formato(`secciones desconocidas ${lista(desconocidas)} (solo ${lista(SECCIONES_DE_DIVERGENCIAS)})`);
+  const entradas = [];
+  for (const nombre of datos.nodosSoloDev || []) {
+    if (typeof nombre !== 'string' || !nombre) return formato('cada elemento de `nodosSoloDev` es el nombre de un nodo');
+    entradas.push({ soloDev: true, nodo: nombre, donde: `nodo \`${nombre}\``, ruta: '', antes: 'no existe', despues: 'existe', descripcion: `nodo solo-DEV \`${nombre}\`` });
+  }
+  for (const [seccion, donde] of [['conexiones', () => 'connections'], ['parametros', (e) => `nodo \`${e.nodo}\``]]) {
+    for (const e of datos[seccion] || []) {
+      if (!e || typeof e.ruta !== 'string' || !e.ruta || (seccion === 'parametros' && (typeof e.nodo !== 'string' || !e.nodo))) return formato(`cada elemento de \`${seccion}\` lleva ${seccion === 'parametros' ? '`nodo`, ' : ''}\`ruta\`, \`valorProd\` y \`valorDev\``);
+      entradas.push({ donde: donde(e), ruta: e.ruta, antes: e.valorProd, despues: e.valorDev, descripcion: `${donde(e)} ${e.ruta}` });
+    }
+  }
+  return { relativa, entradas };
+}
+
+function aplicarDivergencias(distintas, declaracion) {
+  const usadas = new Set();
+  const declaradas = [];
+  const sinDeclarar = [];
+  for (const d of distintas) {
+    let indice = declaracion.entradas.findIndex((e) => !e.soloDev && e.donde === d.donde && e.ruta === d.ruta && estable(e.antes) === estable(d.antes) && estable(e.despues) === estable(d.despues));
+    if (indice < 0 && d.nodo === null && d.antes === 'no existe') indice = declaracion.entradas.findIndex((e) => e.soloDev && e.donde === d.donde);
+    if (indice < 0 && d.donde === 'connections' && d.antes === undefined) indice = declaracion.entradas.findIndex((e) => e.soloDev && e.nodo === d.partes[0]);
+    if (indice < 0) sinDeclarar.push(d);
+    else {
+      usadas.add(indice);
+      declaradas.push(d);
+    }
+  }
+  return { sinDeclarar, declaradas, obsoletas: declaracion.entradas.filter((_, i) => !usadas.has(i)) };
 }
 
 function leerMarca(workflowId, repo) {
@@ -544,6 +653,30 @@ function leerMarca(workflowId, repo) {
 // Campos que no cuentan como diferencia: son propios de cada copia o solo de presentación.
 const CLAVES_IGNORADAS = new Set(['position', 'cachedResultName', 'cachedResultUrl']);
 const PARAMETROS_DE_NOTA_IGNORADOS = new Set(['width', 'height', 'color']);
+
+// JSON con las claves ordenadas, para comparar valores sin depender del orden en que n8n las exporta.
+const estable = (valor) => JSON.stringify(valor, (_clave, v) => (v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : 1))) : v));
+const estaVacio = (valor) => valor === undefined || valor === null || (typeof valor === 'object' && !Object.keys(valor).length);
+
+// Diseño del canvas (sección 5.2 del protocolo): grupos de nodos (`nodeGroups`), posición de cada nodo y
+// ancho, alto y color de las notas adhesivas. No cambian cómo se ejecuta el workflow. El contenido de una
+// nota (`parameters.content`) no es canvas: sigue la regla de texto.
+function cambiosDeCanvas(dev, produccion) {
+  const cambios = [];
+  if (estable(estaVacio(produccion.nodeGroups) ? null : produccion.nodeGroups) !== estable(estaVacio(dev.nodeGroups) ? null : dev.nodeGroups)) cambios.push('grupos de nodos (`nodeGroups`)');
+  const enProduccion = new Map(produccion.nodes.map((n) => [n.name, n]));
+  for (const nodo of dev.nodes) {
+    const antes = enProduccion.get(nodo.name);
+    if (!antes) continue; // Un nodo que solo existe en una copia es una diferencia estructural, no de canvas.
+    if (estable(antes.position) !== estable(nodo.position)) cambios.push(`posición de \`${nodo.name}\``);
+    if (nodo.type === 'n8n-nodes-base.stickyNote') {
+      for (const clave of PARAMETROS_DE_NOTA_IGNORADOS) {
+        if (estable((antes.parameters || {})[clave]) !== estable((nodo.parameters || {})[clave])) cambios.push(`${clave} de la nota \`${nodo.name}\``);
+      }
+    }
+  }
+  return cambios;
+}
 
 function diferenciasEntre(antes, despues, ruta, salida) {
   if (typeof antes === 'string' && typeof despues === 'string') {
@@ -642,9 +775,20 @@ function textosDeContrato(workflow) {
   return textos;
 }
 
+// ¿`fragmento` aparece en `texto` como palabra o frase completa? Una subcadena dentro de otra palabra no
+// cuenta: `consulta` (de `$fromAI('consulta', …)`) no está en "consultando". Ambos vienen normalizados.
+// Solo exige límite de palabra en el borde que es letra o número, así `[[CODIGO]]` sigue coincidiendo.
+const escaparRegex = (texto) => texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function contieneCompleto(texto, fragmento) {
+  if (!fragmento) return false;
+  const inicio = /^[a-z0-9]/.test(fragmento) ? '(?<![a-z0-9])' : '';
+  const fin = /[a-z0-9]$/.test(fragmento) ? '(?![a-z0-9])' : '';
+  return new RegExp(`${inicio}${escaparRegex(fragmento)}${fin}`).test(texto);
+}
+
 // ¿El texto viejo aparece donde algo podría compararlo? Busca en las dos direcciones, sin mayúsculas
 // ni acentos: el texto viejo dentro de otro texto, y cualquier literal de 8+ caracteres dentro del viejo
-// (atrapa `.includes('No encontre informacion')`).
+// (atrapa `.includes('No encontre informacion')`). En las dos, como palabras o frases completas.
 function usosComoContrato(textoViejo, fuentes) {
   const viejo = normalizarTexto(textoViejo);
   const usos = [];
@@ -652,7 +796,7 @@ function usosComoContrato(textoViejo, fuentes) {
     for (const { nodo, texto, esCodigo } of textos) {
       const completo = normalizarTexto(texto);
       const literales = esCodigo ? [...texto.matchAll(LITERALES)].map((m) => m[1] || m[2] || m[3] || '') : [texto];
-      if ((viejo && completo.includes(viejo)) || literales.some((l) => normalizarTexto(l).length >= 8 && viejo.includes(normalizarTexto(l)))) usos.push(`${origen} → \`${nodo}\``);
+      if (contieneCompleto(completo, viejo) || literales.some((l) => normalizarTexto(l).length >= 8 && contieneCompleto(viejo, normalizarTexto(l)))) usos.push(`${origen} → \`${nodo}\``);
     }
   }
   return [...new Set(usos)];
@@ -722,33 +866,38 @@ function revisarTexto(dev, opciones) {
   if (dev.name !== `${nombreDeProduccion(publicado.name || '')} - DEV`) bloqueos.push(`\`${dev.name}\` no es la copia DEV de \`${publicado.name}\``);
   const fuentesRepo = textosDeOtrosWorkflows(opciones.repo, [publicado.id, dev.id].filter(Boolean), nombreDeProduccion(publicado.name || ''));
   if (PATRONES_SECRETO.some((p) => p.test(JSON.stringify(dev.pinData || {})))) bloqueos.push('el pin data de la copia DEV contiene un texto con forma de clave o token (criterio 12)');
-  if (fuentesRepo === null) bloqueos.push(`no existe \`workflows/\` en ${opciones.repo}: sin los demás workflows no se puede buscar el texto viejo en ellos`);
+  const diferencias = compararWorkflows(dev, publicado, opciones.parejas);
+  const cambios = diferencias.filter((d) => !d.tolerada);
+  const canvas = cambiosDeCanvas(dev, publicado);
+  // workflows/ solo sirve para buscar el texto viejo en los demás workflows: un cambio de solo canvas no lo usa.
+  if (cambios.length && fuentesRepo === null) bloqueos.push(`no existe \`workflows/\` en ${opciones.repo}: sin los demás workflows no se puede buscar el texto viejo en ellos`);
   const fuentes = [{ origen: 'este workflow', textos: textosDeContrato(dev) }, ...(fuentesRepo || [])];
 
-  const diferencias = compararWorkflows(dev, publicado, opciones.parejas);
   for (const d of diferencias) d.motivo = motivoDeRechazo(d, dev, fuentes);
-  const cambios = diferencias.filter((d) => !d.tolerada);
-  if (!cambios.length) bloqueos.push('la copia DEV no tiene diferencias con producción: no hay nada que publicar');
+  if (!cambios.length && !canvas.length) bloqueos.push('la copia DEV no tiene diferencias con producción: no hay nada que publicar');
   const rechazadas = diferencias.filter((d) => d.motivo);
-  return { publicado, diferencias, bloqueos, exento: !bloqueos.length && !rechazadas.length };
+  // Un cambio mixto (canvas y texto) ignora el canvas y se evalúa con la regla de texto: si califica, es EXENTO_TEXTO.
+  return { publicado, diferencias, canvas, bloqueos, exento: !bloqueos.length && !rechazadas.length, veredicto: cambios.length ? 'EXENTO_TEXTO' : 'EXENTO_CANVAS' };
 }
 
-function imprimirTexto(dev, { publicado, diferencias, bloqueos, exento }, opciones) {
+function imprimirTexto(dev, { publicado, diferencias, canvas, bloqueos, exento, veredicto }, opciones) {
   const corto = (v) => {
     const texto = typeof v === 'string' ? v : JSON.stringify(v);
     return `\`${(texto === undefined ? '—' : texto.length > 90 ? `${texto.slice(0, 87)}...` : texto).replace(/\|/g, '\\|').replace(/\n/g, ' ').replace(/`/g, "'")}\``;
   };
   const salida = [
-    `## Verificación de cambio de solo texto — \`${dev.name}\``, '',
+    `## Verificación de exención (solo texto o solo canvas) — \`${dev.name}\``, '',
     `versionId de la copia DEV: \`${dev.versionId || 'sin versionId'}\` · producción: \`${publicado.versionId || 'sin versionId'}\` (publicada: \`${opciones['version-publicada']}\`)`, '',
   ];
   if (diferencias.length) {
     salida.push('| # | Dónde | Campo | Antes (producción) | Después (copia DEV) | Veredicto |', '|---|---|---|---|---|---|');
     diferencias.forEach((d, i) => salida.push(`| ${i + 1} | ${d.donde} | \`${d.ruta || '—'}\` | ${corto(d.antes)} | ${corto(d.despues)} | ${d.tolerada ? 'Pareja DEV declarada' : d.motivo ? `Rechazada: ${d.motivo.replace(/\|/g, '\\|')}` : 'Permitida'} |`));
   }
+  if (canvas.length) salida.push('', `Cambios de diseño del canvas (no cuentan como diferencia, sección 5.2): ${canvas.join('; ')}.`);
   if (opciones.parejas.size) salida.push('', `Parejas DEV declaradas (--mapa-dev): ${lista([...opciones.parejas])}.`);
   if (bloqueos.length) salida.push('', ...bloqueos.map((b) => `- Bloqueo: ${b}.`));
-  salida.push('', exento ? 'Resultado: EXENTO_TEXTO — no hace falta el revisor aislado (sección 5.1 del protocolo).' : 'Resultado: NO EXENTO — corre el Gate completo (Pasos 2 a 4).');
+  const seccion = veredicto === 'EXENTO_CANVAS' ? '5.2' : '5.1';
+  salida.push('', exento ? `Resultado: ${veredicto} — no hace falta el revisor aislado (sección ${seccion} del protocolo).` : 'Resultado: NO EXENTO — corre el Gate completo (Pasos 2 a 4).');
   process.stdout.write(`${salida.join('\n')}\n`);
 }
 
@@ -759,11 +908,12 @@ const NOMBRES_CRITERIOS = {
   20: 'SQL con expresiones', 21: 'Nodos sueltos', 22: 'Reintentos HTTP', 23: 'Git',
 };
 
-function imprimir(workflow, { resultados, hallazgos }, modo) {
+function imprimir(workflow, { resultados, hallazgos, catalogo }, modo) {
   const salida = [`## Revisión mecánica — \`${workflow.name}\` (${modo === 'antes' ? 'antes de publicar' : 'después de publicar'})`, '', `versionId del JSON: \`${workflow.versionId || 'sin versionId'}\``, '', '| # | Criterio | Estado | Evidencia |', '|---|---|---|---|'];
   for (const [numero, [estado, evidencia]] of Object.entries(resultados)) salida.push(`| ${numero} | ${NOMBRES_CRITERIOS[numero]} | ${estado} | ${evidencia.replace(/\|/g, '\\|').replace(/\n/g, ' ')} |`);
   const cuenta = (estado) => Object.values(resultados).filter(([e]) => e === estado).length;
   salida.push('', `Resumen: ${cuenta('FAIL')} FAIL · ${cuenta('REVISAR')} REVISAR · ${cuenta('PASS')} PASS · ${cuenta('N/A')} N/A`);
+  if (catalogo) salida.push('', '### Paso opcional — Catálogo de errores (sección 5.4 del protocolo; fuera de los 23 criterios)', '', `Estado: ${catalogo[0]} — ${catalogo[1].replace(/\n/g, ' ')}`);
   if (hallazgos.length) salida.push('', '### Hallazgos para el revisor', '', ...hallazgos.map((h) => `- ${h}`));
   process.stdout.write(`${salida.join('\n')}\n`);
 }
@@ -778,11 +928,11 @@ if (opciones.modo === 'texto') {
   if (resultado.exento && opciones.registrar !== 'no') {
     const sha256 = crypto.createHash('sha256').update(fs.readFileSync(opciones.json)).digest('hex');
     try {
-      require('./marca').escribirMarca(opciones['workflow-id'], 'EXENTO_TEXTO', { version_dev: workflow.versionId, dev_id: workflow.id, sha256 }, opciones.repo);
+      require('./marca').escribirMarca(opciones['workflow-id'], resultado.veredicto, { version_dev: workflow.versionId, dev_id: workflow.id, sha256 }, opciones.repo);
     } catch {
       salirConUso(`No se pudo registrar la marca: ${opciones.repo} no es un repo git. No hay exención.`);
     }
-    registro = `\nVEREDICTO: EXENTO_TEXTO registrado para el workflow ${opciones['workflow-id']} (copia DEV ${workflow.versionId}, sha256 ${sha256}).`;
+    registro = `\nVEREDICTO: ${resultado.veredicto} registrado para el workflow ${opciones['workflow-id']} (copia DEV ${workflow.versionId}, sha256 ${sha256}).`;
   }
   imprimirTexto(workflow, resultado, opciones);
   if (!resultado.exento) process.exit(3);

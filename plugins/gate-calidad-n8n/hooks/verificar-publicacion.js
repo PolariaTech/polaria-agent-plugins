@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Hook del plugin gate-calidad-n8n, compartido por Claude Code y Cursor.
 // Bloquea publish_workflow del MCP de n8n si el workflow no tiene un veredicto APROBADO,
-// RECHAZADO_JUSTIFICADO o EXENTO_TEXTO de las últimas 24 horas, registrado por la skill
+// RECHAZADO_JUSTIFICADO, EXENTO_TEXTO o EXENTO_CANVAS de las últimas 24 horas, registrado por la skill
 // gate-calidad-n8n-polaria en <git-common-dir>/polaria-gate-n8n/<workflowId>.md.
 // Si la persona tiene N8N_API_KEY y la marca trae dev_id, también bloquea cuando la copia DEV
 // cambió después del veredicto (su versionId ya no es el revisado).
@@ -17,7 +17,7 @@ const fs = require('fs');
 const path = require('path');
 
 const VIGENCIA_MS = 24 * 60 * 60 * 1000;
-const PERMITEN_PUBLICAR = /^VEREDICTO: (APROBADO|RECHAZADO_JUSTIFICADO|EXENTO_TEXTO)\s*$/;
+const PERMITEN_PUBLICAR = /^VEREDICTO: (APROBADO|RECHAZADO_JUSTIFICADO|EXENTO_TEXTO|EXENTO_CANVAS)\s*$/;
 
 let esCursor = false;
 // Tras consultar la API no se llama a process.exit(): en Windows, salir con conexiones de fetch aún
@@ -71,7 +71,7 @@ process.stdin.on('end', () => {
   }
 
   const sinVeredicto =
-    `Gate de Calidad N8N: el workflow ${workflowId} no tiene veredicto APROBADO (ni RECHAZADO_JUSTIFICADO ni EXENTO_TEXTO) ` +
+    `Gate de Calidad N8N: el workflow ${workflowId} no tiene veredicto APROBADO (ni RECHAZADO_JUSTIFICADO, EXENTO_TEXTO ni EXENTO_CANVAS) ` +
     'de las últimas 24 horas en el repo del proyecto. Corre la skill gate-calidad-n8n-polaria sobre la copia DEV antes de publicar.';
   if (!marca || !PERMITEN_PUBLICAR.test(marca[0])) bloquear(sinVeredicto);
   const campo = (nombre) => (marca.find((l) => l.startsWith(`${nombre}: `)) || '').slice(nombre.length + 2).trim();
