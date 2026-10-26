@@ -1,0 +1,13 @@
+{
+  "name": "trabajo-en-paralelo",
+  "displayName": "Trabajo en Paralelo (Polaria)",
+  "version": "1.0.0",
+  "description": "Evita que dos devs (o sus asistentes de IA) toquen lo mismo con cambios en local: estima solo qué módulos, archivos y funciones toca cada issue con un % de confianza, lo reclama como comentario del issue en Linear, crea la rama en un worktree aislado y avisa con hooks al editar una zona reclamada por otro o al hacer push con solapes. Requiere gestion-linear (MCP de Linear).",
+  "author": {
+    "name": "Polaria Tech",
+    "url": "https://polaria.tech"
+  },
+  "homepage": "https://github.com/PolariaTech/polaria-agent-plugins",
+  "keywords": ["paralelo", "worktree", "merge", "reclamos", "linear", "polaria"],
+  "defaultEnabled": false
+}
