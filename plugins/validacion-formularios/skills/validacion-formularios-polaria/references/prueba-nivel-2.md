@@ -13,7 +13,10 @@ El runner genera los casos C1 a C8 desde el schema, los ejecuta en el navegador 
 ## Procedimiento
 
 1. **Ubica el schema.** Usa `schemas/schema_<formulario>.md` de la copia de trabajo de este repo si existe; si no, el del repo de flujos (la misma búsqueda del Paso 1 de la skill). Anota de dónde salió: `working_copy` si es de este repo, `flujos` si es del repo de flujos.
-2. **Ubica el JSON del schema.** Busca `<id del formulario>.json` en `public/docs/formularios/schemas-json/` del repo de flujos (el formato 1.0 de `FORMATO_JSON_EXPORTACION_SCHEMAS_FORMULARIOS_v1.0.md`). Si no existe y esta skill no trae `scripts/schema-a-json.mjs`, detente: dile al dev "no hay JSON del schema de este formulario, así que no puedo ejecutar la prueba automatizada", y sigue con el checklist manual del Paso 5. NUNCA armes el JSON a mano ni lo deduzcas del `.md`.
+2. **Obtén el JSON del schema** (formato 1.0 de `FORMATO_JSON_EXPORTACION_SCHEMAS_FORMULARIOS_v1.0.md`).
+   - Si el schema es del repo de flujos y existe `public/docs/formularios/schemas-json/<nombre del schema>.json`, úsalo tal cual.
+   - Si no existe, o si el schema es de la copia de trabajo de este repo, conviértelo: `node "<raíz del plugin>/skills/validacion-formularios-polaria/scripts/schema-a-json.mjs" <ruta del schema .md> .git/polaria-nivel2/<nombre del schema>.json`.
+   - Si el conversor termina con error, muestra su mensaje al dev y sigue con el checklist manual del Paso 5. NUNCA armes el JSON a mano ni lo deduzcas del `.md`.
 3. **Revisa la Tabla 4.** Lee `prueba_nivel_2` del JSON. Si es `null`, dile al dev que el schema no tiene Tabla 4 (rol, ruta, pasos para abrir, botones y localizadores), lista qué le falta y sigue con el checklist manual del Paso 5.
 4. **Arma el código.** Desde la raíz del repo, corre:
    `node "<raíz del plugin>/skills/validacion-formularios-polaria/scripts/armar-codigo.mjs" --schema <ruta del JSON> --base-url http://localhost:3001 --production-url <URL de producción de la app> --schema-source <working_copy|flujos>`
