@@ -4,7 +4,9 @@
 
 | Versión | Creado por | Aprobado por | Fecha |
 |---|---|---|---|
-| v1.2 | Responsable Metodología | Responsable Metodología | 22/09/2026 |
+| v1.3 | Responsable Metodología | Pendiente | Pendiente |
+
+> **ESTADO DEL DOCUMENTO:** v1.3 en revisión (26/10/2026). La v1.2 aprobada el 22/09/2026 sigue siendo la vigente hasta que esta versión se apruebe. Cambio: los cambios sin código propio (POL-267).
 
 *(antes "Revisión de Pares" — renombrado el 22/09/2026 porque el revisor real es una IA actuando como "segundo par", no un dev humano)*
 
@@ -18,6 +20,7 @@
 | CI / staging | CI: servidor que corre las pruebas automáticamente al subir código (ej. GitHub Actions). Staging: entorno de pruebas que imita producción. Su "salida" es el resultado impreso de las pruebas (ej. "42 pasaron, 0 fallaron"). |
 | Build | El comando que prepara el código para publicarlo (ej. `npm run build`). Además de empaquetar, revisa los tipos de TypeScript: un error de tipos que no aparece al desarrollar ni al correr las pruebas hace fallar el build. |
 | Despliegue / preview | Despliegue: publicar el código en la plataforma donde corre (hoy Vercel). Preview: el despliegue de prueba que la plataforma crea sola por cada `push` a una rama. |
+| Código propio / sin código propio | Un cambio es **sin código propio** cuando todos los archivos del diff son documentación (`.md`) o código de terceros generado por spec-kit (carpeta `.specify/` y los `.md` de `specs/`). Cualquier otro archivo (aunque esté borrado o renombrado) lo hace **con código propio**. Lo decide el script `clasificar-diff.js`, no la IA. |
 | Skill / subagente / hook / MCP | Piezas del plugin, explicadas en la sección 3. |
 
 ## 1. Contexto
@@ -45,7 +48,7 @@ Todo lo ejecuta el plugin `gate-calidad-tecnica`, instalado en cada repo de cód
 
 **Paso 1 — Previo.** La skill confirma que hay commits locales contra la rama principal. Si hay cambios sin commit, pide al dev hacer un commit local primero: el veredicto queda atado a ese commit, y si el código cambia después hay que revisarlo de nuevo.
 
-**Paso 2 — Diff y contexto.** La skill obtiene el diff (`git diff <principal>...HEAD`) y el tipo de cambio: lo lee de Linear si la rama o el commit citan `POL-XX`, o se lo pregunta al dev. Si el tipo es Bug, se exige test de regresión. Si el repo se despliega en Vercel, la skill averigua el comando de build y la versión de Node exactos que usa Vercel en ese repo (Vercel — temporal, ver la nota de la sección 6). Si el diff está vacío, responde `ERROR: No se detectó un diff de código válido para auditar en Polaria.` y se detiene.
+**Paso 2 — Diff y contexto.** La skill obtiene el diff (`git diff <principal>...HEAD`) y el tipo de cambio: lo lee de Linear si la rama o el commit citan `POL-XX`, o se lo pregunta al dev. Si el tipo es Bug, se exige test de regresión. Si el repo se despliega en Vercel, la skill averigua el comando de build y la versión de Node exactos que usa Vercel en ese repo (Vercel — temporal, ver la nota de la sección 6). Corre `clasificar-diff.js` para saber si el cambio tiene código propio. Si el diff está vacío, responde `ERROR: No se detectó un diff de código válido para auditar en Polaria.` y se detiene; un diff de solo documentación no está vacío y sigue el flujo.
 
 **Paso 3 — Revisión aislada.** El subagente recibe solo el diff y el contexto, aplica los 8 criterios (sección 6), **corre las pruebas él mismo** y, si el repo se despliega, **corre el build de despliegue**. Devuelve una tabla con los 8 criterios, el Veredicto Final y, debajo, cómo corregir cada `FAIL` (archivo, línea y qué cambiar). La skill lo muestra al dev en el chat sin cambios. El revisor solo sugiere: el dev decide y aplica la corrección (ver la regla de solo lectura en la sección 4).
 
@@ -82,6 +85,7 @@ flowchart TD
 | Regla | Por qué existe |
 |---|---|
 | Todo cambio pasa por este gate antes del `push`, sin excepción — incluidos los issues Urgent | El SLA de Urgent es 24 horas y la revisión toma minutos. Eximir justo al código hecho bajo más presión lo dejaría sin ningún control técnico. |
+| Un cambio sin código propio (solo documentación o código de terceros) también pasa por el gate y siempre recibe una marca: el criterio 6 queda en `N/A` y se revisan los otros 7. Un diff que mezcla documentación y código propio se revisa con los 8 criterios | Sin esta regla, el primer push de cada proyecto nuevo (solo documentación y spec-kit) quedaba bloqueado sin forma de obtener veredicto, o se esquivaba el gate. Que lo clasifique un script evita que la IA o el dev declaren «solo documentación» un cambio con código. |
 | Todo el gate es solo lectura: desde que arranca hasta que entrega el reporte, la IA no edita ningún archivo (código, tests, schemas, docs) ni hace `commit`, `amend` u otro cambio en git, en ningún repo. Nunca ajusta un schema para que el criterio 7 pase. Las correcciones las pide el dev en un mensaje aparte, y después el gate empieza otra vez. La skill compara `HEAD` y `git status` al inicio y al final, y si algo cambió no registra el veredicto | Un gate que corrige lo que revisa deja de ser un segundo par: el dev pierde el control de su código, y bajar la exigencia del schema hace que un formulario incompleto pase como `APROBADO`. Pasó en una ejecución real: el agente editó modales, cambió un campo del schema de obligatorio a opcional e hizo commit sin que el dev lo pidiera |
 | La revisión la hace el subagente aislado, nunca la misma sesión de IA que escribió el código | Una IA revisando su propio código comparte los supuestos que produjeron el defecto: eso es auto-revisión, no un segundo par. |
 | No se hace `push` con `RECHAZADO` sin corregir o justificar por escrito cada `FAIL` | Publicar una rama que nace rechazada genera ruido al equipo y vuelve inútil la revisión. |
@@ -110,7 +114,7 @@ La definición completa (rol, formato de salida, ejemplo) vive en el subagente `
 | 3 | Secretos | Hay API keys, tokens, contraseñas o credenciales en el código. |
 | 4 | Código de debug | Quedan `console.log`, `print`, `TODO borrar` o código muerto. |
 | 5 | Convenciones Polaria | El estilo no es consistente con el lenguaje del diff. |
-| 6 | Pruebas | No hay pruebas que cubran el cambio; es un Bug y no trae su test de regresión; no hay salida real de la ejecución; o alguna prueba falla. Mencionar pruebas no basta. Si el cambio no es automatizable, vale una prueba manual documentada con pasos y resultado. |
+| 6 | Pruebas (`N/A` si el cambio no tiene código propio) | No hay pruebas que cubran el cambio; es un Bug y no trae su test de regresión; no hay salida real de la ejecución; o alguna prueba falla. Mencionar pruebas no basta. Si el cambio no es automatizable, vale una prueba manual documentada con pasos y resultado. |
 | 7 | Validación de formularios (`N/A` si el diff no toca un formulario) | Falta algo de lo que exige `PROTOCOLO_DE_VALIDACION_DE_FORMULARIOS_v1.1.md` para las capas que viven en este repo, con la librería que use el repo: el schema completo (`schemas/schema_<formulario>.md` de este repo; si no está, del repo de flujos u otro repo del workspace; o el issue de Linear), los niveles por campo, las pruebas por campo, su ejecución o el checklist de prueba manual en PASS. |
 | 8 | Build de despliegue (`N/A` si el repo no se despliega en ninguna plataforma) | El comando de build que usa la plataforma de despliegue, corrido en local, termina con error (si la versión mayor de Node difiere de la de la plataforma, se dice en la evidencia); o deja modificados archivos versionados en git. Que las pruebas del criterio 6 pasen no basta: las pruebas no revisan los tipos y el build sí. |
 

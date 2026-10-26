@@ -5,7 +5,7 @@ description: Ejecuta el gate de calidad técnica de Polaria sobre los commits lo
 
 # Skill: Gate de Calidad Técnica Pre-Merge
 
-Ejecuta, paso a paso, `GATE_DE_CALIDAD_TECNICA_PRE_MERGE_v1.2.md` (documento hermano de esta skill, en la carpeta superior) — fuente de verdad de cada paso, regla, excepción y métrica. Esta skill orquesta; **no revisa el código ella misma**. La revisión la hace el subagente `revisor-tecnico-pre-merge` (`agents/revisor-tecnico-pre-merge.md`), que es la fuente ejecutable de los 8 criterios, el formato de salida y el ejemplo.
+Ejecuta, paso a paso, `GATE_DE_CALIDAD_TECNICA_PRE_MERGE_v1.3.md` (documento hermano de esta skill, en la carpeta superior) — fuente de verdad de cada paso, regla, excepción y métrica. Esta skill orquesta; **no revisa el código ella misma**. La revisión la hace el subagente `revisor-tecnico-pre-merge` (`agents/revisor-tecnico-pre-merge.md`), que es la fuente ejecutable de los 8 criterios, el formato de salida y el ejemplo.
 
 > **Todo el gate es solo lectura.** Desde "Antes de empezar" hasta entregar el reporte (y después, hasta que el dev pida otra cosa en un mensaje nuevo), NUNCA edites, crees ni borres archivos del proyecto (código, tests, schemas, docs, config) ni ejecutes comandos que cambien git (`commit`, `commit --amend`, `stash`, `checkout`, `reset`, `rebase`), en este repo ni en otro del workspace. El gate reporta; el dev corrige. En particular, NUNCA cambies un schema de formulario para que el criterio 7 pase: si el schema está mal, se corrige aparte con `validacion-formularios-polaria`. La única escritura permitida es la marca de `registrar-veredicto.js` dentro de `.git/`.
 
@@ -25,6 +25,7 @@ Si el dev te da un número de PR ya abierto (cambio publicado antes de esta vers
 ## Paso 1 — Diff y contexto (Paso 2 del protocolo)
 
 - **Diff:** `git diff <principal>...HEAD`.
+- **Código propio:** corre `node "<raíz del plugin>/hooks/clasificar-diff.js" <principal>` desde la raíz del repo y copia su salida en `<contexto>`. Si responde `SIN_CODIGO_PROPIO` (todo el diff es documentación `.md` o código de terceros generado por spec-kit), el gate sigue completo y el revisor marca el criterio 6 como `[N/A]`. Si responde `CON_CODIGO_PROPIO`, se evalúan los 8 criterios. La clasificación la decide el script, nunca tú.
 - **Tipo de cambio:** si la rama o los commits citan un issue (`POL-XX`), lee su tipo (Bug / Feature / Improvement) con el MCP de Linear (`get_issue`). Si no hay issue o no hay MCP de Linear, pregúntaselo al dev. El tipo decide si se exige test de regresión (criterio 6b).
 - **Salida de pruebas y de build:** si el dev ya corrió las pruebas o el build en otro entorno (CI, staging, `vercel env run -e preview`, preview de Vercel) porque no se pueden correr en local, pide esa salida real (Excepción de la sección 5).
 - **Despliegue, criterio 8 (Vercel — temporal):** averigua si el repo se despliega y con qué comando, en este orden, y detente en el primero que responda:
@@ -39,7 +40,7 @@ Si el dev te da un número de PR ya abierto (cambio publicado antes de esta vers
 
 **Workflow n8n:** no se revisa con este gate. Si el cambio es un workflow de n8n, usa `gate-calidad-n8n-polaria` (plugin `gate-calidad-n8n`).
 
-Si el diff está vacío o no es código, responde exactamente `ERROR: No se detectó un diff de código válido para auditar en Polaria.` y detente (Excepción de la sección 5).
+Si el diff está vacío, responde exactamente `ERROR: No se detectó un diff de código válido para auditar en Polaria.` y detente (Excepción de la sección 5). Un diff de solo documentación no está vacío: sigue el flujo completo con el criterio 6 en `[N/A]`.
 
 ## Paso 2 — Revisión aislada (Paso 3 del protocolo)
 
