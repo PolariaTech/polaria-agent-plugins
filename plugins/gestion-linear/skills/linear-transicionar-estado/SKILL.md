@@ -195,3 +195,14 @@ Si el estado actual permite validación de 4 ojos (Metodología de Trabajo v1.2 
 | Ver estados del equipo | `list_issue_statuses` | "¿Qué estados tiene el equipo POLARIA?" |
 | Cambiar estado / blockedBy / duplicateOf | `save_issue` | "Mueve POL-X a [estado]" |
 | Comentar | `save_comment` | "Comenta en POL-X: ..." |
+
+---
+
+## Vincular el PR con el issue
+
+Cuando se abre un PR por un issue de Linear, la descripción del PR lleva una línea `Refs POL-X` por cada issue que cubre (por ejemplo `Refs POL-370, POL-318`). Nunca `Closes`, `Fixes`, `Resolves` ni `Implements`: cierran el issue al hacer merge y se saltan MODO CIERRE.
+
+1. Antes de `gh pr create`, lista los issues que cubre la rama (el nombre de la rama solo trae uno) y escribe `Refs` con todos en la descripción. El hook `verificar-pr-refs.js` del plugin bloquea `gh pr create` sin ese vínculo o con una palabra que cierra el issue.
+2. Después de abrir el PR, llama `get_issue` de cada issue y confirma que el PR aparece en sus `attachments`. Si falta alguno, agrégalo con `create_attachment`.
+3. Al abrirse el PR, Linear mueve el issue a In Progress. No lo regreses a In Review hasta que empiece MODO PRUEBAS, y no lo muevas a Done hasta el merge y MODO CIERRE.
+4. El hook revisa el comando completo, título incluido: un título como `Fix POL-5 login` se bloquea aunque la descripción tenga `Refs POL-5`. Escribe el título sin esas palabras seguidas de un `POL-N`.

@@ -2,6 +2,12 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según [SemVer](https://semver.org/lang/es/). Las versiones anteriores a 1.2.0 están descritas en los commits del repo (`git log -- plugins/gestion-linear`).
 
+## [1.2.1] — 2026-10-26
+
+### Agregado
+- Hook `verificar-pr-refs.js` (Claude Code y Cursor): bloquea `gh pr create` si la descripción del PR no vincula el issue con `Refs POL-X` (o `Part of`, `Contributes to`, `Related to`), o si usa `Closes`, `Fixes`, `Resolves` o `Implements`. Sin el vínculo, Linear solo engancha el PR por el nombre de la rama y, con varios issues en una rama, solo el primero.
+- `linear-transicionar-estado`: sección "Vincular el PR con el issue" (una línea `Refs` por issue, verificar los `attachments` con `get_issue` después de abrir el PR y qué esperar del estado).
+
 ## [1.2.0] — 2026-10-15
 
 ### Agregado
