@@ -1,0 +1,38 @@
+{
+  "description": "Trabajo en paralelo: al abrir sesión informa los reclamos vigentes, avisa al editar una zona que reclamó otro issue y revisa solapes con las ramas de los demás antes de un git push.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/al-iniciar-sesion.js\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/avisar-zona-ajena.js\"",
+            "timeout": 15
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/revisar-antes-de-push.js\"",
+            "timeout": 90
+          }
+        ]
+      }
+    ]
+  }
+}

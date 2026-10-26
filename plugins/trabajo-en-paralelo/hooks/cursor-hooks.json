@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "node \"${CURSOR_PLUGIN_ROOT}/hooks/al-iniciar-sesion.js\""
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "node \"${CURSOR_PLUGIN_ROOT}/hooks/avisar-zona-ajena.js\"",
+        "matcher": "Write",
+        "failClosed": false
+      }
+    ],
+    "postToolUse": [
+      {
+        "command": "node \"${CURSOR_PLUGIN_ROOT}/hooks/avisar-zona-ajena.js\"",
+        "matcher": "Write",
+        "failClosed": false
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": "node \"${CURSOR_PLUGIN_ROOT}/hooks/revisar-antes-de-push.js\"",
+        "matcher": "git",
+        "failClosed": false
+      }
+    ]
+  }
+}

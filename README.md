@@ -59,6 +59,22 @@ real (skills, agentes, comandos) se escribe una sola vez dentro de la carpeta de
 cada manifiesto es solo un puntero liviano a esas mismas carpetas, para que nada diverja entre
 editores.
 
+## Pruebas y CI
+
+Todo plugin se prueba antes de publicarse, en cuatro niveles. Los dos primeros corren solos en cada PR (GitHub Actions, Linux y Windows, `.github/workflows/plugins.yml`) y se ejecutan igual en local:
+
+```
+node scripts/validar-plugins.js          # nivel 0: manifiestos, versiones, source, hooks, skills, sintaxis
+node scripts/correr-pruebas.js           # nivel 1: pruebas de scripts y hooks (todas)
+node scripts/correr-pruebas.js <plugin>  # nivel 1: solo las de un plugin
+```
+
+- **Nivel 0** (`scripts/validar-plugins.js`): validación estática de todos los plugins. Falla si un `source` lleva `./plugins/` (Cursor duplica el segmento), si las versiones no coinciden entre `plugin.json` y marketplaces, si un hook apunta a un script que no existe, si una skill no tiene `name`/`description` o pasa de 500 líneas. Su propia prueba (`tests/validar-plugins.test.js`) rompe cada una de esas cosas a propósito.
+- **Nivel 1** (`plugins/<nombre>/tests/*.test.js`, `node:test`, sin dependencias): scripts y hooks con repos git reales en carpetas temporales y eventos JSON como los mandan Claude Code y Cursor, incluidos los comportamientos de Cursor que ya nos fallaron (BOM, `cwd` vacío). Un plugin con scripts o hooks DEBE traer su carpeta `tests/`.
+- **Niveles 2 y 3** (carga real en Claude Code y Cursor; Linear y remotos reales) viven en el repo `PolariaTech/polaria-laboratorio-plugins`. Su evidencia va en la descripción del PR.
+
+Para exigirlo antes de mergear: Settings → Rules → Require status checks → `validar y probar`.
+
 ## Plugins actuales
 
 | Plugin | Que hace | Requiere |
@@ -70,6 +86,7 @@ editores.
 | `construccion-desde-cero` | Ejecuta el Protocolo de Construccion de Producto desde Cero v1.1: de la idea a Versionamiento, incluida la inicializacion de la carpeta del proyecto (git, spec-kit con `bug` y `assess`, `.claude/settings.json` con los plugins de Polaria, `AGENTS.md`, `docs/` con la checklist de la Guia de Documentacion) para software o n8n | Instalar a **nivel de usuario** (corre antes de que exista la carpeta del proyecto). spec-kit (`specify`) en la maquina del dev |
 | `gate-calidad-n8n` | Ejecuta el Gate de Calidad N8N v1.0 de Polaria antes de publicar un workflow: skill `gate-calidad-n8n-polaria` + script `revisar-workflow.js` (criterios mecanicos de los Estandares N8N sobre el JSON descargado) + subagente aislado `revisor-workflow-n8n` (criterios de juicio) + hook que bloquea `publish_workflow` del MCP de n8n sin veredicto de las ultimas 24 horas | Node.js en la maquina del dev. Trae el conector MCP de n8n de Polaria (autenticar la primera vez: `/mcp` en Claude Code, Settings -> MCP en Cursor), con "Available in MCP" activo en la copia DEV y en el workflow de produccion. Opcional: MCP de Linear para publicar el reporte |
 | `nomenclatura-credenciales` | Aplica el Protocolo de Nomenclatura de Credenciales v1.0 de Polaria: skill `nomenclatura-credenciales-polaria` (identifica el tipo de credencial, confirma el slug, arma el nombre, lo hace confirmar antes de crear y dice donde registrarla; nunca escribe el valor de un secreto fuera de su plataforma) | Nada obligatorio. Opcional: MCP de Google Drive para leer el Registro de slugs |
+| `trabajo-en-paralelo` | Evita que dos devs (o sus asistentes de IA) toquen lo mismo con cambios en local: skill `trabajo-en-paralelo-polaria` (estima solo las zonas del issue con % de confianza, las reclama como comentario del issue en Linear, crea la rama en un worktree aislado y libera el reclamo al terminar) + hooks que avisan al abrir sesión, al editar una zona reclamada por otro issue y antes de `git push` si la rama choca con la de otro. Solo avisan; `POLARIA_PARALELO_MODO=bloquear` los vuelve bloqueantes | `gestion-linear` instalado (trae el MCP de Linear). Node.js ≥18 y Git ≥2.38 en la maquina del dev. Cada dev publica su rama con el primer push temprano para que los demas la vean |
 
 Fuente de verdad de este contenido: `PROTOCOLOS_NUEVOS/AUDITORIA/` del repo de metodologia
 (`METODOLOGIA`) para `auditoria-tecnica`, `PROTOCOLOS_EXISTENTES/GATE_DE_CALIDAD_TECNICA_PRE_MERGE/skill/`
