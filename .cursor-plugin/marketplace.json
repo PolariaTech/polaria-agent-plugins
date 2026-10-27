@@ -77,10 +77,10 @@
       "name": "trabajo-en-paralelo",
       "displayName": "Trabajo en Paralelo (Polaria)",
       "source": "trabajo-en-paralelo",
-      "description": "Evita que dos devs o sus asistentes de IA toquen lo mismo con cambios en local: estima las zonas de cada issue con % de confianza, las reclama como comentario en Linear, crea la rama en un worktree y avisa con hooks de solapes al editar y antes del push. Requiere gestion-linear.",
+      "description": "Evita que dos devs o sus asistentes de IA toquen lo mismo con cambios en local: estima las zonas de cada ticket (Linear o Sheet) con % de confianza, las reclama como CLAIM.md en la rama, crea la rama en un worktree, impide escribir fuera de esas zonas y avisa de solapes al editar y antes del push.",
       "version": "1.0.0",
       "author": { "name": "Polaria Tech" },
-      "keywords": ["paralelo", "worktree", "merge", "reclamos", "linear", "polaria"]
+      "keywords": ["paralelo", "worktree", "merge", "reclamos", "claim", "polaria"]
     }
   ]
 }

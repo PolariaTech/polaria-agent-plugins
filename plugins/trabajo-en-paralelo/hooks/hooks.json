@@ -1,5 +1,5 @@
 {
-  "description": "Trabajo en paralelo: al abrir sesión informa los reclamos vigentes, avisa al editar una zona que reclamó otro issue y revisa solapes con las ramas de los demás antes de un git push.",
+  "description": "Trabajo en paralelo: al abrir sesión informa el CLAIM.md propio y los reclamos vigentes e instala el pre-commit de git, rechaza editar fuera de las zonas del CLAIM.md, avisa al editar una zona que reclamó otra rama, rechaza los rodeos por terminal (--no-verify, escribir el CLAIM.md) y revisa solapes con las ramas de los demás antes de un git push.",
   "hooks": {
     "SessionStart": [
       {
@@ -14,8 +14,13 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Edit|Write|MultiEdit",
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
         "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/limitar-escritura.js\"",
+            "timeout": 15
+          },
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/avisar-zona-ajena.js\"",
@@ -26,6 +31,11 @@
       {
         "matcher": "Bash",
         "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/guardar-bash.js\"",
+            "timeout": 15
+          },
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/revisar-antes-de-push.js\"",

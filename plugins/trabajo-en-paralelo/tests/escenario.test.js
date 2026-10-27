@@ -1,12 +1,12 @@
 // Pruebas de escenario: dos devs con git real (ayudas.js) y los scripts y hooks ejecutados como los ejecutan los editores.
-// Cubren el CLI (crear-worktree, importar, comparar, estado, solapes) y los tres hooks, incluidos los comportamientos
+// Cubren el CLI (crear-worktree, importar-claims, comparar, estado, solapes) y los hooks, incluidos los comportamientos
 // reales de Cursor que ya nos fallaron: JSON con BOM, cwd vacío y ejecución del hooks.json de Claude con eventos de Cursor.
 
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
-const { git, escribir, crearEscenario, ejecutarParalelo, ejecutarHook, cuerpoDeReclamo, importarReclamos, RECLAMO_DE_MAURO, RECLAMO_DE_DANIEL } = require('./ayudas');
+const { git, escribir, crearEscenario, ejecutarParalelo, ejecutarHook, cuerpoDeReclamo, importarReclamos, mauroPublicaClaim, RECLAMO_DE_MAURO, RECLAMO_DE_DANIEL } = require('./ayudas');
 
 // Daniel arranca pol-102 con la skill: worktree nuevo desde main, y ahí hace un commit que choca con Mauro.
 function danielConWorktree({ chocar = true } = {}) {
@@ -52,31 +52,41 @@ test('crear-worktree: reutiliza una rama local que ya existía', () => {
   assert.match(r.salida, /ya existía/);
 });
 
-test('importar y estado: guarda reclamos activos y descarta comentarios sin formato', () => {
+test('importar-claims y estado: lee el CLAIM.md real de la rama de Mauro', () => {
   const e = danielConWorktree();
-  const r = importarReclamos(e.worktree, [RECLAMO_DE_MAURO, RECLAMO_DE_DANIEL, { issue: 'POL-9', cuerpo: 'comentario normal' }]);
+  mauroPublicaClaim(e);
+  const r = ejecutarParalelo(e.worktree, 'importar-claims');
   assert.strictEqual(r.codigo, 0, r.error);
-  assert.match(r.salida, /2 reclamo\(s\) activo\(s\), 0 liberado\(s\), 1 comentario\(s\) sin formato/);
+  assert.match(r.salida, /1 reclamo\(s\) ajeno\(s\) vigente\(s\), 0 inactivo\(s\)/);
+  assert.match(r.salida, /POL-101 \(Mauro, 85%\): src\/auth\/, src\/ui\/a\.ts#render/);
   const estado = ejecutarParalelo(e.worktree, 'estado').salida;
   assert.match(estado, /Issue de esta rama: POL-102/);
   assert.match(estado, /POL-101 ACTIVO \(Mauro\)/);
 });
 
-test('importar: de varios reclamos del mismo issue gana el más reciente', () => {
+test('importar-claims: una rama sin CLAIM.md o ya mergeada a main no reclama nada', () => {
   const e = danielConWorktree();
-  const viejo = { ...RECLAMO_DE_MAURO, creado: '2026-10-25T10:00:00Z', cuerpo: cuerpoDeReclamo({ rama: 'mauro/pol-101-auth', zonas: ['viejo/'] }) };
-  const nuevo = { ...RECLAMO_DE_MAURO, creado: '2026-10-26T10:00:00Z', cuerpo: cuerpoDeReclamo({ rama: 'mauro/pol-101-auth', zonas: ['nuevo/'] }) };
-  const r = importarReclamos(e.worktree, [nuevo, viejo]);
-  assert.match(r.salida, /nuevo\//);
-  assert.doesNotMatch(r.salida, /viejo\//);
+  assert.match(ejecutarParalelo(e.worktree, 'importar-claims').salida, /0 reclamo\(s\) ajeno\(s\) vigente\(s\)/);
+  mauroPublicaClaim(e);
+  git(e.mauro, 'checkout', '-q', 'main');
+  git(e.mauro, 'merge', '-q', '--ff-only', 'mauro/pol-101-auth');
+  git(e.mauro, 'push', '-q', 'origin', 'main');
+  assert.match(ejecutarParalelo(e.worktree, 'importar-claims').salida, /0 reclamo\(s\) ajeno\(s\) vigente\(s\)/);
 });
 
-test('importar: archivo inexistente o con JSON roto falla con código 2', () => {
-  const e = danielConWorktree({ chocar: false });
-  assert.strictEqual(ejecutarParalelo(e.worktree, 'importar', path.join(e.carpeta, 'no-existe.json')).codigo, 2);
-  const roto = path.join(e.carpeta, 'roto.json');
-  fs.writeFileSync(roto, '{ no es json');
-  assert.strictEqual(ejecutarParalelo(e.worktree, 'importar', roto).codigo, 2);
+test('importar-claims: un CLAIM.md sin formato de reclamo se ignora', () => {
+  const e = danielConWorktree();
+  git(e.mauro, 'checkout', '-q', 'mauro/pol-101-auth');
+  escribir(e.mauro, 'CLAIM.md', 'un archivo cualquiera con ese nombre\n');
+  git(e.mauro, 'add', 'CLAIM.md');
+  git(e.mauro, 'commit', '-q', '-m', 'sin formato');
+  git(e.mauro, 'push', '-q', 'origin', 'mauro/pol-101-auth');
+  assert.match(ejecutarParalelo(e.worktree, 'importar-claims').salida, /0 reclamo\(s\) ajeno\(s\) vigente\(s\)/);
+});
+
+test('importar-claims: fuera de un repo git falla con código 2', () => {
+  const e = crearEscenario();
+  assert.strictEqual(ejecutarParalelo(e.carpeta, 'importar-claims').codigo, 2);
 });
 
 test('comparar: avisa solape de zona, de compartido y distingue funciones distintas del mismo archivo', () => {
@@ -179,7 +189,7 @@ test('sesión: lista los reclamos ajenos con el formato de Claude Code y de Curs
 test('sesión: rama con issue y sin reclamo ni caché pide reclamar y sincronizar', () => {
   const e = danielConWorktree({ chocar: false });
   const r = ejecutarHook('al-iniciar-sesion.js', { cwd: e.worktree });
-  assert.match(r.json.hookSpecificOutput.additionalContext, /no tiene reclamo vigente/);
+  assert.match(r.json.hookSpecificOutput.additionalContext, /no tiene CLAIM\.md/);
   assert.match(r.json.hookSpecificOutput.additionalContext, /modo sincronizar/);
 });
 
@@ -361,7 +371,7 @@ test('Cursor ejecuta hooks.json de Claude: el push con evento de Cursor y sin CU
 
 test('entradas hostiles: JSON ilegible, vacío o de un tipo inesperado nunca rompen ni bloquean', () => {
   const e = danielConWorktree();
-  for (const hook of ['al-iniciar-sesion.js', 'avisar-zona-ajena.js', 'revisar-antes-de-push.js']) {
+  for (const hook of ['al-iniciar-sesion.js', 'avisar-zona-ajena.js', 'revisar-antes-de-push.js', 'limitar-escritura.js', 'guardar-bash.js']) {
     for (const entrada of ['no es json', '', '[]', 'null', '{"tool_input":{}}', '{"tool_input":{"command":123}}']) {
       const r = ejecutarHook(hook, entrada, { cwd: e.worktree, env: { POLARIA_PARALELO_MODO: 'bloquear' } });
       assert.strictEqual(r.codigo, 0, `${hook} con ${JSON.stringify(entrada)} salió con ${r.codigo}: ${r.error}`);

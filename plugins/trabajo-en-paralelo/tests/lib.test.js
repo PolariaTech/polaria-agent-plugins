@@ -3,6 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const lib = require('../scripts/lib');
+const claims = require('../scripts/claims');
 const { cuerpoDeReclamo } = require('./ayudas');
 
 test('issueDeRama: rama generada por Linear, en mayúsculas, con prefijo largo y sin issue', () => {
@@ -103,6 +104,64 @@ test('reclamosAjenos y reclamoPropio ignoran los liberados y al propio issue', (
   assert.strictEqual(lib.reclamoPropio(cache, 'POL-2'), null);
   assert.strictEqual(lib.reclamoPropio(cache, 'POL-1').issue, 'POL-1');
   assert.deepStrictEqual(lib.reclamosAjenos(null, 'POL-1'), []);
+});
+
+test('parsearReclamo: lee el campo Issue (POL- o REQ-) y lo pone en mayúsculas; sin el campo queda vacío', () => {
+  assert.strictEqual(lib.parsearReclamo(cuerpoDeReclamo({ issue: 'req-012', rama: 'x/req-012-a' })).issue, 'REQ-012');
+  assert.strictEqual(lib.parsearReclamo(cuerpoDeReclamo({ issue: 'POL-7', rama: 'x/pol-7-a' })).issue, 'POL-7');
+  assert.strictEqual(lib.parsearReclamo(cuerpoDeReclamo({ rama: 'x/pol-7-a' })).issue, '');
+  assert.strictEqual(lib.issueDeRama('usuario/req-012-corregir-unidades'), 'REQ-012');
+});
+
+test('estaInactivo: más de 5 días sin commits en la rama deja de contar; sin fecha cuenta', () => {
+  const hace = (dias) => new Date(Date.now() - dias * 86400000).toISOString();
+  assert.ok(!lib.estaInactivo({ ultimoCommit: hace(0) }));
+  assert.ok(!lib.estaInactivo({ ultimoCommit: hace(4.9) }));
+  assert.ok(lib.estaInactivo({ ultimoCommit: hace(5.1) }));
+  assert.ok(!lib.estaInactivo({}), 'sin fecha no se puede decir que esté inactivo');
+  assert.ok(!lib.estaInactivo({ ultimoCommit: 'no es una fecha' }));
+  const cache = {
+    reclamos: [
+      { issue: 'POL-1', estado: 'ACTIVO', ultimoCommit: hace(1) },
+      { issue: 'POL-2', estado: 'ACTIVO', ultimoCommit: hace(9) },
+      { issue: 'POL-3', estado: 'LIBERADO', ultimoCommit: hace(1) },
+    ],
+  };
+  assert.deepStrictEqual(lib.reclamosAjenos(cache, 'POL-9').map((r) => r.issue), ['POL-1']);
+  assert.deepStrictEqual(lib.reclamosInactivos(cache, 'POL-9').map((r) => r.issue), ['POL-2']);
+});
+
+test('construirClaim se lee de vuelta con parsearReclamo; agregarZonas solo toca la sección de zonas', () => {
+  const texto = claims.construirClaim({ issue: 'REQ-012', rama: 'x/req-012-a', responsable: 'Ana', confianza: 75, zonas: ['src/a/', 'src/b.ts#f'], compartidos: ['package.json'], porque: 'Porque sí.' });
+  const leido = lib.parsearReclamo(texto);
+  assert.strictEqual(leido.issue, 'REQ-012');
+  assert.strictEqual(leido.confianza, 75);
+  assert.deepStrictEqual(leido.zonas.map((z) => z.ruta), ['src/a/', 'src/b.ts']);
+  assert.deepStrictEqual(leido.compartidos.map((z) => z.ruta), ['package.json']);
+
+  const ampliado = claims.agregarZonas(texto, ['src/c/'], '2026-10-27');
+  const releido = lib.parsearReclamo(ampliado);
+  assert.deepStrictEqual(releido.zonas.map((z) => z.ruta), ['src/a/', 'src/b.ts', 'src/c/']);
+  assert.deepStrictEqual(releido.compartidos.map((z) => z.ruta), ['package.json'], 'los compartidos no cambian');
+  assert.match(ampliado, /- `src\/c\/` — autorizada por el usuario el 2026-10-27\n\n### Compartidos/, 'la nueva ruta queda al final de la sección, antes de la siguiente');
+  assert.match(ampliado, /### Por qué\nPorque sí\./);
+  assert.throws(() => claims.agregarZonas('sin secciones', ['x/'], '2026-10-27'), /Zonas que voy a tocar/);
+});
+
+test('construirClaim con compartidos vacíos no inventa rutas', () => {
+  const leido = lib.parsearReclamo(claims.construirClaim({ issue: 'POL-1', rama: 'x/pol-1-a', confianza: 50, zonas: ['src/a/'] }));
+  assert.deepStrictEqual(leido.compartidos, []);
+});
+
+test('rutaValida: rechaza rutas absolutas, con .., a secas "/" o con comillas invertidas', () => {
+  assert.ok(claims.rutaValida('src/auth/'));
+  assert.ok(claims.rutaValida('package.json'));
+  for (const mala of ['', '/', '../x', 'a/../b', 'C:/x', 'a`b']) assert.ok(!claims.rutaValida(mala), mala);
+});
+
+test('hashDeClaim: ignora los saltos de línea de Windows', () => {
+  assert.strictEqual(lib.hashDeClaim('a\r\nb\r\n'), lib.hashDeClaim('a\nb\n'));
+  assert.notStrictEqual(lib.hashDeClaim('a'), lib.hashDeClaim('b'));
 });
 
 test('cacheVencida: sin caché o de hace más de 4 h está vencida', () => {

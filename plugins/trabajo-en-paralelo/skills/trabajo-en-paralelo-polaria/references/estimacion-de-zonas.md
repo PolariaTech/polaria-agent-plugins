@@ -1,10 +1,12 @@
 # Cómo estimar las zonas de un issue y su confianza
 
-Objetivo: decir, **antes de escribir código**, qué carpetas, archivos y funciones va a tocar el issue, y con qué probabilidad el cambio real se queda dentro de eso. Se hace solo, leyendo el issue y el repo; no se le pregunta al dev.
+Objetivo: decir, **antes de escribir código**, qué carpetas, archivos y funciones va a tocar el ticket, y con qué probabilidad el cambio real se queda dentro de eso. Se hace solo, leyendo el ticket y el repo; no se le pregunta al dev.
+
+**El reclamo es un contrato.** Una vez publicado el `CLAIM.md`, el asistente no puede escribir fuera de sus zonas y compartidos: cada archivo que falte obliga a detenerse y pedirle al usuario que autorice la ampliación. Por eso se estima generosamente: cada zona de código lleva también sus **pruebas**, **tipos**, **fixtures o snapshots** y la **documentación** que el cambio obliga a actualizar. Un reclamo corto no es más seguro, solo interrumpe más.
 
 ## 1. Reunir la evidencia
 
-1. Lee del issue, en este orden de confiabilidad: la **Especificación técnica** (rutas y criterios de aceptación), la descripción 5W2H, los comentarios, los issues relacionados (`relations`).
+1. Lee del ticket, en este orden de confiabilidad. En **Linear**: la Especificación técnica (rutas y criterios de aceptación), la descripción 5W2H, los comentarios, los issues relacionados (`relations`). En el **Sheet de requerimientos**: la descripción, el tipo, y los tickets de las columnas "Relacionado con" y "Duplicado de" (sus comentarios dicen qué se cambió la última vez).
 2. Toma como punto de partida las rutas que el issue nombra. Verifica cada una con Glob: una ruta que no existe es un archivo nuevo (se marca así) o un dato malo (baja la confianza).
 3. Busca con Grep los términos del ticket: nombres de funciones, componentes, tablas, rutas de API, textos de pantalla, mensajes de error. Cada archivo con coincidencias directas es candidato.
 4. Sube una capa: quién llama o importa lo que vas a cambiar (Grep del nombre exportado) y qué prueba lo cubre. Los llamadores solo entran si el cambio rompe su contrato (firma, forma del dato, nombre); las pruebas del archivo cambiado entran siempre.
@@ -40,4 +42,4 @@ Ejemplo: spec con rutas verificadas (95) − un criterio sin archivo (10) − ca
 
 ## 5. Calibrar con el tiempo
 
-Al liberar el reclamo, la skill anota "N de M archivos dentro de lo reclamado". Si de forma repetida los reclamos con 90% terminan con archivos fuera, la rúbrica es optimista: se ajustan los descuentos de este archivo, no se pide al asistente que "sea más cuidadoso".
+Al liberar el reclamo, `paralelo.js liberar` deja en el mensaje del commit "N de M archivos dentro de lo reclamado". Si de forma repetida los reclamos con 90% terminan con archivos fuera, la rúbrica es optimista: se ajustan los descuentos de este archivo, no se pide al asistente que "sea más cuidadoso".

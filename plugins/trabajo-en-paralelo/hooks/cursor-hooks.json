@@ -8,6 +8,11 @@
     ],
     "preToolUse": [
       {
+        "command": "node \"${CURSOR_PLUGIN_ROOT}/hooks/limitar-escritura.js\"",
+        "matcher": "Write|Delete",
+        "failClosed": false
+      },
+      {
         "command": "node \"${CURSOR_PLUGIN_ROOT}/hooks/avisar-zona-ajena.js\"",
         "matcher": "Write",
         "failClosed": false
@@ -21,6 +26,10 @@
       }
     ],
     "beforeShellExecution": [
+      {
+        "command": "node \"${CURSOR_PLUGIN_ROOT}/hooks/guardar-bash.js\"",
+        "failClosed": false
+      },
       {
         "command": "node \"${CURSOR_PLUGIN_ROOT}/hooks/revisar-antes-de-push.js\"",
         "matcher": "git",
