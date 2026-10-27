@@ -1,29 +1,19 @@
 #!/usr/bin/env node
 // Hook de edición del plugin trabajo-en-paralelo. Avisa cuando el asistente va a editar (o acaba de editar)
-// un archivo que otro issue reclamó en Linear.
+// un archivo que otro issue reclamó en su CLAIM.md. (El límite sobre el CLAIM.md propio lo impone limitar-escritura.js.)
 //
 // Claude Code (PreToolUse sobre Edit|Write|MultiEdit, hooks.json): recibe { tool_input: { file_path }, cwd };
 //   responde por stdout con additionalContext (el asistente lo ve junto al resultado) y systemMessage (lo ve el dev).
 // Cursor: preToolUse solo actúa en modo bloquear; postToolUse (matcher Write) avisa con additional_context.
 // Modo: aviso por defecto. Con la variable POLARIA_PARALELO_MODO=bloquear, Claude Code y Cursor rechazan la edición.
 // Un mismo archivo y reclamo se avisan una sola vez cada 30 minutos para no repetir el mensaje en cada edición.
-// Lee la caché que deja la skill (reclamos.json); no llama a Linear. Ante cualquier error sale en silencio.
+// Lee la caché que deja la skill (reclamos.json); no hace git fetch. Ante cualquier error sale en silencio.
 
 const fs = require('fs');
 const path = require('path');
 const lib = require('../scripts/lib');
 
 const MINUTOS_SIN_REPETIR = 30;
-
-function directorioExistente(ruta) {
-  let actual = path.dirname(ruta);
-  while (actual && !fs.existsSync(actual)) {
-    const padre = path.dirname(actual);
-    if (padre === actual) return null;
-    actual = padre;
-  }
-  return actual;
-}
 
 function yaAvisado(repo, clave) {
   const archivo = path.join(repo.directorioCache, 'avisados.json');
@@ -47,18 +37,9 @@ function yaAvisado(repo, clave) {
 }
 
 function evaluar(evento) {
-  const entrada = evento.tool_input || {};
-  const archivo = entrada.file_path || entrada.path || entrada.target_file || evento.file_path;
-  if (!archivo) return null;
-  const rutaAbsoluta = path.isAbsolute(String(archivo).replace(/^\/([a-zA-Z]:)/, '$1'))
-    ? String(archivo).replace(/^\/([a-zA-Z]:)/, '$1')
-    : path.join(lib.directorioDelEvento(evento), archivo);
-  const real = lib.rutaReal(rutaAbsoluta);
-  const directorio = directorioExistente(real);
-  const repo = directorio && lib.infoDelRepo(directorio);
-  if (!repo) return null;
-  const relativa = lib.rutaRelativaAlRepo(lib.rutaReal(repo.raiz), real);
-  if (relativa.startsWith('..') || relativa.startsWith('.git/')) return null;
+  const destino = lib.resolverArchivoDeEdicion(evento);
+  if (!destino || !destino.repo || !destino.relativa) return null;
+  const { repo, relativa } = destino;
 
   const cache = lib.leerCache(repo);
   const issuePropio = lib.issueDeRama(repo.rama);
@@ -76,7 +57,7 @@ function evaluar(evento) {
   const mensaje =
     `Trabajo en paralelo: \`${relativa}\` está en una zona reclamada por otro issue — ${detalle}. ` +
     `Antes de seguir, avísale al dev y propón coordinar con esa persona (cambio mínimo y aislado, o cambiar el orden de las tareas). ` +
-    `Si el cambio es inevitable, hay que ampliar tu reclamo en Linear (skill trabajo-en-paralelo-polaria, modo reclamar) y dejar constancia del solape.`;
+    `Tu CLAIM.md solo se amplía con "paralelo.js autorizar", que corre el usuario en su terminal y se detiene si la zona es de otra rama.`;
   return { mensaje, clave: `${relativa}|${choques.map((r) => r.issue).sort().join(',')}`, repo };
 }
 

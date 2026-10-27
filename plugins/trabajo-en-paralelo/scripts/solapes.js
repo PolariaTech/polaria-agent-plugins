@@ -2,13 +2,16 @@
 // hook que corre antes de un git push. Mira tres cosas, de más a menos concreta:
 //   1. Conflicto real: git merge-tree simula en memoria el merge contra cada rama remota de otro issue.
 //   2. Mismo archivo: ambos cambiaron el mismo archivo desde la base, aunque hoy no choquen.
-//   3. Zona reclamada: un archivo propio cae dentro de lo que otro issue reclamó en Linear (caché).
-// Y una cuarta, sobre el trabajo propio: archivos modificados fuera de lo que el reclamo propio declaró.
+//   3. Zona reclamada: un archivo propio cae dentro de lo que otro issue reclamó en su CLAIM.md (caché).
+// Y una cuarta, sobre el trabajo propio: archivos modificados fuera de lo que el CLAIM.md propio declaró.
+// El propio CLAIM.md no cuenta como trabajo: cada rama con reclamo lo tiene, y compararlo daría choques falsos.
 
 const { execFileSync } = require('child_process');
 const lib = require('./lib');
 
 const MAXIMO_DE_RAMAS = 30;
+
+const esDeTrabajo = (archivo) => archivo !== lib.ARCHIVO_RECLAMO;
 
 function ramaBase(directorio) {
   for (const candidata of [
@@ -44,7 +47,7 @@ function archivosPropios(directorio, base) {
   } catch {
     // HEAD sin commits: no hay nada más que listar.
   }
-  return { archivos: [...propios].map(lib.normalizarRuta), tieneCommitsPropios: Boolean(puntoComun) && puntoComun !== lib.git(directorio, ['rev-parse', 'HEAD']) };
+  return { archivos: [...propios].map(lib.normalizarRuta).filter(esDeTrabajo), tieneCommitsPropios: Boolean(puntoComun) && puntoComun !== lib.git(directorio, ['rev-parse', 'HEAD']) };
 }
 
 // merge-tree --write-tree sale con 1 si hay conflicto; devuelve los archivos en conflicto.
@@ -61,7 +64,11 @@ function simularMerge(directorio, otraRama) {
     if (error.status === 1) {
       const salida = String(error.stdout || '');
       const [, ...resto] = lineas(salida); // La primera línea es el id del árbol resultante.
-      return { conflicto: true, archivos: resto.map(lib.normalizarRuta) };
+      const archivos = resto.map(lib.normalizarRuta);
+      const reales = archivos.filter(esDeTrabajo);
+      // Dos ramas con reclamo "agregan" el mismo CLAIM.md: eso no es un conflicto de trabajo.
+      if (archivos.length && !reales.length) return { conflicto: false, archivos: [] };
+      return { conflicto: true, archivos: reales };
     }
     return { conflicto: false, archivos: [], noSePudo: true };
   }
@@ -109,7 +116,7 @@ function analizar(directorio, opciones = {}) {
     let archivosDeOtra = [];
     try {
       const puntoComun = lib.git(directorio, ['merge-base', base, otra]);
-      archivosDeOtra = lineas(lib.git(directorio, ['diff', '--name-only', `${puntoComun}..${otra}`])).map(lib.normalizarRuta);
+      archivosDeOtra = lineas(lib.git(directorio, ['diff', '--name-only', `${puntoComun}..${otra}`])).map(lib.normalizarRuta).filter(esDeTrabajo);
     } catch {
       continue;
     }
@@ -131,15 +138,15 @@ function analizar(directorio, opciones = {}) {
     const archivos = propios.archivos.filter((a) => zonas.some((z) => lib.zonaCubre(z, a)));
     if (archivos.length) resultado.zonasAjenas.push({ issue: reclamo.issue, responsable: reclamo.responsable, rama: reclamo.rama, archivos });
   }
-  const propio = lib.reclamoPropio(cache, issuePropio);
+  // El reclamo propio es el CLAIM.md del árbol de trabajo; la caché solo es el respaldo si el archivo no se puede leer.
+  const propio = lib.leerClaimPropio(repo.raiz) || lib.reclamoPropio(cache, issuePropio);
   if (propio) {
-    const declaradas = [...propio.zonas, ...(propio.compartidos || [])];
-    resultado.fueraDelReclamo = propios.archivos.filter((a) => !declaradas.some((z) => lib.zonaCubre(z, a)));
+    resultado.fueraDelReclamo = propios.archivos.filter((a) => !lib.claimCubreArchivo(propio, a));
   } else if (issuePropio && propios.archivos.length) {
-    resultado.avisos.push(`No hay reclamo vigente de ${issuePropio} en la caché local: corre la skill trabajo-en-paralelo-polaria (modo reclamar).`);
+    resultado.avisos.push(`Esta rama (${issuePropio}) no tiene CLAIM.md: corre la skill trabajo-en-paralelo-polaria (modo reclamar) antes de seguir editando.`);
   }
   if (cache && lib.cacheVencida(cache)) {
-    resultado.avisos.push(`La caché de reclamos tiene ${Math.round(lib.edadDeCacheEnHoras(cache))} h: corre la skill trabajo-en-paralelo-polaria (modo sincronizar).`);
+    resultado.avisos.push(`La caché de reclamos tiene ${Math.round(lib.edadDeCacheEnHoras(cache))} h: corre "paralelo.js importar-claims" (modo sincronizar de la skill).`);
   }
   return resultado;
 }
@@ -169,7 +176,7 @@ function formatear(r) {
     r.zonasAjenas.forEach((c) => salida.push(`  - ${c.issue}${c.responsable ? ` (${c.responsable})` : ''}: ${listar(c.archivos)}`));
   }
   if (r.fueraDelReclamo.length) {
-    salida.push(`ARCHIVOS PROPIOS FUERA DE LO QUE ${r.issue} RECLAMÓ (hay que ampliar o corregir el reclamo en Linear):`);
+    salida.push(`ARCHIVOS PROPIOS FUERA DE LO QUE ${r.issue || 'ESTA RAMA'} RECLAMÓ (solo el usuario puede ampliar el CLAIM.md, con "paralelo.js autorizar" en su terminal):`);
     salida.push(`  - ${listar(r.fueraDelReclamo)}`);
   }
   r.avisos.forEach((a) => salida.push(`AVISO: ${a}`));
