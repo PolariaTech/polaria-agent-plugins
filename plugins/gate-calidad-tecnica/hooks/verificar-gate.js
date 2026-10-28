@@ -11,6 +11,7 @@
 //   "<ref local> <sha local> <ref remota> <sha remota>" por cada ref; salida distinta de 0 = bloquea.
 //   Cubre el push que la IA no ve: terminal, panel de Git del editor o una IA sin el plugin cargado.
 // En un repo que no es de software (es-repo-de-software.js) deja pasar siempre: el gate no aplica.
+// Tampoco exige veredicto al push que solo publica el CLAIM.md del reclamo del ticket (soloPublicaElReclamo).
 
 const { execFileSync } = require('child_process');
 const fs = require('fs');
@@ -59,6 +60,29 @@ function tieneVeredicto(directorioGit, commit) {
   }
 }
 
+// El push que publica el reclamo del ticket (trabajo-en-paralelo) no lleva código que revisar y debe salir
+// sin demora para que nadie más toque lo mismo. Pasa sin veredicto solo si TODO lo que se publica (los commits
+// que ningún remoto tiene todavía) son commits normales que cambian únicamente CLAIM.md en la raíz.
+// Cualquier duda (merge, commit vacío, error de git) devuelve false: el push sigue exigiendo veredicto.
+const ARCHIVO_DEL_RECLAMO = 'CLAIM.md';
+
+function soloPublicaElReclamo(git, sha) {
+  try {
+    const commits = git('rev-list', '--parents', sha, '--not', '--remotes').split(/\r?\n/).filter(Boolean);
+    if (!commits.length) return false;
+    return commits.every((linea) => {
+      const [commit, ...padres] = linea.split(' ');
+      if (padres.length !== 1) return false;
+      const archivos = git('diff-tree', '-r', '--name-only', '--no-renames', '--no-commit-id', '-z', commit)
+        .split('\0')
+        .filter(Boolean);
+      return archivos.length > 0 && archivos.every((archivo) => archivo === ARCHIVO_DEL_RECLAMO);
+    });
+  } catch {
+    return false;
+  }
+}
+
 function mensajeSinVeredicto(commit) {
   return (
     `Gate de Calidad Técnica Pre-Merge: el commit ${commit.slice(0, 7)} no tiene veredicto APROBADO ` +
@@ -79,7 +103,7 @@ function verificarPrePushDeGit(entrada) {
     if (!refLocal || !shaLocal) continue;
     if (SHA_VACIO.test(shaLocal)) continue; // Borrar una rama remota no publica código.
     if (refLocal.startsWith('refs/tags/')) continue; // El tag apunta a un commit que ya pasó por el gate en su rama.
-    if (!tieneVeredicto(directorioGit, shaLocal)) {
+    if (!tieneVeredicto(directorioGit, shaLocal) && !soloPublicaElReclamo(git, shaLocal)) {
       process.stderr.write(`${mensajeSinVeredicto(shaLocal)}\n`);
       process.exit(1);
     }
@@ -116,7 +140,7 @@ function verificarEventoDelAgente(evento) {
   }
   if (!esRepoDeSoftware(raizDelRepo)) return permitir();
 
-  if (tieneVeredicto(directorioGit, commitActual)) return permitir();
+  if (tieneVeredicto(directorioGit, commitActual) || soloPublicaElReclamo(git, commitActual)) return permitir();
   return bloquear(mensajeSinVeredicto(commitActual));
 }
 

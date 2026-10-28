@@ -4,9 +4,9 @@
 
 | Versión | Creado por | Aprobado por | Fecha |
 |---|---|---|---|
-| v1.3 | Responsable Metodología | Pendiente | Pendiente |
+| v1.4 | Responsable Metodología | Pendiente | Pendiente |
 
-> **ESTADO DEL DOCUMENTO:** v1.3 en revisión (26/10/2026). La v1.2 aprobada el 22/09/2026 sigue siendo la vigente hasta que esta versión se apruebe. Cambio: los cambios sin código propio (POL-267).
+> **ESTADO DEL DOCUMENTO:** v1.4 en revisión (28/10/2026). La v1.3 aprobada el 26/10/2026 sigue siendo la vigente hasta que esta versión se apruebe.
 
 *(antes "Revisión de Pares" — renombrado el 22/09/2026 porque el revisor real es una IA actuando como "segundo par", no un dev humano)*
 
@@ -20,7 +20,8 @@
 | CI / staging | CI: servidor que corre las pruebas automáticamente al subir código (ej. GitHub Actions). Staging: entorno de pruebas que imita producción. Su "salida" es el resultado impreso de las pruebas (ej. "42 pasaron, 0 fallaron"). |
 | Build | El comando que prepara el código para publicarlo (ej. `npm run build`). Además de empaquetar, revisa los tipos de TypeScript: un error de tipos que no aparece al desarrollar ni al correr las pruebas hace fallar el build. |
 | Despliegue / preview | Despliegue: publicar el código en la plataforma donde corre (hoy Vercel). Preview: el despliegue de prueba que la plataforma crea sola por cada `push` a una rama. |
-| Código propio / sin código propio | Un cambio es **sin código propio** cuando todos los archivos del diff son documentación (`.md`) o código de terceros generado por spec-kit (carpeta `.specify/` y los `.md` de `specs/`). Cualquier otro archivo (aunque esté borrado o renombrado) lo hace **con código propio**. Lo decide el script `clasificar-diff.js`, no la IA. |
+| Código propio / sin código propio | Un cambio es **sin código propio** cuando todos los archivos del diff son documentación (`.md`) o código de terceros generado por spec-kit (carpeta `.specify/` y los `.md` de `specs/`). `.claude/` y `.cursor/` no cuentan como código de terceros, porque pueden traer hooks. Cualquier otro archivo (aunque esté borrado o renombrado) lo hace **con código propio**. Lo decide el script `clasificar-diff.js`, no la IA. |
+| Ronda / revisión acotada | Ronda: cada vez que el gate revisa un commit de la misma rama. La primera ronda revisa el diff completo y los 8 criterios. Una ronda posterior a un `RECHAZADO` es **acotada**: el revisor recibe solo lo que cambió desde el último commit revisado, re-evalúa los criterios que fallaron y los criterios 6 y 8 (siempre), y marca el resto `[HEREDADO]` (pasó en la ronda anterior). Las líneas nuevas se revisan igual contra los criterios 1 a 5. Lo decide el script `ronda-previa.js`, no la IA. |
 | Skill / subagente / hook / MCP | Piezas del plugin, explicadas en la sección 3. |
 
 ## 1. Contexto
@@ -48,19 +49,19 @@ Todo lo ejecuta el plugin `gate-calidad-tecnica`, instalado en cada repo de cód
 
 **Paso 1 — Previo.** La skill confirma que hay commits locales contra la rama principal. Si hay cambios sin commit, pide al dev hacer un commit local primero: el veredicto queda atado a ese commit, y si el código cambia después hay que revisarlo de nuevo.
 
-**Paso 2 — Diff y contexto.** La skill obtiene el diff (`git diff <principal>...HEAD`) y el tipo de cambio: lo lee de Linear si la rama o el commit citan `POL-XX`, o se lo pregunta al dev. Si el tipo es Bug, se exige test de regresión. Si el repo se despliega en Vercel, la skill averigua el comando de build y la versión de Node exactos que usa Vercel en ese repo (Vercel — temporal, ver la nota de la sección 6). Corre `clasificar-diff.js` para saber si el cambio tiene código propio. Si el diff está vacío, responde `ERROR: No se detectó un diff de código válido para auditar en Polaria.` y se detiene; un diff de solo documentación no está vacío y sigue el flujo.
+**Paso 2 — Diff y contexto.** La skill obtiene el diff (`git diff <principal>...HEAD`) y el tipo de cambio: lo lee de Linear si la rama o el commit citan `POL-XX`, o se lo pregunta al dev. Si el tipo es Bug, se exige test de regresión. Si el repo se despliega en Vercel, la skill averigua el comando de build y la versión de Node exactos que usa Vercel en ese repo (Vercel — temporal, ver la nota de la sección 6). Corre `clasificar-diff.js` para saber si el cambio tiene código propio, y `ronda-previa.js` para saber si es la primera ronda de la rama (revisión completa) o una ronda posterior a un rechazo (revisión acotada, ver el Paso 3). Si el diff está vacío, responde `ERROR: No se detectó un diff de código válido para auditar en Polaria.` y se detiene; un diff de solo documentación no está vacío y sigue el flujo.
 
-**Paso 3 — Revisión aislada.** El subagente recibe solo el diff y el contexto, aplica los 8 criterios (sección 6), **corre las pruebas él mismo** y, si el repo se despliega, **corre el build de despliegue**. Devuelve una tabla con los 8 criterios, el Veredicto Final y, debajo, cómo corregir cada `FAIL` (archivo, línea y qué cambiar). La skill lo muestra al dev en el chat sin cambios. El revisor solo sugiere: el dev decide y aplica la corrección (ver la regla de solo lectura en la sección 4).
+**Paso 3 — Revisión aislada.** El subagente recibe solo el diff y el contexto, aplica los 8 criterios (sección 6), **corre las pruebas él mismo** y, si el repo se despliega, **corre el build de despliegue**. En una ronda acotada recibe solo el delta (lo que cambió desde el último commit revisado) y evalúa por completo los criterios que fallaron, el 6 y el 8 (y el 7 si el delta toca un formulario); aplica los criterios 1 a 5 solo a las líneas nuevas del delta y marca el resto `[HEREDADO]`, con la línea «Revisión acotada: criterios X heredados de la ronda anterior (<sha>)». Si no hay reporte previo guardado, la revisión es completa. Devuelve una tabla con los 8 criterios, el Veredicto Final y, debajo, cómo corregir cada `FAIL` (archivo, línea y qué cambiar). La skill lo muestra al dev en el chat sin cambios. El revisor solo sugiere: el dev decide y aplica la corrección (ver la regla de solo lectura en la sección 4).
 
-**Paso 4 — Veredicto.** La skill lo registra con un solo comando, que escribe una marca dentro de `.git/` (nunca se sube al repo ni se ve en el proyecto). El gate no crea ningún otro archivo: el reporte vive en el chat y después en el PR/Linear.
+**Paso 4 — Veredicto.** La skill lo registra con un solo comando, que escribe una marca dentro de `.git/` (nunca se sube al repo ni se ve en el proyecto) con el veredicto, el reporte y los criterios en `FAIL`: es lo que usa la ronda siguiente. El gate no crea ningún otro archivo: el reporte vive en el chat y después en el PR/Linear (en una ronda acotada, junto al de la ronda anterior).
 
 | Veredicto | Qué pasa |
 |---|---|
 | `APROBADO` | El dev puede hacer `push`. |
-| `RECHAZADO` | El dev corrige, hace un commit nuevo y vuelve al paso 1. El `push` queda bloqueado. |
+| `RECHAZADO` | El dev corrige, hace un commit nuevo y vuelve al paso 1; esa ronda es acotada. El `push` queda bloqueado. |
 | `RECHAZADO_JUSTIFICADO` | El dev justificó por escrito cada `FAIL` como falso positivo. Puede hacer `push`, y la justificación va junto al reporte en el PR/Linear. |
 
-**Paso 5 — Push.** El dev pide el `push` después de ver el reporte; la IA no lo hace por su cuenta, aunque se lo hayan pedido antes del gate. Al ejecutar `git push`, los hooks revisan el veredicto del commit: si es `APROBADO` o `RECHAZADO_JUSTIFICADO`, dejan pasar; si no existe o es de un commit anterior, bloquean.
+**Paso 5 — Push.** El dev pide el `push` después de ver el reporte; la IA no lo hace por su cuenta, aunque se lo hayan pedido antes del gate. Al ejecutar `git push`, los hooks revisan el veredicto del commit: si es `APROBADO` o `RECHAZADO_JUSTIFICADO`, dejan pasar; si no existe o es de un commit anterior, bloquean. Única excepción: el `push` que solo publica el `CLAIM.md` del reclamo del ticket pasa sin veredicto.
 
 **Paso 6 — PR y evidencia.** La skill ofrece abrir el PR y publicar el reporte completo como primer comentario del PR y/o en el issue de Linear. Siempre pide confirmación antes.
 
@@ -72,7 +73,7 @@ flowchart TD
     B --> C["Subagente aislado:<br/>8 criterios + corre pruebas y build"]
     C --> D{"Veredicto"}
     D -- RECHAZADO --> E{"¿Corrige o justifica<br/>cada FAIL?"}
-    E -- "Corrige (commit nuevo)" --> B
+    E -- "Corrige (commit nuevo,<br/>ronda acotada)" --> B
     E -- "Justifica por escrito" --> F
     D -- APROBADO --> F["Marca en .git/polaria-gate/&lt;commit&gt;.md"]
     F --> G["git push → el hook verifica la marca → pasa"]
@@ -87,6 +88,8 @@ flowchart TD
 | Todo cambio pasa por este gate antes del `push`, sin excepción — incluidos los issues Urgent | El SLA de Urgent es 24 horas y la revisión toma minutos. Eximir justo al código hecho bajo más presión lo dejaría sin ningún control técnico. |
 | Un cambio sin código propio (solo documentación o código de terceros) también pasa por el gate y siempre recibe una marca: el criterio 6 queda en `N/A` y se revisan los otros 7. Un diff que mezcla documentación y código propio se revisa con los 8 criterios | Sin esta regla, el primer push de cada proyecto nuevo (solo documentación y spec-kit) quedaba bloqueado sin forma de obtener veredicto, o se esquivaba el gate. Que lo clasifique un script evita que la IA o el dev declaren «solo documentación» un cambio con código. |
 | Todo el gate es solo lectura: desde que arranca hasta que entrega el reporte, la IA no edita ningún archivo (código, tests, schemas, docs) ni hace `commit`, `amend` u otro cambio en git, en ningún repo. Nunca ajusta un schema para que el criterio 7 pase. Las correcciones las pide el dev en un mensaje aparte, y después el gate empieza otra vez. La skill compara `HEAD` y `git status` al inicio y al final, y si algo cambió no registra el veredicto | Un gate que corrige lo que revisa deja de ser un segundo par: el dev pierde el control de su código, y bajar la exigencia del schema hace que un formulario incompleto pase como `APROBADO`. Pasó en una ejecución real: el agente editó modales, cambió un campo del schema de obligatorio a opcional e hizo commit sin que el dev lo pidiera |
+| Desde la segunda ronda de una rama, la revisión se acota a lo que falló: se re-evalúan los criterios en `FAIL`, el 6 y el 8, y las líneas nuevas se revisan contra los criterios 1 a 5. El resto queda `[HEREDADO]` y el reporte lo declara | En un PR real, quitar un campo sin uso (unas 5 líneas) obligó a revisar otra vez 4.000 líneas y 21 archivos, y el costo del revisor se iba en criterios que ya estaban en `PASS`. Heredar solo lo ya revisado y seguir revisando lo nuevo evita que una infracción nueva pase escondida detrás de un `PASS` viejo. |
+| El `push` que solo publica el `CLAIM.md` del reclamo del ticket no exige veredicto. Si el commit mezcla `CLAIM.md` con cualquier otro archivo, sí lo exige | Ese commit no tiene código que revisar, y el reclamo debe publicarse sin demora para que dos devs no toquen lo mismo (skill `trabajo-en-paralelo-polaria`). |
 | La revisión la hace el subagente aislado, nunca la misma sesión de IA que escribió el código | Una IA revisando su propio código comparte los supuestos que produjeron el defecto: eso es auto-revisión, no un segundo par. |
 | No se hace `push` con `RECHAZADO` sin corregir o justificar por escrito cada `FAIL` | Publicar una rama que nace rechazada genera ruido al equipo y vuelve inútil la revisión. |
 | El reporte completo (no solo el veredicto) queda en el PR o en Linear | Sin el detalle por criterio no hay forma de auditar qué se revisó realmente. |
@@ -101,11 +104,12 @@ flowchart TD
 | Las pruebas no se pueden correr en la máquina del dev (necesitan servicios o credenciales que no tiene) | El dev pega la salida real de CI o staging. Sin ninguna salida real, el criterio 6 es `FAIL`. |
 | El repo ya tiene su propio `pre-push` o usa `core.hooksPath` (por ejemplo, husky) | El plugin no lo pisa y avisa al abrir la sesión. El dev agrega al `pre-push` existente la línea que indica el aviso. Hasta hacerlo, el `push` desde la terminal no se bloquea, y la falta del reporte en el PR lo hace visible. |
 | El build de despliegue falla en local solo porque falta una variable de entorno que el dev no tiene | El dev corre el build con las variables del entorno preview (`vercel env run -e preview -- <comando de build>`) o pega la salida real del build del preview. Sin ninguna salida real, el criterio 8 es `FAIL` (Vercel — temporal). |
+| No hay reporte previo guardado (la marca es de una versión anterior del plugin, o el historial cambió por un `rebase` o `amend`) | La revisión es completa, igual que en la primera ronda. |
 | El dev hace el `push` con `--no-verify` | Salta el `pre-push`. Incumple el protocolo, y la falta del reporte en el PR lo hace visible. |
 
 ## 6. Los 8 criterios
 
-La definición completa (rol, formato de salida, ejemplo) vive en el subagente `revisor-tecnico-pre-merge` del plugin. **Veredicto `APROBADO` solo si ningún criterio queda en `FAIL`**; un `N/A` nunca cuenta como `FAIL`.
+La definición completa (rol, formato de salida, ejemplo) vive en el subagente `revisor-tecnico-pre-merge` del plugin. **Veredicto `APROBADO` solo si ningún criterio queda en `FAIL`**; un `N/A` o un `[HEREDADO]` nunca cuenta como `FAIL`.
 
 | # | Criterio | `FAIL` si… |
 |---|---|---|
