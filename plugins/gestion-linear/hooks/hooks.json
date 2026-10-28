@@ -1,5 +1,5 @@
 {
-  "description": "Bloquea gh pr create si la descripción del PR no vincula el issue de Linear con Refs POL-X, o si usa Closes, Fixes, Resolves o Implements.",
+  "description": "Bloquea gh pr create si la descripción del PR no trae Refs POL-X, Refs REQ-NNN o Sin ticket: motivo, o si usa Closes, Fixes, Resolves o Implements.",
   "hooks": {
     "PreToolUse": [
       {
