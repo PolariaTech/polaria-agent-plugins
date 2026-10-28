@@ -5,7 +5,7 @@ description: Ejecuta el gate de calidad técnica de Polaria sobre los commits lo
 
 # Skill: Gate de Calidad Técnica Pre-Merge
 
-Ejecuta, paso a paso, `GATE_DE_CALIDAD_TECNICA_PRE_MERGE_v1.3.md` (documento hermano de esta skill, en la carpeta superior) — fuente de verdad de cada paso, regla, excepción y métrica. Esta skill orquesta; **no revisa el código ella misma**. La revisión la hace el subagente `revisor-tecnico-pre-merge` (`agents/revisor-tecnico-pre-merge.md`), que es la fuente ejecutable de los 8 criterios, el formato de salida y el ejemplo.
+Ejecuta, paso a paso, `GATE_DE_CALIDAD_TECNICA_PRE_MERGE_v1.4.md` (documento hermano de esta skill, en la carpeta superior) — fuente de verdad de cada paso, regla, excepción y métrica. Esta skill orquesta; **no revisa el código ella misma**. La revisión la hace el subagente `revisor-tecnico-pre-merge` (`agents/revisor-tecnico-pre-merge.md`), que es la fuente ejecutable de los 8 criterios, el formato de salida y el ejemplo.
 
 > **Todo el gate es solo lectura.** Desde "Antes de empezar" hasta entregar el reporte (y después, hasta que el dev pida otra cosa en un mensaje nuevo), NUNCA edites, crees ni borres archivos del proyecto (código, tests, schemas, docs, config) ni ejecutes comandos que cambien git (`commit`, `commit --amend`, `stash`, `checkout`, `reset`, `rebase`), en este repo ni en otro del workspace. El gate reporta; el dev corrige. En particular, NUNCA cambies un schema de formulario para que el criterio 7 pase: si el schema está mal, se corrige aparte con `validacion-formularios-polaria`. La única escritura permitida es la marca de `registrar-veredicto.js` dentro de `.git/`.
 
@@ -24,8 +24,9 @@ Si el dev te da un número de PR ya abierto (cambio publicado antes de esta vers
 
 ## Paso 1 — Diff y contexto (Paso 2 del protocolo)
 
-- **Diff:** `git diff <principal>...HEAD`.
-- **Código propio:** corre `node "<raíz del plugin>/hooks/clasificar-diff.js" <principal>` desde la raíz del repo y copia su salida en `<contexto>`. Si responde `SIN_CODIGO_PROPIO` (todo el diff es documentación `.md` o código de terceros generado por spec-kit), el gate sigue completo y el revisor marca el criterio 6 como `[N/A]`. Si responde `CON_CODIGO_PROPIO`, se evalúan los 8 criterios. La clasificación la decide el script, nunca tú.
+- **Ronda de revisión:** corre `node "<raíz del plugin>/hooks/ronda-previa.js" <principal>` desde la raíz del repo y copia su salida en `<contexto>`. Si responde `{"ronda":"COMPLETA"}` (primera ronda de la rama, o la última revisión no fue un rechazo con reporte guardado), revisas el diff completo y los 8 criterios. Si responde `ACOTADA`, es la ronda 2 o posterior sobre la misma rama: el diff que usas es el delta de `comandoDelta` (`git diff <shaPrevio>..HEAD`) en vez del diff completo, y el revisor re-evalúa solo `criteriosFail` más `criteriosSiempre`. La decisión la toma el script, nunca tú.
+- **Diff:** `git diff <principal>...HEAD`; en ronda `ACOTADA`, el delta de `comandoDelta`.
+- **Código propio:** corre `node "<raíz del plugin>/hooks/clasificar-diff.js" <principal>` desde la raíz del repo (siempre contra el diff completo de la rama, también en ronda acotada) y copia su salida en `<contexto>`. Si responde `SIN_CODIGO_PROPIO` (todo el diff es documentación `.md` o código de terceros generado por spec-kit), el gate sigue completo y el revisor marca el criterio 6 como `[N/A]`. Si responde `CON_CODIGO_PROPIO`, se evalúan los 8 criterios. La clasificación la decide el script, nunca tú.
 - **Tipo de cambio:** si la rama o los commits citan un issue (`POL-XX`), lee su tipo (Bug / Feature / Improvement) con el MCP de Linear (`get_issue`). Si no hay issue o no hay MCP de Linear, pregúntaselo al dev. El tipo decide si se exige test de regresión (criterio 6b).
 - **Salida de pruebas y de build:** si el dev ya corrió las pruebas o el build en otro entorno (CI, staging, `vercel env run -e preview`, preview de Vercel) porque no se pueden correr en local, pide esa salida real (Excepción de la sección 5).
 - **Despliegue, criterio 8 (Vercel — temporal):** averigua si el repo se despliega y con qué comando, en este orden, y detente en el primero que responda:
@@ -33,7 +34,7 @@ Si el dev te da un número de PR ya abierto (cambio publicado antes de esta vers
   2. **Archivos del repo:** si no hay MCP, o el MCP no ve ningún proyecto de este repo (el dev no es miembro del equipo de Vercel), avísale al dev en una línea. Si existe `vercel.json` o la carpeta `.vercel/`, usa `buildCommand` de `vercel.json`, luego el script `vercel-build` de `package.json`, luego el script `build`; la versión de Node sale de `engines.node` de `package.json` o, si no está, del `.nvmrc`.
   3. **Nada de lo anterior:** pregúntale al dev exactamente esto: `¿Este repo se despliega en alguna plataforma? Si sí, ¿cuál y con qué comando de build?`. Si responde que no, escribe en `<contexto>` `El repo no se despliega.` (el criterio 8 queda `N/A`); si responde que sí, usa su respuesta.
   Escribe en `<contexto>` la plataforma, el comando, la versión de Node y de dónde salieron.
-- **Formularios:** si el diff toca un formulario o su validación, trae el checklist de prueba manual y la salida de pruebas que se publicaron en el issue de Linear (`list_comments`), o pídeselos al dev. Busca el schema `schemas/schema_<formulario>.md` en este orden y detente en el primero que lo tenga: (1) este repo; (2) si este repo no tiene la carpeta `schemas/` o no está el schema, un repo cuyo nombre contenga `flujo` entre las demás carpetas del workspace (en Cursor, las otras raíces del workspace; si no hay varias, las carpetas hermanas de este repo); (3) cualquier otra carpeta del workspace o carpeta hermana que tenga ese schema. Si lo encontraste fuera de este repo, dile al dev de dónde lo leíste y pasa su contenido completo, tal cual está. Todo va en `<contexto>`: el subagente no tiene acceso a Linear ni a otros repos (criterio 7).
+- **Formularios:** si el diff (en ronda acotada, el delta) toca un formulario o su validación, o el criterio 7 está en `criteriosFail`, trae el checklist de prueba manual y la salida de pruebas que se publicaron en el issue de Linear (`list_comments`), o pídeselos al dev. Busca el schema `schemas/schema_<formulario>.md` en este orden y detente en el primero que lo tenga: (1) este repo; (2) si este repo no tiene la carpeta `schemas/` o no está el schema, un repo cuyo nombre contenga `flujo` entre las demás carpetas del workspace (en Cursor, las otras raíces del workspace; si no hay varias, las carpetas hermanas de este repo); (3) cualquier otra carpeta del workspace o carpeta hermana que tenga ese schema. Si lo encontraste fuera de este repo, dile al dev de dónde lo leíste y pasa su contenido completo, tal cual está. Todo va en `<contexto>`: el subagente no tiene acceso a Linear ni a otros repos (criterio 7).
 - **Schema no encontrado:** si el diff toca un formulario y la búsqueda anterior no encontró el schema, detente y pregúntale al dev exactamente esto, antes de despachar al subagente: `No encontré el schema del formulario <formulario> ni documentación de sus campos. ¿Dónde está? Responde con la ubicación (ruta, enlace, issue de Linear u otra) o con "No tiene".` Solo hay dos respuestas válidas; si responde otra cosa, repite la pregunta.
   - **Ubicación:** léela con lo que corresponda (ruta: léela del disco; enlace de Drive, GitHub o Linear: el MCP de ese servicio; otro enlace: descárgalo). Si no puedes leerla, pídele al dev que pegue el contenido. Pasa el contenido completo en `<contexto>`, indicando de dónde salió.
   - **"No tiene":** escribe en `<contexto>` `Schema del formulario <formulario>: el dev confirma que no existe.` El criterio 7(a) queda en `[FAIL]`, y la forma de corregirlo es crear el schema con la skill `validacion-formularios-polaria`.
@@ -46,6 +47,8 @@ Si el diff está vacío, responde exactamente `ERROR: No se detectó un diff de 
 
 Despacha el subagente `revisor-tecnico-pre-merge` con el diff entre `<code_diff>` y el tipo de cambio, issue, salidas de pruebas o build y datos de despliegue entre `<contexto>`. NUNCA le pases la conversación en la que se escribió el código ni tu opinión sobre el cambio: su valor es que no comparte tus supuestos.
 
+**Ronda `ACOTADA`:** en `<code_diff>` pasa solo el delta (`comandoDelta`), no el diff completo de la rama, y deja en `<contexto>` la salida de `ronda-previa.js` tal cual. No le pases el reporte de la ronda anterior: el revisor aplica las reglas de su modo acotado y escribe él mismo la línea de criterios heredados.
+
 Devuelve al dev el reporte del subagente tal cual, sin reescribirlo ni suavizarlo.
 
 **Si el entorno no soporta subagentes nativos** (mismo respaldo que `CLAUDE.md` del repo de metodología): despacha `subagent_type: general-purpose` con el contenido completo de `agents/revisor-tecnico-pre-merge.md` como instrucciones, seguido del diff y el contexto. Si tampoco eso es posible, aplica ese archivo tú mismo en el hilo actual y agrega al reporte la línea `Revisión sin aislamiento: la ejecutó la misma sesión que escribió el código.`
@@ -56,17 +59,21 @@ Devuelve al dev el reporte del subagente tal cual, sin reescribirlo ni suavizarl
 
 Registra el veredicto con un solo comando desde la raíz del repo, sin crear ningún archivo (ni temporal) en el proyecto:
 
-`node "$(git rev-parse --git-common-dir)/polaria-gate/registrar-veredicto.js" <APROBADO | RECHAZADO | RECHAZADO_JUSTIFICADO>`
+```
+node "$(git rev-parse --git-common-dir)/polaria-gate/registrar-veredicto.js" <APROBADO | RECHAZADO | RECHAZADO_JUSTIFICADO> --reporte <<'REPORTE_GATE'
+<el reporte completo del subagente, tal cual>
+REPORTE_GATE
+```
 
-El script escribe la marca dentro de `.git/` (no se commitea ni se ve en el proyecto), atada al commit actual. Es lo único que lee el hook de `git push`. El reporte no se guarda en archivo: se muestra en el chat y, en el Paso 4, va al PR/Linear.
+El script escribe la marca dentro de `.git/` (no se commitea ni se ve en el proyecto), atada al commit actual. Del veredicto, que está en su primera línea, depende el hook de `git push`. Con `--reporte` la marca guarda además el reporte y los criterios en `[FAIL]`: es lo que `ronda-previa.js` lee para acotar la ronda siguiente. El reporte sigue mostrándose en el chat y, en el Paso 4, va al PR/Linear.
 
 - **`APROBADO`:** dile al dev que puede hacer `push` y abrir el PR. No hagas el `push` tú: espera a que el dev lo pida después de ver el reporte. Un "haz push" dicho antes del gate no cuenta como autorización.
-- **`RECHAZADO`:** el reporte ya trae, debajo del veredicto, cómo corregir cada `[FAIL]`. Deja explícito que **no** debe hacer `push` todavía y termina ahí tu turno: no apliques ninguna corrección. Si el dev te pide en un mensaje nuevo que corrijas, eso ya es trabajo fuera del gate; cuando exista el commit con la corrección, el gate se repite desde el Paso 1.
+- **`RECHAZADO`:** el reporte ya trae, debajo del veredicto, cómo corregir cada `[FAIL]`. Deja explícito que **no** debe hacer `push` todavía y termina ahí tu turno: no apliques ninguna corrección. Si el dev te pide en un mensaje nuevo que corrijas, eso ya es trabajo fuera del gate; cuando exista el commit con la corrección, el gate se repite desde el Paso 1 y esa ronda será acotada a lo que falló.
 - **El dev justifica por escrito cada `[FAIL]`** (posible falso positivo, Excepción de la sección 5): registra de nuevo con `RECHAZADO_JUSTIFICADO`. La justificación de cada `FAIL` queda en el chat y en el PR/Linear junto al reporte (Paso 4).
 
 ## Paso 4 — Publicar la evidencia (Paso 6 del protocolo)
 
-Después del `push` y de abrir el PR, el reporte completo (no solo el veredicto, y con las justificaciones si las hay) queda como primer comentario del PR y/o en el issue de Linear. Ofrece publicarlo tú: `gh pr comment` o el MCP de GitHub para el PR, `save_comment` del MCP de Linear para el issue. Confirma con el dev antes de publicar y antes de `gh pr create`: son acciones visibles para el resto del equipo.
+Después del `push` y de abrir el PR, el reporte completo (no solo el veredicto, y con las justificaciones si las hay) queda como primer comentario del PR y/o en el issue de Linear. Si la última ronda fue `ACOTADA`, publica también el reporte de la ronda anterior en el mismo comentario, debajo del actual: se lee de la marca `<git-dir>/polaria-gate/<shaPrevio>.md`, después de la línea `---`. Ofrece publicarlo tú: `gh pr comment` o el MCP de GitHub para el PR, `save_comment` del MCP de Linear para el issue. Confirma con el dev antes de publicar y antes de `gh pr create`: son acciones visibles para el resto del equipo.
 
 ## Paso 5 — Merge (Paso 7 del protocolo)
 
@@ -80,7 +87,7 @@ Si el dev te pide mergear tú mismo (`gh pr merge`), confirma antes: es una acci
 
 ## Si el hook bloquea un push
 
-El hook de la IA o el `pre-push` de git se disparan cuando el commit que se va a publicar no tiene marca `APROBADO` ni `RECHAZADO_JUSTIFICADO`. No los esquives (ni borrando el hook, ni con `git push --no-verify`, ni escribiendo la marca sin revisión, ni pidiendo al dev que haga el `push` por otra vía para saltarlo): corre esta skill desde el Paso 1 sobre el commit actual.
+El hook de la IA o el `pre-push` de git se disparan cuando el commit que se va a publicar no tiene marca `APROBADO` ni `RECHAZADO_JUSTIFICADO`. La única excepción es el push que solo publica el `CLAIM.md` del reclamo del ticket (`trabajo-en-paralelo`): no lleva código que revisar y pasa sin veredicto. Un push que mezcla `CLAIM.md` con cualquier otro cambio sí lo exige. No los esquives (ni borrando el hook, ni con `git push --no-verify`, ni escribiendo la marca sin revisión, ni pidiendo al dev que haga el `push` por otra vía para saltarlo): corre esta skill desde el Paso 1 sobre el commit actual.
 
 ## Excepciones (sección 5 del protocolo)
 
@@ -105,6 +112,7 @@ No corrijas el commit ya mergeado. Guía al dev a revertirlo y generar una versi
 - NUNCA publiques el reporte en GitHub/Linear, abras el PR o mergees sin que el dev lo confirme.
 - NUNCA uses el MCP de Vercel para escribir (redesplegar, promover, cambiar variables o configuración): en este gate solo lee.
 - NUNCA decidas tú lo que el protocolo deja al Responsable en una Excepción.
+- NUNCA decidas tú que una ronda es `ACOTADA` ni qué criterios se re-evalúan: lo decide `ronda-previa.js`. Si el script falla o no responde, haz la revisión completa.
 
 ## Verificación
 
@@ -114,6 +122,7 @@ Antes de dar por cerrado un ciclo de esta skill:
 - [ ] `HEAD` y `git status --porcelain` son iguales al inicio y al final del gate: el gate no modificó nada.
 - [ ] El tipo de cambio se obtuvo de Linear o del dev, y el criterio 6 se evaluó con ejecución real de pruebas.
 - [ ] Si el repo se despliega, el criterio 8 corrió el mismo comando de build que usa la plataforma, y `<contexto>` dice de dónde salió.
-- [ ] Existe la marca `<git-dir>/polaria-gate/<sha>.md` con el veredicto del commit revisado.
+- [ ] `ronda-previa.js` corrió y su salida está en `<contexto>`. Si la ronda fue `ACOTADA`, el revisor recibió solo el delta, y el reporte trae la línea «Revisión acotada: criterios X heredados de la ronda anterior (<sha>)» y los criterios no evaluados como `[HEREDADO]`.
+- [ ] Existe la marca `<git-dir>/polaria-gate/<sha>.md` con el veredicto del commit revisado y, registrada con `--reporte`, el reporte completo.
 - [ ] Si `APROBADO` o `RECHAZADO_JUSTIFICADO`: el reporte completo quedó publicado en el PR o en Linear antes de considerar el ciclo cerrado.
 - [ ] Si `RECHAZADO`: no se hizo `push` ni se aplicó ninguna corrección sin que el dev la pidiera.
