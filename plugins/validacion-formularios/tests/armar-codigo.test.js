@@ -23,7 +23,7 @@ function repoTemporal(env) {
 }
 
 function correr(carpeta, argumentos, entorno = {}) {
-  const limpio = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('NIVEL2_')));
+  const limpio = Object.fromEntries(Object.entries(process.env).filter(([clave]) => !clave.startsWith('NIVEL2_')));
   return spawnSync(process.execPath, [SCRIPT, ...argumentos], { cwd: carpeta, encoding: 'utf8', env: { ...limpio, ...entorno } });
 }
 
@@ -31,11 +31,11 @@ const BASE = ['--schema', FIXTURE, '--base-url', 'http://localhost:3001', '--pro
 
 test('con las credenciales en el .env: escribe el código dentro de .git/ y solo imprime la ruta', () => {
   const repo = repoTemporal(`${USUARIO}=ana@prueba.test\n${CONTRASENA}="Clave-123"\n`);
-  const r = correr(repo, BASE);
-  assert.strictEqual(r.status, 0, r.stderr);
-  const ruta = r.stdout.trim();
+  const resultado = correr(repo, BASE);
+  assert.strictEqual(resultado.status, 0, resultado.stderr);
+  const ruta = resultado.stdout.trim();
   assert.match(ruta, /\.git[\\/]polaria-nivel2[\\/]codigo-sintetico_modal_simple\.js$/);
-  assert.doesNotMatch(r.stdout + r.stderr, /Clave-123|ana@prueba\.test/, 'nunca imprime las credenciales');
+  assert.doesNotMatch(resultado.stdout + resultado.stderr, /Clave-123|ana@prueba\.test/, 'nunca imprime las credenciales');
   const codigo = fs.readFileSync(path.join(repo, ruta), 'utf8');
   assert.match(codigo, /^async \(page\) => \{/);
   assert.match(codigo, /Clave-123/, 'el archivo sí lleva las credenciales: por eso va dentro de .git/');
@@ -55,32 +55,32 @@ test('el código lleva el origen del schema, la URL y el entorno local', () => {
 
 test('sin credenciales: sale con 3 y lista los nombres de las variables, sin crear el archivo', () => {
   const repo = repoTemporal();
-  const r = correr(repo, BASE);
-  assert.strictEqual(r.status, 3);
-  assert.ok(r.stderr.includes(USUARIO) && r.stderr.includes(CONTRASENA));
-  assert.match(r.stderr, /\.env/);
+  const resultado = correr(repo, BASE);
+  assert.strictEqual(resultado.status, 3);
+  assert.ok(resultado.stderr.includes(USUARIO) && resultado.stderr.includes(CONTRASENA));
+  assert.match(resultado.stderr, /\.env/);
   assert.strictEqual(fs.existsSync(path.join(repo, '.git', 'polaria-nivel2')), false);
 });
 
 test('las credenciales también se leen del entorno', () => {
   const repo = repoTemporal();
-  const r = correr(repo, BASE, { [USUARIO]: 'u@prueba.test', [CONTRASENA]: 'p-123' });
-  assert.strictEqual(r.status, 0, r.stderr);
+  const resultado = correr(repo, BASE, { [USUARIO]: 'u@prueba.test', [CONTRASENA]: 'p-123' });
+  assert.strictEqual(resultado.status, 0, resultado.stderr);
 });
 
 test('falta solo una credencial: sale con 3 y nombra la que falta', () => {
   const repo = repoTemporal(`${USUARIO}=ana@prueba.test\n`);
-  const r = correr(repo, BASE);
-  assert.strictEqual(r.status, 3);
-  assert.ok(r.stderr.includes(CONTRASENA));
-  assert.ok(!r.stderr.includes(`${USUARIO},`));
+  const resultado = correr(repo, BASE);
+  assert.strictEqual(resultado.status, 3);
+  assert.ok(resultado.stderr.includes(CONTRASENA));
+  assert.ok(!resultado.stderr.includes(`${USUARIO},`));
 });
 
 test('un schema sin Tabla 4 se rechaza con un mensaje claro', () => {
   const repo = repoTemporal(`${USUARIO}=u\n${CONTRASENA}=p\n`);
-  const r = correr(repo, ['--schema', SIN_TABLA_4, '--base-url', 'http://localhost:3001', '--production-url', 'https://wms.polaria.tech']);
-  assert.strictEqual(r.status, 1);
-  assert.match(r.stderr, /no tiene prueba_nivel_2/);
+  const resultado = correr(repo, ['--schema', SIN_TABLA_4, '--base-url', 'http://localhost:3001', '--production-url', 'https://wms.polaria.tech']);
+  assert.strictEqual(resultado.status, 1);
+  assert.match(resultado.stderr, /no tiene prueba_nivel_2/);
 });
 
 test('faltan argumentos o el origen del schema es inválido: error de uso', () => {

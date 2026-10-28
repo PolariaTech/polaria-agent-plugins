@@ -1,7 +1,9 @@
 // Runner de Nivel 2: genera y ejecuta los casos C1 a C8 de un formulario a partir de su schema
 // (formato 1.0) y devuelve un `verification_report` determinista. Es la pieza que comparten la
-// verificación local (skill) y la validación en staging (n8n). Contrato: specs/001-validacion-nivel-2/
-// contracts/runner-nivel2.md. Decisiones: docs/adr/0002-motor-de-navegador.md.
+// verificación local (skill) y la validación en staging (n8n). Contrato y decisiones en el repo
+// PolariaTech/validacion-formularios: specs/001-validacion-nivel-2/contracts/runner-nivel2.md y
+// docs/adr/0002-motor-de-navegador.md. Los códigos FR-NNN y SC-NNN de los comentarios son los requisitos
+// y criterios de éxito de specs/001-validacion-nivel-2/spec.md de ese repo.
 //
 // Uso en navegador: quien llama (la skill o n8n) arma el código con `armarCodigo(fuente, input)`, que
 // incrusta `const input = {...}` y envía una función `async (page) => {...}` a `browser_run_code_unsafe`.
@@ -11,7 +13,8 @@
 // Reglas que este archivo hace cumplir (FR-002 a FR-008):
 // - Solo usa datos del schema; lo que falta deja el caso en `not_executable` con su motivo.
 // - Nunca confirma un guardado: durante el intento de guardar de C7 y C8 bloquea toda petición que
-//   modifique datos. El único cierre que ejecuta es "descartar" en el diálogo de descarte.
+//   modifique datos, también la que dispararía el clic en el botón de confirmar de la advertencia.
+//   El único cierre del formulario que ejecuta es "descartar" en el diálogo de descarte.
 // - Rechaza toda `base_url` que empiece con `production_url`.
 // - Nunca incluye `credentials` en la salida.
 
@@ -76,7 +79,7 @@ function valorDePrueba(campo) {
 // El modal es el diálogo que espera el último paso "esperar" de pasos_abrir.
 function localizadorDelModal(acceso) {
   const pasos = (acceso && acceso.pasos_abrir) || [];
-  const paso = [...pasos].reverse().find((p) => p.accion === 'esperar' && p.localizador && p.localizador.rol === 'dialog');
+  const paso = [...pasos].reverse().find((pasoAbrir) => pasoAbrir.accion === 'esperar' && pasoAbrir.localizador && pasoAbrir.localizador.rol === 'dialog');
   return paso ? paso.localizador : null;
 }
 
@@ -97,25 +100,25 @@ function generarCasos(schema) {
   const botones = pruebaNivel2.botones || {};
   const camposT4 = pruebaNivel2.campos || [];
   const localizadorDe = (campoId) => {
-    const campo = camposT4.find((c) => c.campo_id === campoId);
+    const campo = camposT4.find((candidato) => candidato.campo_id === campoId);
     return campo && localizadorValido(campo.localizador) ? campo.localizador : null;
   };
   const faltaCampo = (campoId) => `dato faltante: localizador del campo ${campoId} (Tabla 4.2)`;
   const faltaBoton = (nombre) => `dato faltante: botón ${nombre} (Tabla 4.1)`;
   const modal = localizadorDelModal(acceso);
   const vive = ((schema.datos_formulario || {}).vive_en_modal || {}).valor === 'si';
-  const conValor = camposT4.filter((c) => valorDePrueba(c) && localizadorValido(c.localizador));
+  const conValor = camposT4.filter((campo) => valorDePrueba(campo) && localizadorValido(campo.localizador));
 
   // C1: orden de tabulación. Solo los campos con posición numérica; el resto se reporta aparte.
-  const posicionados = tabla2.filter((c) => c.orden_tabulacion && c.orden_tabulacion.tipo === 'posicion' && Number.isInteger(c.orden_tabulacion.posicion)).sort((primero, segundo) => primero.orden_tabulacion.posicion - segundo.orden_tabulacion.posicion);
+  const posicionados = tabla2.filter((campo) => campo.orden_tabulacion && campo.orden_tabulacion.tipo === 'posicion' && Number.isInteger(campo.orden_tabulacion.posicion)).sort((primero, segundo) => primero.orden_tabulacion.posicion - segundo.orden_tabulacion.posicion);
   const c1 = { ...plantilla(), case_id: 'C1', field_id: null, applies: posicionados.length >= 2 };
   if (c1.applies) {
-    c1.inputs = { orden: posicionados.map((c) => ({ campo_id: c.campo_id, localizador: localizadorDe(c.campo_id) })) };
-    const sinLocalizador = posicionados.find((c) => !localizadorDe(c.campo_id));
+    c1.inputs = { orden: posicionados.map((campo) => ({ campo_id: campo.campo_id, localizador: localizadorDe(campo.campo_id) })) };
+    const sinLocalizador = posicionados.find((campo) => !localizadorDe(campo.campo_id));
     if (sinLocalizador) c1.reason = faltaCampo(sinLocalizador.campo_id);
   }
   casos.push(c1);
-  for (const campo of tabla2.filter((c) => c.orden_tabulacion && c.orden_tabulacion.tipo === 'relativo')) {
+  for (const campo of tabla2.filter((candidato) => candidato.orden_tabulacion && candidato.orden_tabulacion.tipo === 'relativo')) {
     casos.push({ ...plantilla(), case_id: 'C1', field_id: campo.campo_id, applies: true, inputs: {}, reason: 'orden relativo (no ejecutable)' });
   }
 
@@ -130,7 +133,7 @@ function generarCasos(schema) {
   }
 
   // C3: foco automático. Solo cuando ocurre al abrir; cualquier otro momento no es ejecutable.
-  for (const campo of tabla2.filter((c) => c.foco_automatico && c.foco_automatico.tiene)) {
+  for (const campo of tabla2.filter((candidato) => candidato.foco_automatico && candidato.foco_automatico.tiene)) {
     const caso = { ...plantilla(), case_id: 'C3', field_id: campo.campo_id, applies: true, inputs: { localizador: localizadorDe(campo.campo_id), momento: campo.foco_automatico.momento } };
     if (!campo.foco_automatico.momento) caso.reason = 'dato faltante: momento del foco automático (Tabla 2)';
     else if (!momentoEsApertura(campo.foco_automatico.momento)) caso.reason = `foco automático con un momento distinto a la apertura ("${campo.foco_automatico.momento}"): no ejecutable`;
@@ -140,7 +143,7 @@ function generarCasos(schema) {
 
   // C4 a C6: modal con datos sin guardar.
   const hayDescarte = botones.descarte_seguir_editando && botones.descarte_confirmar;
-  const datosModal = { modal, campos_con_valor: conValor.map((c) => ({ campo_id: c.campo_id, localizador: c.localizador, valor: String(c.valor_de_prueba) })) };
+  const datosModal = { modal, campos_con_valor: conValor.map((campo) => ({ campo_id: campo.campo_id, localizador: campo.localizador, valor: String(campo.valor_de_prueba) })) };
   const razonModal = () => {
     if (!modal) return 'dato faltante: paso "esperar dialog" en pasos_abrir (Tabla 4.1) para ubicar el modal';
     if (!conValor.length) return 'dato faltante: valor de prueba (ningún campo de la Tabla 4.2 lo tiene)';
@@ -157,7 +160,7 @@ function generarCasos(schema) {
   casos.push(c6);
 
   // C7 y C8: advertencia no-saltable por pre-llenado.
-  const origenes = tabla3.filter((c) => c.origen && c.origen.valor).map((c) => c.origen.valor);
+  const origenes = tabla3.filter((fila) => fila.origen && fila.origen.valor).map((fila) => fila.origen.valor);
   const datosAdvertencia = { modal, guardar: botones.guardar || null, advertencia_confirmar: botones.advertencia_confirmar || null, cancelar: botones.cancelar || null, descarte_confirmar: botones.descarte_confirmar || null, campos_con_valor: datosModal.campos_con_valor };
   const razonAdvertencia = () => (!botones.guardar ? faltaBoton('guardar') : !botones.advertencia_confirmar ? faltaBoton('advertencia_confirmar') : null);
   const c7 = { ...plantilla(), case_id: 'C7', field_id: null, applies: origenes.includes('extraccion_ia'), inputs: datosAdvertencia };
@@ -173,21 +176,21 @@ function generarCasos(schema) {
 // ejecutable, o con un error de ambiente, no se pudo validar.
 function calcularResumen(resultados, errorDeAmbiente) {
   if (errorDeAmbiente) return 'could_not_validate';
-  const ejecutados = resultados.filter((r) => r.result === 'pass' || r.result === 'fail');
-  if (ejecutados.some((r) => r.result === 'fail')) return 'fails';
+  const ejecutados = resultados.filter((resultadoCaso) => resultadoCaso.result === 'pass' || resultadoCaso.result === 'fail');
+  if (ejecutados.some((resultadoCaso) => resultadoCaso.result === 'fail')) return 'fails';
   return ejecutados.length ? 'passes' : 'could_not_validate';
 }
 
 // Reemplaza en todo el valor los textos secretos (y su forma escapada en JSON) por [redactado].
 function censurar(valor, secretos) {
-  const textos = secretos.filter((s) => typeof s === 'string' && s.length >= 3);
+  const textos = secretos.filter((secreto) => typeof secreto === 'string' && secreto.length >= 3);
   if (!textos.length) return valor;
-  const formas = textos.flatMap((s) => [s, JSON.stringify(s).slice(1, -1)]);
-  const limpiar = (v) => {
-    if (typeof v === 'string') return formas.reduce((acc, forma) => acc.split(forma).join('[redactado]'), v);
-    if (Array.isArray(v)) return v.map(limpiar);
-    if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, limpiar(x)]));
-    return v;
+  const formas = textos.flatMap((secreto) => [secreto, JSON.stringify(secreto).slice(1, -1)]);
+  const limpiar = (elemento) => {
+    if (typeof elemento === 'string') return formas.reduce((acc, forma) => acc.split(forma).join('[redactado]'), elemento);
+    if (Array.isArray(elemento)) return elemento.map(limpiar);
+    if (elemento && typeof elemento === 'object') return Object.fromEntries(Object.entries(elemento).map(([clave, valorAnidado]) => [clave, limpiar(valorAnidado)]));
+    return elemento;
   };
   return limpiar(valor);
 }
@@ -312,7 +315,7 @@ function crearAdaptador(page, opciones, login) {
           manejadores.push(await ubicado.elementHandle());
         }
       }
-      const indice = await page.evaluate((elementos) => elementos.findIndex((e) => e === document.activeElement), manejadores);
+      const indice = await page.evaluate((elementos) => elementos.findIndex((elemento) => elemento === document.activeElement), manejadores);
       return indice >= 0 ? presentes[indice].campo_id : null;
     },
     async llenar(loc, valor) {
@@ -329,7 +332,7 @@ function crearAdaptador(page, opciones, login) {
       const caja = modal ? await (await encontrar(modal)).boundingBox() : null;
       const tamano = page.viewportSize() || { width: 1280, height: 720 };
       const candidatos = [[2, 2], [tamano.width - 2, 2], [2, tamano.height - 2], [tamano.width - 2, tamano.height - 2]];
-      const punto = candidatos.find(([x, y]) => !caja || x < caja.x || x > caja.x + caja.width || y < caja.y || y > caja.y + caja.height);
+      const punto = candidatos.find(([posX, posY]) => !caja || posX < caja.x || posX > caja.x + caja.width || posY < caja.y || posY > caja.y + caja.height);
       if (!punto) throw new ErrorDeCaso('no_encontrado', 'no hay un punto fuera del modal donde hacer clic');
       await page.mouse.click(punto[0], punto[1]);
       await this.estabilizar();
@@ -365,7 +368,7 @@ const sinGuion = (ids) => ids.join(' → ');
 // Recorre el formulario con Tab desde el primer campo con posición y devuelve los campo_id enfocados,
 // uno por pulsación (null = el foco quedó en un elemento que no es un campo conocido).
 async function recorrerConTab(adaptador, camposT4, primero, pulsaciones) {
-  const conocidos = camposT4.filter((c) => localizadorValido(c.localizador)).map((c) => ({ campo_id: c.campo_id, localizador: c.localizador }));
+  const conocidos = camposT4.filter((campo) => localizadorValido(campo.localizador)).map((campo) => ({ campo_id: campo.campo_id, localizador: campo.localizador }));
   const visitados = [];
   if (primero) {
     await adaptador.enfocar(primero.localizador);
@@ -395,7 +398,7 @@ async function datosConservados(adaptador, campos, base) {
 
 async function ejecutarCaso(adaptador, caso, contexto) {
   const { schema, input } = contexto;
-  const campos = (schema.prueba_nivel_2.campos || []).filter((c) => localizadorValido(c.localizador));
+  const campos = (schema.prueba_nivel_2.campos || []).filter((campo) => localizadorValido(campo.localizador));
   const acceso = schema.prueba_nivel_2.acceso;
   const reabrir = () => adaptador.abrir(input.base_url, acceso);
   const conValor = caso.inputs.campos_con_valor || [];
@@ -404,31 +407,31 @@ async function ejecutarCaso(adaptador, caso, contexto) {
 
   if (caso.case_id === 'C1') {
     const orden = caso.inputs.orden;
-    const esperado = orden.map((c) => c.campo_id);
+    const esperado = orden.map((campo) => campo.campo_id);
     await reabrir();
     for (const campo of orden) await adaptador.existe(campo.localizador);
     const visitados = await recorrerConTab(adaptador, campos, orden[0], esperado.length - 1);
     const desvio = esperado.findIndex((id, i) => visitados[i] !== id);
     const expected = `el foco recorre ${sinGuion(esperado)} con Tab`;
     if (desvio === -1) return pasa(expected, `el foco recorrió ${sinGuion(visitados)}`);
-    return falla(expected, `primer desvío en la posición ${desvio + 1}: se esperaba "${esperado[desvio]}" y el foco quedó en ${visitados[desvio] ? `"${visitados[desvio]}"` : 'otro elemento'} (recorrido: ${visitados.map((v) => v ?? 'otro').join(' → ')})`);
+    return falla(expected, `primer desvío en la posición ${desvio + 1}: se esperaba "${esperado[desvio]}" y el foco quedó en ${visitados[desvio] ? `"${visitados[desvio]}"` : 'otro elemento'} (recorrido: ${visitados.map((visitado) => visitado ?? 'otro').join(' → ')})`);
   }
 
   if (caso.case_id === 'C2') {
     await reabrir();
     await adaptador.existe(caso.inputs.localizador);
-    const posicionados = (schema.tabla_2_interaccion || []).filter((c) => c.orden_tabulacion && c.orden_tabulacion.tipo === 'posicion' && Number.isInteger(c.orden_tabulacion.posicion)).sort((primero, segundo) => primero.orden_tabulacion.posicion - segundo.orden_tabulacion.posicion);
-    const primero = posicionados.map((c) => campos.find((k) => k.campo_id === c.campo_id)).find(Boolean);
+    const posicionados = (schema.tabla_2_interaccion || []).filter((campo) => campo.orden_tabulacion && campo.orden_tabulacion.tipo === 'posicion' && Number.isInteger(campo.orden_tabulacion.posicion)).sort((primero, segundo) => primero.orden_tabulacion.posicion - segundo.orden_tabulacion.posicion);
+    const primero = posicionados.map((campo) => campos.find((campoT4) => campoT4.campo_id === campo.campo_id)).find(Boolean);
     const visitados = await recorrerConTab(adaptador, campos, primero, campos.length + 1);
     const expected = `"${caso.field_id}" no recibe foco durante el recorrido con Tab`;
-    if (!visitados.includes(caso.field_id)) return pasa(expected, `el recorrido pasó por ${sinGuion(visitados.map((v) => v ?? 'otro'))} sin enfocarlo`);
+    if (!visitados.includes(caso.field_id)) return pasa(expected, `el recorrido pasó por ${sinGuion(visitados.map((visitado) => visitado ?? 'otro'))} sin enfocarlo`);
     return falla(expected, `el campo recibió foco en la pulsación ${visitados.indexOf(caso.field_id) + 1} del recorrido`);
   }
 
   if (caso.case_id === 'C3') {
     await reabrir();
     await adaptador.existe(caso.inputs.localizador);
-    const conocidos = campos.map((c) => ({ campo_id: c.campo_id, localizador: c.localizador }));
+    const conocidos = campos.map((campo) => ({ campo_id: campo.campo_id, localizador: campo.localizador }));
     const enfocado = await adaptador.campoConFoco(conocidos);
     const expected = `al abrir, el foco queda en "${caso.field_id}"`;
     if (enfocado === caso.field_id) return pasa(expected, `el foco quedó en "${enfocado}"`);
@@ -494,7 +497,7 @@ async function ejecutarCaso(adaptador, caso, contexto) {
   } finally {
     await guardia.liberar();
   }
-  // Descarta sin guardar: el único cierre permitido.
+  // Descarta sin guardar: el único cierre del formulario permitido.
   if (cancelar && descartar) {
     try {
       await adaptador.clic(cancelar);
@@ -544,7 +547,7 @@ async function ejecutarConAdaptador(adaptadorRecibido, input, fabricaDeAdaptador
   if (apuntaAProduccion(input.base_url, input.production_url)) return terminar({ stage: 'produccion', message: 'base_url apunta a producción o falta production_url: el runner solo corre en local o en staging' });
   if (!schema.prueba_nivel_2) return terminar({ stage: 'schema', message: 'sin Tabla 4: no hay datos para ejecutar la prueba automatizada' });
 
-  const plan = generarCasos(schema).filter((c) => c.applies);
+  const plan = generarCasos(schema).filter((caso) => caso.applies);
   const contexto = { schema, input: entrada };
   const adaptador = adaptadorRecibido || fabricaDeAdaptador(entrada);
   try {
@@ -593,7 +596,7 @@ function cuerpoDelRunner(fuente) {
 }
 
 // Arma el código `async (page) => {...}` con `const input = {...}` incrustado. Con `credentials: null`, las
-// credenciales son los marcadores sin comillas que sustituye el proxy del MCP alojado (ADR 0002); n8n nunca
+// credenciales son los marcadores sin comillas que sustituye el proxy del MCP alojado (ADR 0002 de ese repo); n8n nunca
 // ve el secreto. Nada del schema se evalúa como código: solo viaja como JSON.
 function armarCodigo(fuente, input) {
   const rol = (((input.schema || {}).prueba_nivel_2 || {}).acceso || {}).rol;

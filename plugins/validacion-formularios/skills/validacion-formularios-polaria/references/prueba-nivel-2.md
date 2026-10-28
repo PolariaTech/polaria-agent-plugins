@@ -2,7 +2,7 @@
 
 Procedimiento para verificar el Nivel 2 de un formulario con el runner (`scripts/nivel2-runner.js`) en lugar del recorrido manual. El Nivel 2 es la tabulación, el foco, los campos deshabilitados, el modal, la confirmación de descarte y las advertencias de pre-llenado. Los Niveles 1, 3, 4 y 5 siguen en el checklist manual del Paso 5.
 
-El runner genera los casos C1 a C8 desde el schema, los ejecuta en el navegador y devuelve un reporte. El veredicto de cada caso lo decide código, no tú. Nunca guarda datos: el único cierre que hace es "descartar".
+El runner genera los casos C1 a C8 desde el schema, los ejecuta en el navegador y devuelve un reporte. El veredicto de cada caso lo decide código, no tú. Nunca guarda datos: bloquea toda petición que modifique datos y el único cierre del formulario que hace es "descartar". En C7 y C8 también pulsa el botón de confirmar de la advertencia de pre-llenado, con esa guardia activa.
 
 ## Antes de empezar
 
