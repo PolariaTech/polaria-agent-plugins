@@ -1,6 +1,6 @@
 # polaria-agent-plugins
 
-Repositorio privado de Polaria para distribuir plugins/skills/agentes reutilizables de
+Repositorio publico de Polaria para distribuir plugins/skills/agentes reutilizables de
 asistentes de codigo (Claude Code, Cursor) entre repos reales del equipo, en vez de copiar
 carpetas a mano desde Drive.
 
@@ -12,8 +12,8 @@ carpetas a mano desde Drive.
 /plugin install <nombre-del-plugin>@polaria-agent-plugins
 ```
 
-Requiere acceso de lectura al repo (ya lo tienen todos los miembros de la org PolariaTech via
-`gh auth`). Tambien se puede agregar desde la UI: Plugins -> "Add plugin from GitHub
+El repo es publico: no hace falta cuenta de GitHub ni `gh auth` para instalar. Si falla con
+`git@github.com`, ver "Si falla con Failed to resolve git ref". Tambien se puede agregar desde la UI: Plugins -> "Add plugin from GitHub
 repository" -> `PolariaTech/polaria-agent-plugins`.
 
 ## Instalar en Cursor
@@ -29,6 +29,21 @@ instalar el marketplace: la unica via es clonar este repo y copiar a mano las ca
 `skills/`, `agents/`, `commands/` del plugin que necesite a `.cursor/skills/`,
 `.cursor/rules/` o `.cursor/commands/` de su proyecto destino (los formatos de archivo,
 `SKILL.md` y `.mdc`, son compatibles sin traduccion).
+
+## Si falla con "Failed to resolve git ref" (Cursor)
+
+Sintoma: el plugin muestra "Error loading plugin: Failed to resolve git ref "main" for
+git@github.com:PolariaTech/polaria-agent-plugins.git" y ninguno de los plugins del marketplace
+carga. Causa: Cursor guarda el marketplace con la URL SSH y la maquina no tiene una llave SSH
+registrada en GitHub; SSH la exige aunque el repo sea publico. Arreglo (verificado 28/10/2026):
+
+1. En la terminal: `git config --global url."https://github.com/".insteadOf "git@github.com:"`
+2. Comprobar: `git -c credential.interactive=false ls-remote git@github.com:PolariaTech/polaria-agent-plugins.git main`
+   debe devolver un hash y `refs/heads/main`.
+3. Cerrar Cursor por completo (Cmd+Q en Mac) y abrirlo de nuevo.
+4. Customize -> abrir el plugin; si el aviso sigue, desinstalarlo e instalarlo otra vez.
+
+Volver a agregar el marketplace con la URL HTTPS no resolvio el error en el caso observado.
 
 ## Estructura del repo
 
