@@ -2,6 +2,12 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según [SemVer](https://semver.org/lang/es/). Las versiones anteriores a 1.2.0 están descritas en los commits del repo (`git log -- plugins/gestion-linear`).
 
+## [1.2.2] — 2026-10-28
+
+### Cambiado
+- Hook `verificar-pr-refs.js`: ya no exige solo `Refs POL-X`. Acepta tres caminos: `Refs POL-X` (issue de Linear), `Refs REQ-NNN` (requerimiento del Sheet; solo valida el formato, no que la fila exista) y `Sin ticket: <motivo>` para trabajo sin requerimiento creado (el motivo es obligatorio, mínimo 8 caracteres). Sigue bloqueando un PR sin ninguno de los tres y sigue bloqueando `Closes`, `Fixes`, `Resolves` o `Implements` con un `POL-X`. El mensaje de bloqueo explica los tres caminos.
+- `linear-transicionar-estado`: la sección "Vincular el PR con el issue" describe los tres caminos.
+
 ## [1.2.1] — 2026-10-26
 
 ### Agregado

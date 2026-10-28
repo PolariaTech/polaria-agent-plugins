@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 // Hook del plugin gestion-linear, compartido por Claude Code y Cursor.
-// Bloquea `gh pr create` si la descripción del PR no vincula el issue de Linear con `Refs POL-X`
-// (o `Part of`, `Contributes to`, `Related to`), o si lo hace con `Closes`, `Fixes`, `Resolves` o `Implements`:
+// Bloquea `gh pr create` si la descripción del PR no declara de dónde viene el trabajo. Acepta tres caminos:
+//   - Linear: `Refs POL-X` (o `Part of`, `Contributes to`, `Related to`).
+//   - Sheet de requerimientos: `Refs REQ-NNN` (mismos verbos). El hook solo valida el formato, no que la fila exista.
+//   - Manual, para trabajo sin requerimiento creado: `Sin ticket: <motivo>` con un motivo escrito (mínimo 8 caracteres).
+// También bloquea si usa `Closes`, `Fixes`, `Resolves` o `Implements` con un POL-X:
 // esas palabras cierran el issue al hacer merge y se saltan el MODO CIERRE de linear-transicionar-estado.
 // Sin el vínculo, Linear solo engancha el PR por el nombre de la rama, y con varios issues en una rama enlaza solo el primero.
 //
@@ -15,7 +18,9 @@ const fs = require('fs');
 const path = require('path');
 
 const CREAR_PR = /\bgh(?:\.exe)?\s+pr\s+create\b/i;
-const VINCULA = /\b(?:refs?|part of|contributes to|related to)\s+POL-\d+/i;
+const VINCULA = /\b(?:refs?|part of|contributes to|related to)\s+(?:POL|REQ)-\d+/i;
+const SIN_TICKET = /\bsin ticket\s*:[ \t]*([^\r\n"']+)/i;
+const MOTIVO_MINIMO = 8;
 const CIERRA = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|implement(?:s|ed)?)\s+POL-\d+/i;
 const ARCHIVO_DE_DESCRIPCION = /(?:--body-file|-F)[\s=]+(?:"([^"]+)"|'([^']+)'|(\S+))/;
 
@@ -66,8 +71,10 @@ process.stdin.on('end', () => {
   if (CIERRA.test(texto)) {
     bloquear('Gestión de Linear: la descripción del PR cierra el issue (`Closes`, `Fixes`, `Resolves` o `Implements` POL-X). Cámbialo por `Refs POL-X`: el issue se cierra solo con MODO CIERRE de linear-transicionar-estado, después del merge y con los criterios de aceptación citados.');
   }
-  if (!VINCULA.test(texto)) {
-    bloquear('Gestión de Linear: la descripción del PR no vincula ningún issue. Agrega una línea `Refs POL-X` por cada issue que cubre el PR (por ejemplo `Refs POL-370, POL-318`), con --body o --body-file. Sin ella, Linear solo engancha el primer issue que aparece en el nombre de la rama.');
+  const sinTicket = SIN_TICKET.exec(texto);
+  const motivoValido = sinTicket && sinTicket[1].trim().length >= MOTIVO_MINIMO;
+  if (!VINCULA.test(texto) && !motivoValido) {
+    bloquear('Gestión de Linear: la descripción del PR no dice de dónde viene el trabajo. Agrega una de estas líneas con --body o --body-file: `Refs POL-X` si hay issue en Linear (una por issue, por ejemplo `Refs POL-370, POL-318`), `Refs REQ-NNN` si el requerimiento está en el Sheet, o `Sin ticket: <motivo>` si no hay requerimiento creado (el motivo es obligatorio, mínimo 8 caracteres). Sin vínculo a Linear, este solo engancha el primer issue que aparece en el nombre de la rama.');
   }
   permitir();
 });

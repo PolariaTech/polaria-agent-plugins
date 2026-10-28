@@ -1,4 +1,4 @@
-// Pruebas del hook verificar-pr-refs.js (gh pr create con Refs POL-X).
+// Pruebas del hook verificar-pr-refs.js (gh pr create con Refs POL-X, Refs REQ-NNN o Sin ticket: motivo).
 
 const test = require('node:test');
 const assert = require('node:assert');
@@ -25,10 +25,48 @@ test('gh pr create con Refs POL-X pasa', () => {
   assert.strictEqual(correr(claude('gh pr create --body "$(cat <<\'EOF\'\n## Qué\nPart of POL-12\nEOF\n)"')).status, 0);
 });
 
-test('gh pr create sin ningún vínculo se bloquea con exit 2 y explica qué falta', () => {
+test('gh pr create sin ningún vínculo se bloquea con exit 2 y explica los tres caminos', () => {
   const resultado = correr(claude('gh pr create --title "x" --body "cambia algo"'));
   assert.strictEqual(resultado.status, 2);
   assert.match(resultado.stderr, /Refs POL-X/);
+  assert.match(resultado.stderr, /Refs REQ-NNN/);
+  assert.match(resultado.stderr, /Sin ticket: <motivo>/);
+});
+
+test('gh pr create con Refs REQ-NNN (requerimiento del Sheet) pasa', () => {
+  assert.strictEqual(correr(claude('gh pr create --title "x" --body "Refs REQ-012"')).status, 0);
+  assert.strictEqual(correr(claude('gh pr create --title "x" --body "refs req-12, POL-5"')).status, 0);
+  assert.strictEqual(correr(claude('gh pr create --title "x" --body "Related to REQ-7"')).status, 0);
+});
+
+test('Refs con un ID que no es POL ni REQ se bloquea', () => {
+  assert.strictEqual(correr(claude('gh pr create --title "x" --body "Refs ABC-12"')).status, 2);
+  assert.strictEqual(correr(claude('gh pr create --title "x" --body "Refs REQ"')).status, 2);
+});
+
+test('Sin ticket: con motivo pasa, también en heredoc y con mayúsculas distintas', () => {
+  assert.strictEqual(correr(claude('gh pr create --title "x" --body "Sin ticket: corrección de documentación menor"')).status, 0);
+  assert.strictEqual(correr(claude('gh pr create --body "$(cat <<\'EOF\'\n## Qué\nSIN TICKET: no hay requerimiento aún\nEOF\n)"')).status, 0);
+});
+
+test('Sin ticket: sin motivo o con un motivo de relleno se bloquea', () => {
+  for (const cuerpo of ['Sin ticket:', 'Sin ticket: ', 'Sin ticket: n/a', 'Sin ticket: x', 'Sin ticket']) {
+    assert.strictEqual(correr(claude(`gh pr create --title "x" --body "${cuerpo}"`)).status, 2, cuerpo);
+  }
+});
+
+test('Sin ticket: no deja pasar una descripción que cierra un issue con Closes', () => {
+  const resultado = correr(claude('gh pr create --body "Sin ticket: motivo suficiente\nCloses POL-2"'));
+  assert.strictEqual(resultado.status, 2);
+  assert.match(resultado.stderr, /cierra el issue/);
+});
+
+test('Sin ticket: en un archivo --body-file se lee', () => {
+  const carpeta = fs.mkdtempSync(path.join(os.tmpdir(), 'pr-sin-ticket-'));
+  fs.writeFileSync(path.join(carpeta, 'bueno.md'), 'Sin ticket: ajuste de documentación\n');
+  fs.writeFileSync(path.join(carpeta, 'malo.md'), 'Sin ticket:\n');
+  assert.strictEqual(correr(claude('gh pr create --title t --body-file bueno.md', carpeta)).status, 0);
+  assert.strictEqual(correr(claude('gh pr create --title t --body-file malo.md', carpeta)).status, 2);
 });
 
 test('gh pr create --fill, sin descripción, se bloquea', () => {

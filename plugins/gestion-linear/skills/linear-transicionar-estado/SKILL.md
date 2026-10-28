@@ -200,9 +200,9 @@ Si el estado actual permite validación de 4 ojos (Metodología de Trabajo v1.2 
 
 ## Vincular el PR con el issue
 
-Cuando se abre un PR por un issue de Linear, la descripción del PR lleva una línea `Refs POL-X` por cada issue que cubre (por ejemplo `Refs POL-370, POL-318`). Nunca `Closes`, `Fixes`, `Resolves` ni `Implements`: cierran el issue al hacer merge y se saltan MODO CIERRE.
+Cuando se abre un PR por un issue de Linear, la descripción del PR lleva una línea `Refs POL-X` por cada issue que cubre (por ejemplo `Refs POL-370, POL-318`). Nunca `Closes`, `Fixes`, `Resolves` ni `Implements`: cierran el issue al hacer merge y se saltan MODO CIERRE. Si el trabajo no vive en Linear, el hook acepta otros dos caminos: `Refs REQ-NNN` cuando el requerimiento es una fila del Sheet, o `Sin ticket: <motivo>` (motivo escrito, mínimo 8 caracteres) cuando todavía no existe ningún requerimiento. Con esos dos no hay issue que vincular, así que los pasos 2 y 3 de abajo solo aplican a `Refs POL-X`.
 
-1. Antes de `gh pr create`, lista los issues que cubre la rama (el nombre de la rama solo trae uno) y escribe `Refs` con todos en la descripción. El hook `verificar-pr-refs.js` del plugin bloquea `gh pr create` sin ese vínculo o con una palabra que cierra el issue.
+1. Antes de `gh pr create`, lista los issues que cubre la rama (el nombre de la rama solo trae uno) y escribe `Refs` con todos en la descripción. El hook `verificar-pr-refs.js` del plugin bloquea `gh pr create` sin ninguno de los tres caminos o con una palabra que cierra el issue.
 2. Después de abrir el PR, llama `get_issue` de cada issue y confirma que el PR aparece en sus `attachments`. Si falta alguno, agrégalo con `create_attachment`.
 3. Al abrirse el PR, Linear mueve el issue a In Progress. No lo regreses a In Review hasta que empiece MODO PRUEBAS, y no lo muevas a Done hasta el merge y MODO CIERRE.
 4. El hook revisa el comando completo, título incluido: un título como `Fix POL-5 login` se bloquea aunque la descripción tenga `Refs POL-5`. Escribe el título sin esas palabras seguidas de un `POL-N`.
