@@ -3,7 +3,7 @@
 //
 // La única fuente de verdad de los reclamos es el CLAIM.md que cada dev publica en su rama. Los hooks no pueden hacer
 // git fetch en cada edición, así que la skill (paralelo.js importar-claims) copia los CLAIM.md de las ramas remotas a
-// <git-common-dir>/polaria-paralelo/reclamos.json (fuera del árbol de trabajo, compartido por todos los worktrees) y
+// <git-common-dir>/polaria-paralelo/reclamos.json (fuera del árbol de trabajo, compartido por todas las ramas del repo) y
 // los hooks leen de ahí.
 
 const { execFileSync } = require('child_process');

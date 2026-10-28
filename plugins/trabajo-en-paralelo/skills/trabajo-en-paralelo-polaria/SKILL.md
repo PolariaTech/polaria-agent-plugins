@@ -1,17 +1,19 @@
 ---
 name: trabajo-en-paralelo-polaria
-description: Coordina el trabajo en paralelo de varios devs, cada uno con su asistente de IA y sus cambios en local, para que nadie toque lo mismo ni se rompa el merge. Estima qué archivos va a tocar un ticket (issue de Linear POL-X o fila del Sheet REQ-NNN), los publica como CLAIM.md en la rama, revisa que ninguna otra rama los haya reclamado, crea la rama y su worktree, mantiene al asistente dentro de esas zonas y al terminar libera el reclamo. Úsala SIEMPRE que alguien diga "vamos a trabajar en POL-X", "sigamos con REQ-012", "retomemos POL-X", "voy a empezar el ticket X", "¿alguien está tocando esto?", "¿puedo tocar este módulo?", "¿esto choca con lo de otro dev?", "sincroniza los reclamos", "ya terminé POL-X, libera", o cuando un hook rechace una edición o un commit por salirse de las zonas del CLAIM.md o avise de un solape, incluso si no dice "reclamo" ni "worktree". No la uses para crear issues, cambiar su estado ni cerrarlos (eso es `gestion-linear`), ni para revisar la calidad del diff (eso es `gate-calidad-tecnica-pre-merge-polaria`).
+description: Coordina el trabajo en paralelo de varios devs, cada uno con su asistente de IA y sus cambios en local, para que nadie toque lo mismo ni se rompa el merge. Estima qué archivos va a tocar un ticket (issue de Linear POL-X o fila del Sheet REQ-NNN), los publica como CLAIM.md en la rama, revisa que ninguna otra rama los haya reclamado, cambia a la rama del ticket dentro del mismo proyecto, mantiene al asistente dentro de esas zonas y al terminar libera el reclamo. Úsala SIEMPRE que alguien diga "vamos a trabajar en POL-X", "sigamos con REQ-012", "retomemos POL-X", "voy a empezar el ticket X", "¿alguien está tocando esto?", "¿puedo tocar este módulo?", "¿esto choca con lo de otro dev?", "sincroniza los reclamos", "ya terminé POL-X, libera", o cuando un hook rechace una edición o un commit por salirse de las zonas del CLAIM.md o avise de un solape, incluso si no dice "reclamo". No la uses para crear issues, cambiar su estado ni cerrarlos (eso es `gestion-linear`), ni para revisar la calidad del diff (eso es `gate-calidad-tecnica-pre-merge-polaria`).
 ---
 
 # Skill: Trabajo en paralelo sin pisarse
 
-Los cambios de cada dev viven en su máquina y nadie ve lo del otro. Lo único que todos ven es git. Por eso el reclamo de cada ticket es un archivo **`CLAIM.md` en la raíz de la rama**: la única fuente de verdad. Los hooks leen una copia local de los `CLAIM.md` de las ramas remotas para avisar antes de que dos personas editen lo mismo, y rechazan que el asistente escriba fuera de las zonas de su propio `CLAIM.md`. Un `git worktree` por tarea aísla al asistente de Claude y al de Cursor de una misma persona.
+Los cambios de cada dev viven en su máquina y nadie ve lo del otro. Lo único que todos ven es git. Por eso el reclamo de cada ticket es un archivo **`CLAIM.md` en la raíz de la rama**: la única fuente de verdad. Los hooks leen una copia local de los `CLAIM.md` de las ramas remotas para avisar antes de que dos personas editen lo mismo, y rechazan que el asistente escriba fuera de las zonas de su propio `CLAIM.md`. Cada ticket es una rama distinta **del mismo proyecto**: al empezar uno se cambia de rama en esa misma carpeta y al terminar se libera y se vuelve a la rama principal. Nunca se crea una carpeta ni un worktree por rama.
 
-**Raíz del plugin:** la carpeta dos niveles arriba de esta skill. Los scripts se llaman `node "<raíz del plugin>/scripts/paralelo.js" <comando>`, siempre desde dentro del repo (o de uno de sus worktrees). Formato del archivo y quién puede cambiarlo: `references/formato-reclamo.md`.
+**Dónde se mira si alguien ya reclamó algo:** siempre en el `CLAIM.md` de las ramas remotas del repo (lo hace `importar-claims`). Linear y el Sheet solo sirven para leer el ticket que se va a trabajar; nunca se buscan en ellos reclamos ni "issues activos".
+
+**Raíz del plugin:** la carpeta dos niveles arriba de esta skill. Los scripts se llaman `node "<raíz del plugin>/scripts/paralelo.js" <comando>`, siempre desde dentro del repo. Formato del archivo y quién puede cambiarlo: `references/formato-reclamo.md`.
 
 **Requisitos:** repo git con remoto `origin`, Node ≥18 y Git ≥2.38. Para leer el ticket: el MCP de Linear (lo trae el plugin `gestion-linear`) si es `POL-X`, o el conector de Google Sheets si es `REQ-NNN`. Si falta, sigue `references/instalar-conectores.md`.
 
-Todo es automático, sin preguntar, **excepto tres casos**: un solape con el reclamo de otra rama (Modo A, paso 5), no saber dónde está el ticket (paso 1) y salir de las zonas (Modo E). En esos casos te detienes y le preguntas al dev, porque coordinar con otra persona o autorizar un cambio de alcance no lo puede decidir un asistente.
+Todo es automático, sin preguntar, **excepto cuatro casos**: un solape con el reclamo de otra rama (Modo A, paso 5), no saber dónde está el ticket (paso 1), la rama actual con un reclamo todavía activo (Modo A, paso 6) y salir de las zonas (Modo E). En esos casos te detienes y le preguntas al dev, porque coordinar con otra persona o autorizar un cambio de alcance no lo puede decidir un asistente.
 
 ## Modo A: Reclamar (al empezar un ticket)
 
@@ -28,13 +30,16 @@ Si `linear-transicionar-estado` también se activa por la misma frase, déjala m
    - Sin línea `SOLAPE`: sigue al paso 6.
    - Con `SOLAPE` de zona: **detente**. Muéstrale al dev, en una tabla corta, de quién es el reclamo y qué rutas chocan. Ofrece dos caminos: (a) coordinar con esa persona antes de empezar, (b) tomar otro ticket primero. No existe un tercer camino de seguir con el solape. Espera su respuesta antes de crear nada.
    - Con `SOLAPE EN COMPARTIDO` solamente: no te detengas; sigue y menciónalo en el paso 8.
-6. **Crea la rama y el worktree.** Ejecuta `node "<raíz del plugin>/scripts/paralelo.js" crear-worktree <rama>`. Imprime la ruta del worktree. Trabaja desde ahí: usa esa ruta en todas tus lecturas, ediciones y comandos git. Si el dev ya está parado en un worktree de esta misma rama, omite este paso.
-7. **Reclama.** Desde el worktree, ejecuta `node "<raíz del plugin>/scripts/paralelo.js" reclamar --issue <ID> --zonas "<zonas>" --compartidos "<compartidos>" --confianza <N> --responsable "<asignado>" --porque "<una frase>"`. El comando vuelve a cruzar con las otras ramas, escribe el `CLAIM.md`, lo commitea como primer commit y publica la rama. NUNCA escribas el `CLAIM.md` a mano. Según el código de salida:
+6. **Cambia a la rama del ticket, en este mismo proyecto.** Ejecuta `node "<raíz del plugin>/scripts/paralelo.js" iniciar-rama <rama>`. Cambia de rama en la carpeta actual; no crea carpetas. Si ya estás en esa rama, no hace nada. Según el código de salida:
+   - `0`: listo. Trabaja en esta misma carpeta.
+   - `6`: hay cambios sin guardar en la rama actual. Dile al dev cuáles son y que los guarde (commit) antes; no los descartes ni los muevas tú.
+   - `7`: la rama actual tiene un reclamo activo de otro ticket. **Pregúntale al dev una sola vez** si ese trabajo terminó o lo deja pausado. Si terminó, ejecuta `paralelo.js liberar --volver` (Modo D) y repite este paso. Si lo deja pausado, repite este paso con `--pausar`: el reclamo de ese ticket sigue vigente.
+7. **Reclama.** Ejecuta `node "<raíz del plugin>/scripts/paralelo.js" reclamar --issue <ID> --zonas "<zonas>" --compartidos "<compartidos>" --confianza <N> --responsable "<asignado>" --porque "<una frase>"`. El comando vuelve a cruzar con las otras ramas, escribe el `CLAIM.md`, lo commitea como primer commit y publica la rama. NUNCA escribas el `CLAIM.md` a mano. Según el código de salida:
    - `0`: listo.
    - `3`: apareció un choque entre el paso 5 y ahora; vuelve al paso 5.
    - `5`: el commit quedó pero el push falló. Lee el error, díselo al dev y, si lo bloqueó el gate de calidad, sigue sus instrucciones. Los demás no ven el reclamo hasta que la rama se publique.
    - `2`: error de uso; corrige el argumento que dice el mensaje.
-8. **Informa al dev en 4 líneas:** zonas reclamadas, confianza, ruta del worktree y si hay solapes en compartidos. No pegues el `CLAIM.md` completo.
+8. **Informa al dev en 4 líneas:** zonas reclamadas, confianza, rama activa y si hay solapes en compartidos. No pegues el `CLAIM.md` completo.
 
 ## Modo B: Sincronizar (traer los reclamos de las ramas a la caché local)
 
@@ -58,8 +63,8 @@ Los hooks no pueden hacer `git fetch` en cada edición; leen `<git-common-dir>/p
 ## Modo D: Liberar (al terminar o abandonar el ticket)
 
 1. Confirma con el dev que el trabajo terminó (PR mergeado) o se abandona. Si no está claro, pregunta una sola vez.
-2. Ejecuta `node "<raíz del plugin>/scripts/paralelo.js" liberar`. Borra el `CLAIM.md` con un commit, lo publica y deja en el mensaje del commit "N de M archivos dentro de lo reclamado (confianza declarada X%)", que sirve para ver con el tiempo si el porcentaje estimado era honesto.
-3. Si el trabajo se hizo en un worktree creado por esta skill y el dev confirma que ya no lo necesita, ejecuta `git worktree remove <ruta>` desde el repo principal. Sin `--force`: si git dice que hay cambios sin guardar, muéstraselo al dev y no lo fuerces.
+2. Ejecuta `node "<raíz del plugin>/scripts/paralelo.js" liberar --volver`. Borra el `CLAIM.md` con un commit, lo publica, vuelve a la rama principal en este mismo proyecto y borra la rama local si ya está mergeada (si no lo está, la conserva y lo dice). Deja en el mensaje del commit "N de M archivos dentro de lo reclamado (confianza declarada X%)", que sirve para ver con el tiempo si el porcentaje estimado era honesto.
+3. Si git no pudo volver a la principal (por ejemplo por cambios sin guardar), muéstrale el aviso al dev y no fuerces nada.
 
 ## Modo E: Salir de las zonas (cuando un hook o el pre-commit rechaza)
 
@@ -78,7 +83,8 @@ Se activa cuando un hook rechaza una edición con "no puedes editar ... fuera de
 - NUNCA uses `--no-verify`, cambies `core.hooksPath` ni escribas en `<git>/polaria-paralelo` o en `<git>/hooks`.
 - NUNCA llames a herramientas de escritura del conector de Google Sheets. El Sheet es solo de lectura.
 - NUNCA reclames zonas inventadas: cada ruta DEBE existir en el repo o ser un archivo nuevo que el ticket pide crear.
-- NUNCA uses `--force` en `git worktree remove` ni `git push --force`.
+- NUNCA crees carpetas ni worktrees por rama, y nunca uses `git push --force` ni `git branch -D`.
+- NUNCA busques reclamos en Linear ni en el Sheet: los reclamos activos salen solo del `CLAIM.md` de las ramas (`importar-claims`).
 - SIEMPRE publica el reclamo **antes** de editar código; un reclamo tardío no protege a nadie.
 - DEBERÍAS reclamar de más antes que de menos: una zona de sobra cuesta una coordinación; una zona faltante detiene el trabajo y pide una autorización.
 - Los hooks de zonas ajenas y de push avisan; solo `POLARIA_PARALELO_MODO=bloquear` los vuelve bloqueantes. El rechazo de escribir fuera del propio `CLAIM.md` es siempre, sin depender de esa variable.

@@ -32,7 +32,7 @@ const VERBO_DE_ESCRITURA = new RegExp(
 );
 const TOCA_EL_RECLAMO = /CLAIM\.md/i;
 const TOCA_LA_CACHE = /polaria-paralelo|hooks[\\/]+pre-commit/i;
-const ES_PARALELO = /paralelo\.js["']?\s+(?:reclamar|liberar|importar-claims|estado|comparar|solapes|crear-worktree|base)\b/;
+const ES_PARALELO = /paralelo\.js["']?\s+(?:reclamar|liberar|importar-claims|estado|comparar|solapes|iniciar-rama|base)\b/;
 
 // Devuelve el motivo del rechazo, o null si el comando puede seguir.
 function evaluar(comando) {

@@ -1,5 +1,5 @@
 // Pruebas de escenario: dos devs con git real (ayudas.js) y los scripts y hooks ejecutados como los ejecutan los editores.
-// Cubren el CLI (crear-worktree, importar-claims, comparar, estado, solapes) y los hooks, incluidos los comportamientos
+// Cubren el CLI (iniciar-rama, importar-claims, comparar, estado, solapes) y los hooks, incluidos los comportamientos
 // reales de Cursor que ya nos fallaron: JSON con BOM, cwd vacío y ejecución del hooks.json de Claude con eventos de Cursor.
 
 const test = require('node:test');
@@ -8,12 +8,12 @@ const fs = require('fs');
 const path = require('path');
 const { git, escribir, crearEscenario, ejecutarParalelo, ejecutarHook, cuerpoDeReclamo, importarReclamos, mauroPublicaClaim, RECLAMO_DE_MAURO, RECLAMO_DE_DANIEL } = require('./ayudas');
 
-// Daniel arranca pol-102 con la skill: worktree nuevo desde main, y ahí hace un commit que choca con Mauro.
+// Daniel arranca pol-102 con la skill: rama nueva desde main en su mismo clon, y ahí hace un commit que choca con Mauro.
 function danielConWorktree({ chocar = true } = {}) {
   const e = crearEscenario();
-  const r = ejecutarParalelo(e.daniel, 'crear-worktree', 'daniel/pol-102-login');
+  const r = ejecutarParalelo(e.daniel, 'iniciar-rama', 'daniel/pol-102-login');
   assert.strictEqual(r.codigo, 0, r.error);
-  const worktree = path.join(e.carpeta, 'daniel-daniel-pol-102-login');
+  const worktree = e.daniel;
   if (chocar) {
     escribir(worktree, 'src/auth/session.ts', 'export function login(){return 222}\n\n\n\nexport function logout(){return 2}\n');
     git(worktree, 'commit', '-q', '-am', 'daniel');
@@ -26,30 +26,62 @@ const eventoPush = (cwd, comando = 'git push -u origin daniel/pol-102-login') =>
 
 // ---------- CLI ----------
 
-test('crear-worktree: carpeta hermana, rama desde main y sin tracking (un push no iría a main)', () => {
+test('iniciar-rama: cambia de rama en el mismo clon, desde main y sin tracking (un push no iría a main)', () => {
   const e = crearEscenario();
-  const r = ejecutarParalelo(e.daniel, 'crear-worktree', 'daniel/pol-102-login');
+  const r = ejecutarParalelo(e.daniel, 'iniciar-rama', 'daniel/pol-102-login');
   assert.strictEqual(r.codigo, 0, r.error);
-  const worktree = path.join(e.carpeta, 'daniel-daniel-pol-102-login');
-  assert.ok(fs.existsSync(path.join(worktree, 'src', 'auth', 'session.ts')));
-  assert.strictEqual(git(worktree, 'rev-parse', '--abbrev-ref', 'HEAD'), 'daniel/pol-102-login');
-  assert.throws(() => git(worktree, 'config', '--get', 'branch.daniel/pol-102-login.merge'), 'la rama no debe seguir a origin/main');
+  assert.ok(fs.existsSync(path.join(e.daniel, 'src', 'auth', 'session.ts')));
+  assert.strictEqual(git(e.daniel, 'rev-parse', '--abbrev-ref', 'HEAD'), 'daniel/pol-102-login');
+  assert.throws(() => git(e.daniel, 'config', '--get', 'branch.daniel/pol-102-login.merge'), 'la rama no debe seguir a origin/main');
+  assert.strictEqual(git(e.daniel, 'worktree', 'list').split('\n').length, 1, 'no debe crear carpetas ni worktrees nuevos');
+  assert.ok(!fs.existsSync(path.join(e.carpeta, 'daniel-daniel-pol-102-login')));
 });
 
-test('crear-worktree: rechaza una carpeta que ya existe y nombres de rama peligrosos', () => {
+test('iniciar-rama: rechaza nombres de rama peligrosos y repetir la rama actual no hace nada', () => {
   const e = crearEscenario();
-  assert.strictEqual(ejecutarParalelo(e.daniel, 'crear-worktree', 'daniel/pol-102-login').codigo, 0);
-  assert.strictEqual(ejecutarParalelo(e.daniel, 'crear-worktree', 'daniel/pol-102-login').codigo, 2);
-  assert.strictEqual(ejecutarParalelo(e.daniel, 'crear-worktree', 'x; rm -rf /').codigo, 2);
-  assert.strictEqual(ejecutarParalelo(e.daniel, 'crear-worktree').codigo, 2);
+  assert.strictEqual(ejecutarParalelo(e.daniel, 'iniciar-rama', 'daniel/pol-102-login').codigo, 0);
+  assert.match(ejecutarParalelo(e.daniel, 'iniciar-rama', 'daniel/pol-102-login').salida, /Ya estás en/);
+  assert.strictEqual(ejecutarParalelo(e.daniel, 'iniciar-rama', 'x; rm -rf /').codigo, 2);
+  assert.strictEqual(ejecutarParalelo(e.daniel, 'iniciar-rama').codigo, 2);
 });
 
-test('crear-worktree: reutiliza una rama local que ya existía', () => {
+test('iniciar-rama: reutiliza una rama local que ya existía', () => {
   const e = crearEscenario();
   git(e.daniel, 'branch', 'daniel/pol-102-login');
-  const r = ejecutarParalelo(e.daniel, 'crear-worktree', 'daniel/pol-102-login');
+  const r = ejecutarParalelo(e.daniel, 'iniciar-rama', 'daniel/pol-102-login');
   assert.strictEqual(r.codigo, 0, r.error);
   assert.match(r.salida, /ya existía/);
+});
+
+test('iniciar-rama: con cambios sin guardar se detiene (código 6) y no cambia de rama', () => {
+  const e = crearEscenario();
+  escribir(e.daniel, 'src/ui/a.ts', 'cambio sin guardar\n');
+  const r = ejecutarParalelo(e.daniel, 'iniciar-rama', 'daniel/pol-102-login');
+  assert.strictEqual(r.codigo, 6);
+  assert.strictEqual(git(e.daniel, 'rev-parse', '--abbrev-ref', 'HEAD'), 'main');
+});
+
+test('iniciar-rama: si la rama actual tiene reclamo activo se detiene (código 7) salvo --pausar', () => {
+  const e = crearEscenario();
+  assert.strictEqual(ejecutarParalelo(e.daniel, 'iniciar-rama', 'daniel/pol-102-login').codigo, 0);
+  const rec = ejecutarParalelo(e.daniel, 'reclamar', '--zonas', 'src/ui/', '--confianza', '80', '--responsable', 'Daniel', '--porque', 'Prueba');
+  assert.strictEqual(rec.codigo, 0, rec.error + rec.salida);
+  const r = ejecutarParalelo(e.daniel, 'iniciar-rama', 'daniel/pol-103-otra');
+  assert.strictEqual(r.codigo, 7);
+  assert.strictEqual(git(e.daniel, 'rev-parse', '--abbrev-ref', 'HEAD'), 'daniel/pol-102-login');
+  const pausa = ejecutarParalelo(e.daniel, 'iniciar-rama', 'daniel/pol-103-otra', '--pausar');
+  assert.strictEqual(pausa.codigo, 0, pausa.error);
+  assert.strictEqual(git(e.daniel, 'rev-parse', '--abbrev-ref', 'HEAD'), 'daniel/pol-103-otra');
+});
+
+test('liberar --volver: libera, vuelve a main en el mismo clon y conserva la rama si no está mergeada', () => {
+  const e = crearEscenario();
+  ejecutarParalelo(e.daniel, 'iniciar-rama', 'daniel/pol-102-login');
+  ejecutarParalelo(e.daniel, 'reclamar', '--zonas', 'src/ui/', '--confianza', '80', '--responsable', 'Daniel', '--porque', 'Prueba');
+  const r = ejecutarParalelo(e.daniel, 'liberar', '--volver');
+  assert.strictEqual(r.codigo, 0, r.error + r.salida);
+  assert.strictEqual(git(e.daniel, 'rev-parse', '--abbrev-ref', 'HEAD'), 'main');
+  assert.match(r.salida, /se conserva/);
 });
 
 test('importar-claims y estado: lee el CLAIM.md real de la rama de Mauro', () => {

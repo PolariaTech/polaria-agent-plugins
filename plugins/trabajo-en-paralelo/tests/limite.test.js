@@ -15,12 +15,12 @@ const INSTALADOR = path.join(RAIZ_PLUGIN, 'scripts', 'instalar-pre-commit.js');
 
 function conWorktree() {
   const e = crearEscenario();
-  const r = ejecutarParalelo(e.daniel, 'crear-worktree', 'daniel/pol-102-login');
+  const r = ejecutarParalelo(e.daniel, 'iniciar-rama', 'daniel/pol-102-login');
   assert.strictEqual(r.codigo, 0, r.error);
-  return { ...e, worktree: path.join(e.carpeta, 'daniel-daniel-pol-102-login') };
+  return { ...e, worktree: e.daniel };
 }
 
-// Daniel con su worktree y el reclamo ya creado y publicado por el CLI.
+// Daniel en su rama de ticket (misma carpeta del clon) y el reclamo ya creado y publicado por el CLI.
 function conReclamo(zonas = 'src/ui/') {
   const e = conWorktree();
   const r = ejecutarParalelo(e.worktree, 'reclamar', '--zonas', zonas, '--compartidos', 'package.json', '--confianza', '80', '--responsable', 'Daniel', '--porque', 'Prueba');
@@ -87,7 +87,7 @@ test('reclamar: rechaza un segundo reclamo, rutas peligrosas, confianza faltante
   }
   assert.strictEqual(ejecutarParalelo(otra.worktree, 'reclamar', '--zonas', 'src/a/').codigo, 2, 'sin --confianza');
   assert.strictEqual(ejecutarParalelo(otra.worktree, 'reclamar', '--confianza', '80').codigo, 2, 'sin --zonas');
-  assert.match(ejecutarParalelo(otra.daniel, 'reclamar', '--zonas', 'src/a/', '--confianza', '80').error, /no trae un ID de ticket/);
+  assert.match(ejecutarParalelo(crearEscenario().daniel, 'reclamar', '--zonas', 'src/a/', '--confianza', '80').error, /no trae un ID de ticket/);
 });
 
 // ---------- importar-claims, inactividad y cruce ----------
@@ -178,7 +178,7 @@ test('ampliar: si el usuario no confirma no cambia nada; una ruta ya cubierta o 
   assert.strictEqual((await claims.ampliar(repo, ['src/ui/nuevo.ts'], sinPreguntar)).codigo, 0);
   assert.strictEqual((await claims.ampliar(repo, ['../afuera/'], sinPreguntar)).codigo, 2);
   assert.strictEqual((await claims.ampliar(repo, [], sinPreguntar)).codigo, 2);
-  assert.strictEqual((await claims.ampliar(lib.infoDelRepo(e.daniel), ['src/a/'], sinPreguntar)).codigo, 2, 'sin CLAIM.md');
+  assert.strictEqual((await claims.ampliar(lib.infoDelRepo(crearEscenario().daniel), ['src/a/'], sinPreguntar)).codigo, 2, 'sin CLAIM.md');
 });
 
 // ---------- liberar ----------
