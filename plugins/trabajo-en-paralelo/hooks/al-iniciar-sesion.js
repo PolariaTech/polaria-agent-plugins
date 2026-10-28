@@ -3,18 +3,34 @@
 // Le dice al asistente, sin que nadie lo pida, en qué estado está el trabajo en paralelo de este repo: si la rama
 // actual tiene CLAIM.md y cuáles son sus zonas, si la caché de reclamos está al día y qué zonas tienen reclamadas
 // los demás. En una rama de ticket (o con CLAIM.md) también instala el pre-commit de git que cuida el límite de escritura.
+// Antes de todo eso hace git fetch y, si es seguro (árbol limpio, avance limpio), descarga los cambios nuevos para que
+// nadie trabaje con código viejo (scripts/sincronizar.js).
 // Nunca bloquea ni rompe la sesión: ante cualquier error sale en silencio.
 
 const lib = require('../scripts/lib');
 const { instalarPreCommit } = require('../scripts/instalar-pre-commit');
+const { sincronizar } = require('../scripts/sincronizar');
 
 function describirZonas(zonas) {
   return zonas.map((z) => z.ruta + (z.funcion ? `#${z.funcion}` : '')).join(', ');
 }
 
+// Antes de trabajar: git fetch y, si es seguro, descarga los cambios nuevos. Avisa solo si hay algo que decir.
 function mensajeParaElAsistente(directorio) {
   const repo = lib.infoDelRepo(directorio);
   if (!repo) return null;
+  let sincronizacion = [];
+  try {
+    sincronizacion = sincronizar(repo).lineas;
+  } catch {
+    // Sin la revisión de cambios por descargar, el resto del mensaje sigue igual.
+  }
+  const resto = mensajeDeReclamos(repo);
+  const todas = [...sincronizacion, ...(resto ? [resto] : [])];
+  return todas.length ? todas.join('\n') : null;
+}
+
+function mensajeDeReclamos(repo) {
   const issue = lib.issueDeRama(repo.rama);
   const claim = lib.leerClaimPropio(repo.raiz);
   const cache = lib.leerCache(repo);

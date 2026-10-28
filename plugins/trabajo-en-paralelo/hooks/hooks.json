@@ -1,5 +1,5 @@
 {
-  "description": "Trabajo en paralelo: al abrir sesión informa el CLAIM.md propio y los reclamos vigentes e instala el pre-commit de git, rechaza editar fuera de las zonas del CLAIM.md, avisa al editar una zona que reclamó otra rama, rechaza los rodeos por terminal (--no-verify, escribir el CLAIM.md) y revisa solapes con las ramas de los demás antes de un git push.",
+  "description": "Trabajo en paralelo: al abrir sesión descarga los cambios nuevos si es seguro, informa el CLAIM.md propio y los reclamos vigentes e instala el pre-commit de git, rechaza editar fuera de las zonas del CLAIM.md, avisa al editar una zona que reclamó otra rama, rechaza los rodeos por terminal (--no-verify, escribir el CLAIM.md), exige liberar el CLAIM.md antes de gh pr create y revisa solapes con las ramas de los demás antes de un git push.",
   "hooks": {
     "SessionStart": [
       {
@@ -7,7 +7,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/al-iniciar-sesion.js\"",
-            "timeout": 15
+            "timeout": 45
           }
         ]
       }
@@ -34,6 +34,11 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/guardar-bash.js\"",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/exigir-claim-liberado.js\"",
             "timeout": 15
           },
           {

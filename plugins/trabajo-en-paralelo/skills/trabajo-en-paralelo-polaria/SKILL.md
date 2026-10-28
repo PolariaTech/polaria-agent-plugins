@@ -1,6 +1,6 @@
 ---
 name: trabajo-en-paralelo-polaria
-description: Coordina el trabajo en paralelo de varios devs, cada uno con su asistente de IA y sus cambios en local, para que nadie toque lo mismo ni se rompa el merge. Estima qué archivos va a tocar un ticket (issue de Linear POL-X o fila del Sheet REQ-NNN), los publica como CLAIM.md en la rama, revisa que ninguna otra rama los haya reclamado, cambia a la rama del ticket dentro del mismo proyecto, mantiene al asistente dentro de esas zonas y al terminar libera el reclamo. Úsala SIEMPRE que alguien diga "vamos a trabajar en POL-X", "sigamos con REQ-012", "retomemos POL-X", "voy a empezar el ticket X", "¿alguien está tocando esto?", "¿puedo tocar este módulo?", "¿esto choca con lo de otro dev?", "sincroniza los reclamos", "ya terminé POL-X, libera", o cuando un hook rechace una edición o un commit por salirse de las zonas del CLAIM.md o avise de un solape, incluso si no dice "reclamo". No la uses para crear issues, cambiar su estado ni cerrarlos (eso es `gestion-linear`), ni para revisar la calidad del diff (eso es `gate-calidad-tecnica-pre-merge-polaria`).
+description: Coordina el trabajo en paralelo de varios devs, cada uno con su asistente de IA y sus cambios en local, para que nadie toque lo mismo ni se rompa el merge. Estima qué archivos va a tocar un ticket (POL-X de Linear o REQ-NNN del Sheet), los publica como CLAIM.md en la rama, revisa que nadie más los haya reclamado, descarga los cambios nuevos antes de empezar, cambia a la rama del ticket, mantiene al asistente dentro de esas zonas, libera el reclamo antes del PR y deja al día el Estado y el Asignado a del REQ-NNN en el Sheet. Úsala SIEMPRE que alguien diga "vamos a trabajar en POL-X", "retomemos REQ-012", "¿alguien está tocando esto?", "terminé el código de REQ-012 y lo pruebo", "voy a crear el PR", "ya terminé POL-X, libera", o cuando un hook rechace una edición, un commit o un gh pr create por el CLAIM.md. No la uses para crear, cambiar el estado ni cerrar issues de Linear (eso es `gestion-linear`), ni para revisar el diff (eso es `gate-calidad-tecnica-pre-merge-polaria`).
 ---
 
 # Skill: Trabajo en paralelo sin pisarse
@@ -11,27 +11,30 @@ Los cambios de cada dev viven en su máquina y nadie ve lo del otro. Lo único q
 
 **Raíz del plugin:** la carpeta dos niveles arriba de esta skill. Los scripts se llaman `node "<raíz del plugin>/scripts/paralelo.js" <comando>`, siempre desde dentro del repo. Formato del archivo y quién puede cambiarlo: `references/formato-reclamo.md`.
 
-**Requisitos:** repo git con remoto `origin`, Node ≥18 y Git ≥2.38. Para leer el ticket: el MCP de Linear (lo trae el plugin `gestion-linear`) si es `POL-X`, o el conector de Google Sheets si es `REQ-NNN`. Si falta, sigue `references/instalar-conectores.md`.
+**Requisitos:** repo git con remoto `origin`, Node ≥18 y Git ≥2.38. Para leer el ticket: el MCP de Linear (lo trae el plugin `gestion-linear`) si es `POL-X`, o el conector de Google Sheets si es `REQ-NNN`; con el Sheet también se cambian el Estado y el Asignado a de la fila (`references/sheet-requerimientos.md`). Si falta el conector, sigue `references/instalar-conectores.md`.
 
-Todo es automático, sin preguntar, **excepto cuatro casos**: un solape con el reclamo de otra rama (Modo A, paso 5), no saber dónde está el ticket (paso 1), la rama actual con un reclamo todavía activo (Modo A, paso 6) y salir de las zonas (Modo E). En esos casos te detienes y le preguntas al dev, porque coordinar con otra persona o autorizar un cambio de alcance no lo puede decidir un asistente.
+Todo es automático, sin preguntar, **excepto estos casos**: un solape con el reclamo de otra rama (Modo A, paso 5), no saber dónde está el ticket (paso 1), la rama actual con un reclamo todavía activo (Modo A, paso 6), salir de las zonas (Modo E), un `REQ-NNN` asignado a otra persona o en `En Revisión` (`references/sheet-requerimientos.md`, paso 3) y un prefijo de rama que no se reconoce (Modo A, paso 2). En esos casos te detienes y le preguntas al dev, porque coordinar con otra persona o autorizar un cambio de alcance no lo puede decidir un asistente.
 
 ## Modo A: Reclamar (al empezar un ticket)
 
 Si `linear-transicionar-estado` también se activa por la misma frase, déjala mover el issue a In Progress primero y sigue después con estos pasos.
 
+**Antes del paso 1, siempre:** ejecuta `node "<raíz del plugin>/scripts/paralelo.js" sincronizar`. Hace `git fetch` y descarga los cambios nuevos si es seguro (sin cambios sin guardar y sin que la rama haya divergido), para que nadie trabaje con código viejo. Muéstrale al dev su salida si dice algo distinto de "al día". Si avisa que no pudo comprobar, que hay cambios sin guardar o que la rama divergió, díselo al dev y sigue: no descargues por tu cuenta ni uses `git pull` sin `--ff-only`. El hook de inicio de sesión hace lo mismo al abrir la sesión.
+
 1. **Identifica el ticket y dónde vive.** El ID es el que dijo el dev o, si no dijo ninguno, el que sale de `git rev-parse --abbrev-ref HEAD`. `POL-X` es un issue de Linear y `REQ-NNN` es una fila del Sheet de requerimientos. Si no hay ID, pídelo en una línea. Si el ID no es de ninguno de los dos tipos, pregunta en una línea dónde está el ticket.
 2. **Lee el ticket.**
    - **Linear:** `get_issue` (pide `gitBranchName`, `assignee`, `project`, `description`) y `list_comments`. La rama es el `gitBranchName`.
-   - **Sheet:** con las herramientas de lectura del conector de Google Sheets, busca el ID en la columna B de la pestaña `Requerimientos` (hoja "Requerimientos", ID `1AdIh-6s7iMPuYbLEwLSevvp6uMfIZpqP7UJ-9h0loDY`). Columnas: C tipo, D descripción, F prioridad, G estado, H duplicado de, I relacionado con, J asignado a, L comentarios. Avisa en una línea, sin detenerte, si el estado es `Completado` o `Rechazado`, si "Duplicado de" apunta a otro REQ distinto, o si el estado es `Asignado` o `En Progreso` para una persona distinta del dev. Recuérdale al dev que marque a mano `En Progreso` y "Asignado a" en el Sheet. La rama es `<usuario>/<id-en-minúsculas>-<título-corto>`, con el usuario de `git config user.name` en minúsculas y sin espacios ni tildes, y el título en 3 a 5 palabras separadas por guiones.
+   - **Sheet:** sigue los pasos 1 a 3 de `references/sheet-requerimientos.md` (buscar la fila por el ID en la columna B y leer su Estado y su Asignado a). Si la fila está en `En Revisión`, detente: el requerimiento espera la revisión de Edgar y no se reclama. La rama es `<prefijo>/<id-en-minúsculas>-<título-corto>`, con el título en 3 a 5 palabras separadas por guiones. El `<prefijo>` lo da `node "<raíz del plugin>/scripts/paralelo.js" prefijo` (sale de `git config user.name`; imprime `dani`, `lucho` o `mauro`). Nunca uses el usuario del sistema operativo del PC. Si sale con código 8, pregúntale al dev una sola vez cuál es su nombre y repite con `--linear "<su nombre>"`; si tampoco se reconoce, pídele que agregue su primer nombre en `scripts/prefijos.json`. `iniciar-rama` (paso 6) rechaza una rama nueva de un REQ-NNN con otro prefijo.
    - Si no hay herramientas del conector que necesitas, sigue `references/instalar-conectores.md`.
 3. **Estima las zonas.** Aplica `references/estimacion-de-zonas.md` de principio a fin: obtienes la lista de zonas, la de compartidos y un porcentaje de confianza. No le preguntes nada al dev; investiga en el repo con Glob, Grep y Read. Estima generosamente: el reclamo es un contrato.
 4. **Trae los reclamos ajenos.** Ejecuta `node "<raíz del plugin>/scripts/paralelo.js" importar-claims`.
 5. **Cruza.** Ejecuta `node "<raíz del plugin>/scripts/paralelo.js" comparar --zonas "<zona1>,<zona2>,..." --issue <ID>` con tus zonas (carpetas terminadas en `/`, funciones como `archivo#función`).
    - Sin línea `SOLAPE`: sigue al paso 6.
    - Con `SOLAPE` de zona: **detente**. Muéstrale al dev, en una tabla corta, de quién es el reclamo y qué rutas chocan. Ofrece dos caminos: (a) coordinar con esa persona antes de empezar, (b) tomar otro ticket primero. No existe un tercer camino de seguir con el solape. Espera su respuesta antes de crear nada.
-   - Con `SOLAPE EN COMPARTIDO` solamente: no te detengas; sigue y menciónalo en el paso 8.
-6. **Cambia a la rama del ticket, en este mismo proyecto.** Ejecuta `node "<raíz del plugin>/scripts/paralelo.js" iniciar-rama <rama>`. Cambia de rama en la carpeta actual; no crea carpetas. Si ya estás en esa rama, no hace nada. Según el código de salida:
+   - Con `SOLAPE EN COMPARTIDO` solamente: no te detengas; sigue y menciónalo en el paso 9.
+6. **Cambia a la rama del ticket, en este mismo proyecto.** Ejecuta `node "<raíz del plugin>/scripts/paralelo.js" iniciar-rama <rama>`. Cambia de rama en la carpeta actual; no crea carpetas. Si ya estás en esa rama, no hace nada. Si la rama ya existía y estaba atrás de su remota, descarga los cambios antes de empezar. Según el código de salida:
    - `0`: listo. Trabaja en esta misma carpeta.
+   - `8`: el prefijo de la rama no es el del dev (o no se pudo determinar). Corrige el prefijo como dice el paso 2 y repite.
    - `6`: hay cambios sin guardar en la rama actual. Dile al dev cuáles son y que los guarde (commit) antes; no los descartes ni los muevas tú.
    - `7`: la rama actual tiene un reclamo activo de otro ticket. **Pregúntale al dev una sola vez** si ese trabajo terminó o lo deja pausado. Si terminó, ejecuta `paralelo.js liberar --volver` (Modo D) y repite este paso. Si lo deja pausado, repite este paso con `--pausar`: el reclamo de ese ticket sigue vigente.
 7. **Reclama.** Ejecuta `node "<raíz del plugin>/scripts/paralelo.js" reclamar --issue <ID> --zonas "<zonas>" --compartidos "<compartidos>" --confianza <N> --responsable "<asignado>" --porque "<una frase>"`. El comando vuelve a cruzar con las otras ramas, escribe el `CLAIM.md`, lo commitea como primer commit y publica la rama. NUNCA escribas el `CLAIM.md` a mano. Según el código de salida:
@@ -39,7 +42,8 @@ Si `linear-transicionar-estado` también se activa por la misma frase, déjala m
    - `3`: apareció un choque entre el paso 5 y ahora; vuelve al paso 5.
    - `5`: el commit quedó pero el push falló. Lee el error, díselo al dev y, si lo bloqueó el gate de calidad, sigue sus instrucciones. Los demás no ven el reclamo hasta que la rama se publique.
    - `2`: error de uso; corrige el argumento que dice el mensaje.
-8. **Informa al dev en 4 líneas:** zonas reclamadas, confianza, rama activa y si hay solapes en compartidos. No pegues el `CLAIM.md` completo.
+8. **Marca el Sheet (solo si el ticket es `REQ-NNN`).** Sigue `references/sheet-requerimientos.md`: Estado = `En Progreso` y Asignado a = el dev. Los `POL-X` no se marcan aquí.
+9. **Informa al dev en 4 líneas:** zonas reclamadas, confianza, rama activa y si hay solapes en compartidos. No pegues el `CLAIM.md` completo.
 
 ## Modo B: Sincronizar (traer los reclamos de las ramas a la caché local)
 
@@ -60,11 +64,30 @@ Los hooks no pueden hacer `git fetch` en cada edición; leen `<git-common-dir>/p
    - **ARCHIVOS PROPIOS FUERA DE LO QUE RECLAMÓ**: ve al Modo E.
 3. Si el dev va a hacer push, recuérdale que el primer push temprano, aunque el trabajo esté a medias, es lo que hace visible su rama para los demás.
 
-## Modo D: Liberar (al terminar o abandonar el ticket)
+## Modo D: Entregar y liberar (antes de crear el PR y al cerrar el ticket)
 
-1. Confirma con el dev que el trabajo terminó (PR mergeado) o se abandona. Si no está claro, pregunta una sola vez.
-2. Ejecuta `node "<raíz del plugin>/scripts/paralelo.js" liberar --volver`. Borra el `CLAIM.md` con un commit, lo publica, vuelve a la rama principal en este mismo proyecto y borra la rama local si ya está mergeada (si no lo está, la conserva y lo dice). Deja en el mensaje del commit "N de M archivos dentro de lo reclamado (confianza declarada X%)", que sirve para ver con el tiempo si el porcentaje estimado era honesto.
+### Antes de crear el PR (siempre, sin excepción)
+
+El `CLAIM.md` no puede llegar a la rama principal con el PR. Un hook rechaza `gh pr create` si la rama o su remota todavía lo traen, y el push final es el de la rama sobre la que se va a crear el PR: un push intermedio conserva el reclamo. Sigue este orden, sin saltarte pasos:
+
+1. Ejecuta el Modo C, paso 1 (`solapes`), y resuelve lo que diga antes de seguir.
+2. **Libera el reclamo, sin `--volver`.** Ejecuta `node "<raíz del plugin>/scripts/paralelo.js" liberar`. Borra el `CLAIM.md` con un commit y lo publica en la misma rama, antes de crear el PR. Deja en el mensaje del commit "N de M archivos dentro de lo reclamado (confianza declarada X%)", que sirve para ver con el tiempo si el porcentaje estimado era honesto. Si sale con código 5, el commit quedó pero el push falló: díselo al dev, y no crees el PR hasta que la liberación esté publicada (`git push origin <rama>`).
+3. Crea el PR (`gh pr create`) con `Refs <ID>` en la descripción. Si el hook lo rechaza por el `CLAIM.md`, vuelve al paso 2; no busques otro camino.
+4. **Marca el Sheet (solo si el ticket es `REQ-NNN`).** Sigue `references/sheet-requerimientos.md`: Estado = `En paso a producción`. Los `POL-X` no se marcan aquí.
+
+### Al cerrar (PR mergeado o ticket abandonado)
+
+1. Confirma con el dev que el trabajo terminó (PR mergeado) o se abandona. Si no está claro, pregunta una sola vez. `Completado` en el Sheet lo marca una persona cuando el cambio está en producción; tú no lo escribes.
+2. Ejecuta `node "<raíz del plugin>/scripts/paralelo.js" liberar --volver`. Si la rama aún tiene el `CLAIM.md` (ticket abandonado, sin PR), lo borra con un commit y lo publica. Si ya se liberó antes del PR, lo dice y solo continúa. Luego vuelve a la rama principal en este mismo proyecto y borra la rama local si ya está mergeada (si no lo está, la conserva y lo dice).
 3. Si git no pudo volver a la principal (por ejemplo por cambios sin guardar), muéstrale el aviso al dev y no fuerces nada.
+
+## Modo F: Avanzar el estado del REQ-NNN a "En validación"
+
+Se activa cuando el dev dice que terminó de escribir el código de un `REQ-NNN` y va a empezar a verificar que la implementación funciona (primera prueba de cualquier tipo: automatizada, manual o en un ambiente). Hazlo ANTES de correr la primera prueba, no después.
+
+1. Si el ticket es un `POL-X`, no hagas nada aquí: lo cambia `gestion-linear`.
+2. Si es `REQ-NNN`, sigue `references/sheet-requerimientos.md` con Estado = `En validación`.
+3. Dile al dev en una línea que quedó marcado.
 
 ## Modo E: Salir de las zonas (cuando un hook o el pre-commit rechaza)
 
@@ -81,7 +104,11 @@ Se activa cuando un hook rechaza una edición con "no puedes editar ... fuera de
 - NUNCA edites un archivo fuera de las zonas y compartidos del `CLAIM.md` de tu rama. Los hooks lo rechazan, pero la regla es tuya primero.
 - NUNCA escribas, muevas ni borres el `CLAIM.md` por ningún medio que no sea `paralelo.js reclamar` y `paralelo.js liberar`. `autorizar` solo lo corre el dev en su terminal.
 - NUNCA uses `--no-verify`, cambies `core.hooksPath` ni escribas en `<git>/polaria-paralelo` o en `<git>/hooks`.
-- NUNCA llames a herramientas de escritura del conector de Google Sheets. El Sheet es solo de lectura.
+- NUNCA escribas en el Sheet nada que no sea el Estado (columna G) y el Asignado a (columna J) de la fila del ticket que estás trabajando, ni un valor que no esté en la lista desplegable de esa celda, ni los estados `En Revisión`, `Completado`, `Rechazado` o `Proximo Sprint`. Sigue `references/sheet-requerimientos.md` paso a paso.
+- NUNCA pises el Asignado a de otra persona sin preguntarle al dev, ni reclames un `REQ-NNN` que esté en `En Revisión`.
+- NUNCA crees el PR con el `CLAIM.md` puesto: libéralo antes con `paralelo.js liberar` (sin `--volver`).
+- NUNCA armes el prefijo de la rama con el usuario del sistema operativo: sale de `paralelo.js prefijo`.
+- NUNCA descargues cambios con un `git pull` que cree un commit de merge, ni con `--force`: solo `paralelo.js sincronizar` (`--ff-only`).
 - NUNCA reclames zonas inventadas: cada ruta DEBE existir en el repo o ser un archivo nuevo que el ticket pide crear.
 - NUNCA crees carpetas ni worktrees por rama, y nunca uses `git push --force` ni `git branch -D`.
 - NUNCA busques reclamos en Linear ni en el Sheet: los reclamos activos salen solo del `CLAIM.md` de las ramas (`importar-claims`).

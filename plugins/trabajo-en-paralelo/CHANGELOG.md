@@ -2,6 +2,25 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según [SemVer](https://semver.org/lang/es/).
 
+## [1.2.0] — 2026-10-28
+
+Refs POL-393.
+
+### Agregado
+- **Liberar el `CLAIM.md` antes de crear el PR.** Hook nuevo `exigir-claim-liberado.js` (Claude Code y Cursor): rechaza `gh pr create` (código 2) si el último commit de la rama, o su remota `origin/<rama>`, todavía trae el `CLAIM.md`, y dice cómo liberarlo. Un push intermedio no pasa por este hook y conserva el reclamo; el push final es el de la rama sobre la que se crea el PR. El Modo D de la skill queda en dos tiempos: antes del PR se corre `liberar` (sin `--volver`) y después del merge `liberar --volver`.
+- **Prefijo de la rama según git o Linear, nunca el usuario del PC.** `paralelo.js prefijo [--linear "Nombre"]` toma `git config user.name` y, si no se reconoce, el nombre de Linear, y lo convierte con la tabla `scripts/prefijos.json` (`dani`, `lucho`, `mauro`; para sumar a alguien se agrega su primer nombre). `iniciar-rama` rechaza una rama nueva de un `REQ-NNN` con otro prefijo (código 8); las ramas de un `POL-X` siguen usando el nombre que sugiere Linear y las ramas que ya existían se reutilizan.
+- **Descargar los cambios nuevos antes de trabajar.** `scripts/sincronizar.js`, usado por el hook de inicio de sesión, por `paralelo.js sincronizar` y por `iniciar-rama` (cuando la rama ya existía): `git fetch` y, solo si el árbol está limpio y el avance es limpio, `git merge --ff-only`. Con cambios sin guardar, con una rama que divergió o con la principal por delante de una rama de ticket, avisa y no toca nada. Si `git fetch` falla, avisa y deja trabajar. El timeout del hook de inicio de sesión sube de 15 a 45 s por el fetch.
+- **Estado y Asignado a del `REQ-NNN` en el Sheet.** La skill cambia, con el conector de Google Sheets, el Estado (columna G) y el Asignado a (columna J) de la fila del ticket: `En Progreso` al reclamar, `En validación` al terminar el código y empezar a verificar (Modo F) y `En paso a producción` al crear el PR. Nunca escribe `En Revisión` (el ticket espera a Edgar y no se reclama), `Completado`, `Rechazado` ni `Proximo Sprint`; no pisa la asignación de otra persona sin preguntar; verifica el valor contra la lista desplegable de la celda antes de escribir. Procedimiento en `references/sheet-requerimientos.md`.
+
+### Cambiado
+- Deja de ser cierto que el Sheet es solo de lectura para este plugin; ahora solo se escriben esas dos celdas de la fila del ticket.
+- `liberar --volver` ya no falla si el reclamo se liberó antes del PR: lo dice y solo vuelve a la rama principal.
+- Descripción de la skill acortada a menos de 1024 caracteres.
+
+### Límites conocidos
+- La escritura en el Sheet es una instrucción de la skill, no un hook (los hooks no pueden llamar a conectores): depende de que el asistente siga el procedimiento.
+- Sin probar en sesiones reales: que el hook `exigir-claim-liberado.js` se dispare con el `matcher` `gh` de Cursor, y la escritura en el Sheet con el conector en Claude Code y Cursor (niveles 2 y 3 del laboratorio).
+
 ## [1.1.0] — 2026-10-28
 
 Sube la versión porque Claude Code indexa su caché de plugins por número de versión: quien instaló la 1.0.0 antes del rediseño con `CLAIM.md` (diseño anterior, que leía los reclamos de comentarios de Linear) no recibía el cambio al actualizar.
