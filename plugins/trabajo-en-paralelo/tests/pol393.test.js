@@ -14,7 +14,7 @@ const PR = 'gh pr create --title "x" --body "Refs POL-102"';
 function danielConReclamo() {
   const escenario = crearEscenario();
   assert.strictEqual(ejecutarParalelo(escenario.daniel, 'iniciar-rama', 'daniel/pol-102-login').codigo, 0);
-  const resultado = ejecutarParalelo(escenario.daniel, 'reclamar', '--zonas', 'src/ui/', '--confianza', '80', '--responsable', 'Daniel', '--porque', 'Prueba');
+  const resultado = ejecutarParalelo(escenario.daniel, 'reclamar', '--zonas', 'src/ui/a.ts', '--confianza', '80', '--responsable', 'Daniel', '--porque', 'Prueba');
   assert.strictEqual(resultado.codigo, 0, resultado.error + resultado.salida);
   return escenario;
 }
@@ -62,8 +62,8 @@ test('CA7: si el borrado está solo en local y origin todavía trae el CLAIM.md,
 
 test('CA8: un push intermedio con el reclamo puesto pasa y conserva el CLAIM.md', () => {
   const escenario = danielConReclamo();
-  escribir(escenario.daniel, 'src/ui/b.ts', 'b\n');
-  git(escenario.daniel, 'add', 'src/ui/b.ts');
+  escribir(escenario.daniel, 'src/ui/a.ts', 'cambio\n');
+  git(escenario.daniel, 'add', 'src/ui/a.ts');
   git(escenario.daniel, 'commit', '-q', '-m', 'avance');
   const resultado = ejecutarHook('exigir-claim-liberado.js', eventoBash(escenario.daniel, 'git push origin daniel/pol-102-login'), { cwd: escenario.daniel });
   assert.strictEqual(resultado.codigo, 0, resultado.error);

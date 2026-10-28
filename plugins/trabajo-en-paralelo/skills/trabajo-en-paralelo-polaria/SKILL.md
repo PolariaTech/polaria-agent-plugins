@@ -26,9 +26,9 @@ Si `linear-transicionar-estado` también se activa por la misma frase, déjala m
    - **Linear:** `get_issue` (pide `gitBranchName`, `assignee`, `project`, `description`) y `list_comments`. La rama es el `gitBranchName`.
    - **Sheet:** sigue los pasos 1 a 3 de `references/sheet-requerimientos.md` (buscar la fila por el ID en la columna B y leer su Estado y su Asignado a). Si la fila está en `En Revisión`, detente: el requerimiento espera la revisión de Edgar y no se reclama. La rama es `<prefijo>/<id-en-minúsculas>-<título-corto>`, con el título en 3 a 5 palabras separadas por guiones. El `<prefijo>` lo da `node "<raíz del plugin>/scripts/paralelo.js" prefijo` (sale de `git config user.name`; imprime `dani`, `lucho` o `mauro`). Nunca uses el usuario del sistema operativo del PC. Si sale con código 8, pregúntale al dev una sola vez cuál es su nombre y repite con `--linear "<su nombre>"`; si tampoco se reconoce, pídele que agregue su primer nombre en `scripts/prefijos.json`. `iniciar-rama` (paso 6) rechaza una rama nueva de un REQ-NNN con otro prefijo.
    - Si no hay herramientas del conector que necesitas, sigue `references/instalar-conectores.md`.
-3. **Estima las zonas.** Aplica `references/estimacion-de-zonas.md` de principio a fin: obtienes la lista de zonas, la de compartidos y un porcentaje de confianza. No le preguntes nada al dev; investiga en el repo con Glob, Grep y Read. Estima generosamente: el reclamo es un contrato.
+3. **Estima las zonas.** Aplica `references/estimacion-de-zonas.md` de principio a fin: obtienes la lista de zonas (rutas exactas de archivo, nunca carpetas), la de compartidos y un porcentaje de confianza. No le preguntes nada al dev; investiga en el repo con Glob, Grep y Read. Estima generosamente en archivos, no en carpetas: el reclamo es un contrato.
 4. **Trae los reclamos ajenos.** Ejecuta `node "<raíz del plugin>/scripts/paralelo.js" importar-claims`.
-5. **Cruza.** Ejecuta `node "<raíz del plugin>/scripts/paralelo.js" comparar --zonas "<zona1>,<zona2>,..." --issue <ID>` con tus zonas (carpetas terminadas en `/`, funciones como `archivo#función`).
+5. **Cruza.** Ejecuta `node "<raíz del plugin>/scripts/paralelo.js" comparar --zonas "<zona1>,<zona2>,..." --issue <ID>` con tus zonas (archivos exactos; funciones como `archivo#función`).
    - Sin línea `SOLAPE`: sigue al paso 6.
    - Con `SOLAPE` de zona: **detente**. Muéstrale al dev, en una tabla corta, de quién es el reclamo y qué rutas chocan. Ofrece dos caminos: (a) coordinar con esa persona antes de empezar, (b) tomar otro ticket primero. No existe un tercer camino de seguir con el solape. Espera su respuesta antes de crear nada.
    - Con `SOLAPE EN COMPARTIDO` solamente: no te detengas; sigue y menciónalo en el paso 9.
@@ -37,11 +37,11 @@ Si `linear-transicionar-estado` también se activa por la misma frase, déjala m
    - `8`: el prefijo de la rama no es el del dev (o no se pudo determinar). Corrige el prefijo como dice el paso 2 y repite.
    - `6`: hay cambios sin guardar en la rama actual. Dile al dev cuáles son y que los guarde (commit) antes; no los descartes ni los muevas tú.
    - `7`: la rama actual tiene un reclamo activo de otro ticket. **Pregúntale al dev una sola vez** si ese trabajo terminó o lo deja pausado. Si terminó, ejecuta `paralelo.js liberar --volver` (Modo D) y repite este paso. Si lo deja pausado, repite este paso con `--pausar`: el reclamo de ese ticket sigue vigente.
-7. **Reclama.** Ejecuta `node "<raíz del plugin>/scripts/paralelo.js" reclamar --issue <ID> --zonas "<zonas>" --compartidos "<compartidos>" --confianza <N> --responsable "<asignado>" --porque "<una frase>"`. El comando vuelve a cruzar con las otras ramas, escribe el `CLAIM.md`, lo commitea como primer commit y publica la rama. NUNCA escribas el `CLAIM.md` a mano. Según el código de salida:
+7. **Reclama.** Ejecuta `node "<raíz del plugin>/scripts/paralelo.js" reclamar --issue <ID> --zonas "<zonas>" --nuevos "<archivos que el ticket crea>" --compartidos "<compartidos>" --confianza <N> --responsable "<asignado>" --porque "<una frase>"`. El comando vuelve a cruzar con las otras ramas, escribe el `CLAIM.md`, lo commitea como primer commit y publica la rama. NUNCA escribas el `CLAIM.md` a mano. Según el código de salida:
    - `0`: listo.
    - `3`: apareció un choque entre el paso 5 y ahora; vuelve al paso 5.
    - `5`: el commit quedó pero el push falló. Lee el error, díselo al dev y, si lo bloqueó el gate de calidad, sigue sus instrucciones. Los demás no ven el reclamo hasta que la rama se publique.
-   - `2`: error de uso; corrige el argumento que dice el mensaje.
+   - `2`: error de uso; corrige el argumento que dice el mensaje. Si rechaza una carpeta, lista los archivos con Glob y repite; si dice que una ruta no existe, corrígela o agrégala a `--nuevos`.
 8. **Marca el Sheet (solo si el ticket es `REQ-NNN`).** Sigue `references/sheet-requerimientos.md`: Estado = `En Progreso` y Asignado a = el dev. Los `POL-X` no se marcan aquí.
 9. **Informa al dev en 4 líneas:** zonas reclamadas, confianza, rama activa y si hay solapes en compartidos. No pegues el `CLAIM.md` completo.
 
@@ -109,10 +109,11 @@ Se activa cuando un hook rechaza una edición con "no puedes editar ... fuera de
 - NUNCA crees el PR con el `CLAIM.md` puesto: libéralo antes con `paralelo.js liberar` (sin `--volver`).
 - NUNCA armes el prefijo de la rama con el usuario del sistema operativo: sale de `paralelo.js prefijo`.
 - NUNCA descargues cambios con un `git pull` que cree un commit de merge, ni con `--force`: solo `paralelo.js sincronizar` (`--ff-only`).
-- NUNCA reclames zonas inventadas: cada ruta DEBE existir en el repo o ser un archivo nuevo que el ticket pide crear.
+- NUNCA reclames zonas inventadas: cada ruta DEBE existir en el repo o ser un archivo nuevo que el ticket pide crear (va en `--nuevos`).
+- NUNCA reclames una carpeta para evitarte listar archivos. `--permitir-carpetas` solo se usa cuando los archivos no se pueden conocer antes de trabajar, y el motivo va en `--porque`.
 - NUNCA crees carpetas ni worktrees por rama, y nunca uses `git push --force` ni `git branch -D`.
 - NUNCA busques reclamos en Linear ni en el Sheet: los reclamos activos salen solo del `CLAIM.md` de las ramas (`importar-claims`).
 - SIEMPRE publica el reclamo **antes** de editar código; un reclamo tardío no protege a nadie.
-- DEBERÍAS reclamar de más antes que de menos: una zona de sobra cuesta una coordinación; una zona faltante detiene el trabajo y pide una autorización.
+- DEBERÍAS reclamar más archivos antes que menos, pero siempre archivos concretos: un archivo de sobra cuesta una coordinación; uno faltante detiene el trabajo y pide una autorización.
 - Los hooks de zonas ajenas y de push avisan; solo `POLARIA_PARALELO_MODO=bloquear` los vuelve bloqueantes. El rechazo de escribir fuera del propio `CLAIM.md` es siempre, sin depender de esa variable.
 - Si el hook de otro plugin (el gate de calidad) bloquea el push, eso no tiene que ver con esta skill: sigue las instrucciones del gate.

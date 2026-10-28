@@ -1,7 +1,7 @@
 {
   "name": "trabajo-en-paralelo",
   "displayName": "Trabajo en Paralelo (Polaria)",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Evita que dos devs (o sus asistentes de IA) toquen lo mismo con cambios en local: descarga los cambios nuevos antes de empezar, estima solo qué archivos toca cada ticket (issue de Linear o fila del Sheet de requerimientos) con un % de confianza, lo reclama como CLAIM.md en la rama (prefijo del dev, no del PC), impide que el asistente escriba fuera de esas zonas (hook de edición, de terminal y pre-commit de git), avisa de solapes antes del push, exige liberar el CLAIM.md antes de crear el PR y deja al día el Estado y el Asignado a del REQ-NNN en el Sheet. Lee Linear con gestion-linear y lee y actualiza el Sheet con el conector de Google Sheets.",
   "author": {
     "name": "Polaria Tech",

@@ -23,7 +23,7 @@ function conWorktree() {
 // Daniel en su rama de ticket (misma carpeta del clon) y el reclamo ya creado y publicado por el CLI.
 function conReclamo(zonas = 'src/ui/') {
   const e = conWorktree();
-  const r = ejecutarParalelo(e.worktree, 'reclamar', '--zonas', zonas, '--compartidos', 'package.json', '--confianza', '80', '--responsable', 'Daniel', '--porque', 'Prueba');
+  const r = ejecutarParalelo(e.worktree, 'reclamar', '--zonas', zonas, '--compartidos', 'package.json', '--confianza', '80', '--responsable', 'Daniel', '--porque', 'Prueba', '--permitir-carpetas');
   assert.strictEqual(r.codigo, 0, `${r.error}${r.salida}`);
   return e;
 }
@@ -35,13 +35,13 @@ const eventoBash = (cwd, comando) => ({ cwd, hook_event_name: 'PreToolUse', tool
 // ---------- reclamar ----------
 
 test('reclamar: crea el CLAIM.md como primer commit, publica la rama e instala el pre-commit', () => {
-  const e = conReclamo('src/ui/,src/nuevo.ts#fn');
+  const e = conReclamo('src/ui/,src/ui/a.ts#fn');
   const claim = claimDe(e);
   assert.match(claim, /^<!-- polaria-reclamo v1 -->/);
   assert.match(claim, /\*\*Issue:\*\* POL-102/);
   assert.match(claim, /\*\*Confianza:\*\* 80%/);
   assert.match(claim, /- `src\/ui\/`/);
-  assert.match(claim, /- `src\/nuevo\.ts#fn`/);
+  assert.match(claim, /- `src\/ui\/a\.ts#fn`/);
   assert.match(claim, /- `package\.json`/);
   assert.strictEqual(git(e.worktree, 'log', '-1', '--format=%s'), 'claim(POL-102): reclama las zonas del ticket');
   assert.strictEqual(git(e.origen, 'show', 'daniel/pol-102-login:CLAIM.md').replace(/\r/g, ''), claim.replace(/\r/g, '').trim());
@@ -85,7 +85,7 @@ test('reclamar: rechaza un segundo reclamo, rutas peligrosas, confianza faltante
   for (const zona of ['../fuera/', '/', 'C:\\Windows', 'a`b/']) {
     assert.strictEqual(ejecutarParalelo(otra.worktree, 'reclamar', '--zonas', zona, '--confianza', '80').codigo, 2, `debía rechazar ${zona}`);
   }
-  assert.strictEqual(ejecutarParalelo(otra.worktree, 'reclamar', '--zonas', 'src/a/').codigo, 2, 'sin --confianza');
+  assert.strictEqual(ejecutarParalelo(otra.worktree, 'reclamar', '--zonas', 'src/ui/a.ts').codigo, 2, 'sin --confianza');
   assert.strictEqual(ejecutarParalelo(otra.worktree, 'reclamar', '--confianza', '80').codigo, 2, 'sin --zonas');
   assert.match(ejecutarParalelo(crearEscenario().daniel, 'reclamar', '--zonas', 'src/a/', '--confianza', '80').error, /no trae un ID de ticket/);
 });
@@ -117,7 +117,7 @@ test('inactividad: un commit nuevo en la rama reactiva el reclamo', () => {
 test('solapes: el CLAIM.md de cada rama no se cuenta como conflicto entre ramas', () => {
   const e = conWorktree();
   mauroPublicaClaim(e);
-  assert.strictEqual(ejecutarParalelo(e.worktree, 'reclamar', '--zonas', 'src/otro/', '--confianza', '80').codigo, 0);
+  assert.strictEqual(ejecutarParalelo(e.worktree, 'reclamar', '--zonas', 'src/otro.ts', '--nuevos', 'src/otro.ts', '--confianza', '80').codigo, 0);
   // Las dos ramas "agregaron" CLAIM.md con contenido distinto: sin el filtro, git merge-tree lo reportaría como conflicto.
   const r = ejecutarParalelo(e.worktree, 'solapes', '--sin-fetch').salida;
   assert.doesNotMatch(r, /CONFLICTO REAL|CLAIM\.md/);
@@ -425,4 +425,38 @@ test('sesión: menciona los reclamos inactivos que se ignoran', () => {
   ejecutarParalelo(e.worktree, 'importar-claims');
   const r = ejecutarHook('al-iniciar-sesion.js', { cwd: e.worktree, hook_event_name: 'SessionStart' });
   assert.match(r.json.hookSpecificOutput.additionalContext, /Reclamos inactivos, ignorados.*POL-101/);
+});
+
+// ---------- zonas por archivo exacto ----------
+
+test('reclamar: rechaza las carpetas y dice cómo listar archivos; con --permitir-carpetas exige el motivo y las marca', () => {
+  const e = conWorktree();
+  const sinPermiso = ejecutarParalelo(e.worktree, 'reclamar', '--zonas', 'src/ui/', '--confianza', '80', '--porque', 'Prueba');
+  assert.strictEqual(sinPermiso.codigo, 2);
+  assert.match(sinPermiso.error, /archivos exactos, no carpetas: src\/ui\//);
+  assert.ok(!fs.existsSync(path.join(e.worktree, 'CLAIM.md')));
+  const sinMotivo = ejecutarParalelo(e.worktree, 'reclamar', '--zonas', 'src/ui/', '--confianza', '80', '--permitir-carpetas');
+  assert.strictEqual(sinMotivo.codigo, 2);
+  assert.match(sinMotivo.error, /--porque debe explicar/);
+  const conMotivo = ejecutarParalelo(e.worktree, 'reclamar', '--zonas', 'src/ui/', '--confianza', '80', '--permitir-carpetas', '--porque', 'Archivos generados');
+  assert.strictEqual(conMotivo.codigo, 0, `${conMotivo.error}${conMotivo.salida}`);
+  assert.match(claimDe(e), /- `src\/ui\/` — carpeta \(excepción\)/);
+});
+
+test('reclamar: una ruta que no existe se rechaza salvo que vaya en --nuevos, y el CLAIM.md la marca como archivo nuevo', () => {
+  const e = conWorktree();
+  const inventada = ejecutarParalelo(e.worktree, 'reclamar', '--zonas', 'src/ui/a.ts,src/ui/b.ts', '--confianza', '80', '--porque', 'Prueba');
+  assert.strictEqual(inventada.codigo, 2);
+  assert.match(inventada.error, /no existen en el repo: src\/ui\/b\.ts/);
+  const existente = ejecutarParalelo(e.worktree, 'reclamar', '--zonas', 'src/ui/a.ts', '--nuevos', 'src/ui/a.ts', '--confianza', '80');
+  assert.strictEqual(existente.codigo, 2);
+  assert.match(existente.error, /ya existen/);
+  const ajeno = ejecutarParalelo(e.worktree, 'reclamar', '--zonas', 'src/ui/a.ts', '--nuevos', 'src/ui/c.ts', '--confianza', '80');
+  assert.strictEqual(ajeno.codigo, 2);
+  assert.match(ajeno.error, /no están en --zonas/);
+  const bien = ejecutarParalelo(e.worktree, 'reclamar', '--zonas', 'src/ui/a.ts#render,src/ui/b.ts', '--nuevos', 'src/ui/b.ts', '--confianza', '80', '--porque', 'Prueba');
+  assert.strictEqual(bien.codigo, 0, `${bien.error}${bien.salida}`);
+  const claim = claimDe(e);
+  assert.match(claim, /- `src\/ui\/a\.ts#render`\r?\n/);
+  assert.match(claim, /- `src\/ui\/b\.ts` — archivo nuevo/);
 });

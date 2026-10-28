@@ -15,10 +15,11 @@ El reclamo es un archivo `CLAIM.md` en la raíz de la rama del dev. Es la única
 **Confianza:** 80%
 
 ### Zonas que voy a tocar
-- `src/modules/auth/`
+- `src/modules/auth/guard.ts`
+- `src/modules/auth/guard.test.ts`
 - `src/lib/session.ts`
 - `src/lib/token.ts#refreshToken`
-- `src/modules/auth/nuevo-guard.ts`
+- `src/modules/auth/nuevo-guard.ts` — archivo nuevo
 - `src/lib/token.ts` — autorizada por el usuario el 2026-10-27
 
 ### Compartidos (cambio mínimo y aviso)
@@ -36,10 +37,10 @@ Una o dos frases: qué pide el ticket y qué evidencia sostiene la estimación.
 - `**Rama:**` es la rama del dev. `**Responsable:**` es el asignado del ticket (Linear) o el valor de "Asignado a" (Sheet); si no hay, el dev.
 - `**Confianza:**` es un número entero seguido de `%`: la probabilidad de que el diff final quede dentro de las zonas y compartidos declarados (cómo se calcula: `estimacion-de-zonas.md`).
 - Cada zona es una viñeta que empieza por la ruta entre comillas invertidas, relativa a la raíz del repo y con `/` (nunca `\`):
-  - carpeta: termina en `/`;
+  - carpeta: termina en `/`. Solo como excepción (`reclamar --permitir-carpetas`, con el motivo en `### Por qué`); el CLI la marca "carpeta (excepción)";
   - archivo: ruta completa;
   - función: `ruta#nombreDeLaFunción` (sirve para que dos personas en el mismo archivo vean si de verdad se pisan; el límite de escritura se aplica por archivo);
-  - lo que dice después de la ruta (`— autorizada por el usuario el ...`) lo agrega el CLI al ampliar.
+  - lo que dice después de la ruta (`— archivo nuevo`, `— carpeta (excepción)`, `— autorizada por el usuario el ...`) lo agrega el CLI.
 - `### Compartidos` lleva los archivos que casi toda tarea toca de pasada (manifiestos, lockfiles, esquemas, índices de rutas). Un solape en compartidos no frena a nadie, pero queda visible, y el asistente sí puede editarlos.
 - `### Por qué` es opcional.
 
