@@ -2,7 +2,7 @@
 
 Objetivo: decir, **antes de escribir código**, qué carpetas, archivos y funciones va a tocar el ticket, y con qué probabilidad el cambio real se queda dentro de eso. Se hace solo, leyendo el ticket y el repo; no se le pregunta al dev.
 
-**El reclamo es un contrato.** Una vez publicado el `CLAIM.md`, el asistente no puede escribir fuera de sus zonas y compartidos: cada archivo que falte obliga a detenerse y pedirle al usuario que autorice la ampliación. Por eso se estima generosamente: cada zona de código lleva también sus **pruebas**, **tipos**, **fixtures o snapshots** y la **documentación** que el cambio obliga a actualizar. Un reclamo corto no es más seguro, solo interrumpe más.
+**El reclamo es un contrato.** Una vez publicado el `CLAIM.md`, el asistente no puede escribir fuera de sus zonas y compartidos: cada archivo que falte obliga a detenerse y pedirle al usuario que autorice la ampliación. Por eso se estima generosamente: cada archivo de código va acompañado de sus **pruebas**, **tipos**, **fixtures o snapshots** y la **documentación** que el cambio obliga a actualizar, todos listados por ruta exacta. Un reclamo corto no es más seguro, solo interrumpe más.
 
 ## 1. Reunir la evidencia
 
@@ -14,14 +14,19 @@ Objetivo: decir, **antes de escribir código**, qué carpetas, archivos y funcio
 
 ## 2. Elegir la granularidad de cada zona
 
+**Cada zona es una ruta exacta de archivo, no una carpeta.** El reclamo debe decirle a los demás qué archivos se van a tocar, no en qué zona del proyecto se trabaja. `paralelo.js reclamar` rechaza las carpetas y las rutas que no existen.
+
 | Situación | Zona |
 |---|---|
-| Hay 3 o más archivos del mismo directorio, o la confianza queda bajo 70% | Carpeta (termina en `/`) |
+| Un archivo existente que el cambio modifica | Su ruta completa |
 | Un archivo de más de 300 líneas y el cambio cae en funciones identificables | `archivo#función` (una por función) |
-| Cualquier otro caso | Archivo |
-| El issue pide crear un archivo | Su ruta, marcada "archivo nuevo" |
+| El ticket pide crear un archivo | Su ruta completa, también en `--nuevos` (el `CLAIM.md` lo marca "archivo nuevo") |
 
-Reclama el directorio contenedor cuando dudes entre dos granularidades: una zona de sobra cuesta una conversación, una zona faltante cuesta un conflicto de merge.
+Cómo armar la lista:
+
+1. Enumera los archivos con Glob y Grep (pasos 1 a 5 de arriba), no por carpeta. Por cada archivo de código que cambia, agrega los que el cambio obliga a tocar: su **prueba**, sus **tipos**, sus **fixtures o snapshots** y la **documentación** que menciona lo que cambia.
+2. Si dudas de un archivo, **inclúyelo** y baja la confianza (paso 4). No subas a la carpeta contenedora: eso esconde qué se toca de verdad y genera solapes falsos con otros tickets.
+3. Hay una sola excepción: archivos que no se pueden listar antes de trabajar (por ejemplo, salidas generadas). Entonces usa `--permitir-carpetas` y explica el motivo en `--porque`. El `CLAIM.md` lo marca "carpeta (excepción)". Si solo te da pereza listar, no es excepción.
 
 ## 3. Separar los compartidos
 
@@ -36,7 +41,7 @@ Es la probabilidad de que el diff final quede dentro de las zonas y compartidos 
 3. Resta **10 puntos** si el issue no tiene criterios de aceptación o es ambiguo.
 4. Resta **15 puntos** si el cambio atraviesa una capa compartida (base de datos, API usada por varios, componente de UI reutilizado).
 5. Resta **10 puntos** si el repo no tiene pruebas que cubran el área (no hay red que avise si te saliste).
-6. Mínimo **30%**. Si el resultado queda bajo 70%, aplica la regla del paso 2 (reclama carpeta).
+6. Mínimo **30%**. Un resultado bajo no se arregla con una carpeta: se reclaman los archivos probables y se deja la confianza baja, para que el dev y los demás lo vean.
 
 Ejemplo: spec con rutas verificadas (95) − un criterio sin archivo (10) − capa compartida (15) = **70%**.
 

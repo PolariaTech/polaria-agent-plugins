@@ -2,6 +2,18 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según [SemVer](https://semver.org/lang/es/).
 
+## [1.3.0] — 2026-10-28
+
+### Cambiado
+- **El reclamo lista archivos exactos, no carpetas.** `references/estimacion-de-zonas.md` §2 ya no manda subir a la carpeta cuando hay 3 o más archivos en un directorio ni cuando la confianza queda bajo 70%. Cada zona es la ruta completa de un archivo (o `archivo#función`), con sus pruebas, tipos, fixtures y documentación listados por ruta. Si hay duda, se incluye el archivo probable y baja la confianza.
+- `paralelo.js reclamar` rechaza (código 2) las zonas que terminan en `/`. La única excepción es `--permitir-carpetas`, que exige explicar el motivo en `--porque`; el `CLAIM.md` la marca "carpeta (excepción)".
+- `paralelo.js reclamar` rechaza (código 2) las rutas que no existen en el repo, salvo que el ticket las cree y vayan también en `--nuevos "ruta1,ruta2"`. El `CLAIM.md` las marca "archivo nuevo", así se ve qué se modifica y qué se crea. También rechaza `--nuevos` con archivos que ya existen o que no están en `--zonas`.
+- La skill (Modo A, pasos 3 y 7, y Restricciones) y `references/formato-reclamo.md` reflejan la regla nueva.
+
+### Límites conocidos
+- Los reclamos ya publicados con carpetas siguen siendo válidos; la regla se aplica al crear uno nuevo. `autorizar` no cambió.
+- Sin probar en sesiones reales (niveles 2 y 3 del laboratorio): que el asistente, con la regla nueva, arme listas de archivos completas y no genere interrupciones excesivas por archivos faltantes.
+
 ## [1.2.0] — 2026-10-28
 
 Refs POL-393.

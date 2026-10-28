@@ -8,6 +8,7 @@
 //      cuyo hash esté registrado.
 
 const fs = require('fs');
+const path = require('path');
 const { spawnSync } = require('child_process');
 const lib = require('./lib');
 const { ramaBase, analizar } = require('./solapes');
@@ -117,8 +118,9 @@ function rutaValida(ruta) {
   return Boolean(ruta) && ruta !== '/' && !/(^|\/)\.\.(\/|$)/.test(ruta) && !/[`\n\r]/.test(ruta) && !/^[a-zA-Z]:/.test(ruta);
 }
 
-function construirClaim({ issue, rama, responsable, confianza, zonas, compartidos = [], porque = '' }) {
-  const lista = (rutas) => (rutas.length ? rutas.map((r) => `- \`${r}\``).join('\n') : 'Ninguno.');
+function construirClaim({ issue, rama, responsable, confianza, zonas, compartidos = [], porque = '', nuevos = [], carpetasPermitidas = [] }) {
+  const nota = (r) => (nuevos.includes(r) ? ' — archivo nuevo' : carpetasPermitidas.includes(r) ? ' — carpeta (excepción)' : '');
+  const lista = (rutas) => (rutas.length ? rutas.map((r) => `- \`${r}\`${nota(r)}`).join('\n') : 'Ninguno.');
   return [
     '<!-- polaria-reclamo v1 -->',
     '## 🔒 Reclamo de trabajo en paralelo',
@@ -171,7 +173,7 @@ function publicar(repo, mensaje, { subir = true } = {}) {
 
 // Crea el CLAIM.md de la rama: el primer commit de la rama y su primer push. Se detiene sin escribir nada si alguna
 // zona choca con el reclamo vigente de otra rama.
-function reclamar(repo, { issue, responsable, confianza, zonas, compartidos = [], porque = '' }) {
+function reclamar(repo, { issue, responsable, confianza, zonas, compartidos = [], porque = '', nuevos = [], permitirCarpetas = false }) {
   const issueFinal = (issue || lib.issueDeRama(repo.rama) || '').toUpperCase();
   if (!issueFinal) return { codigo: 2, mensaje: 'La rama no trae un ID de ticket (por ejemplo usuario/pol-123-titulo o usuario/req-012-titulo) y no pasaste --issue.' };
   if (!repo.rama) return { codigo: 2, mensaje: 'Estás en HEAD suelto: cambia a la rama del ticket antes de reclamar.' };
@@ -181,6 +183,21 @@ function reclamar(repo, { issue, responsable, confianza, zonas, compartidos = []
   if (!listaZonas.length) return { codigo: 2, mensaje: 'Falta --zonas: lista al menos una zona.' };
   const invalida = [...listaZonas, ...listaCompartidos].find((z) => !rutaValida(z.split('#')[0]));
   if (invalida) return { codigo: 2, mensaje: `Ruta no válida: "${invalida}". Usa rutas relativas a la raíz del repo, sin "..", sin "/" a secas y sin comillas invertidas.` };
+  const listaNuevos = (nuevos || []).map((z) => lib.normalizarRuta(z.trim())).filter(Boolean);
+  const carpetas = listaZonas.filter((z) => zonaDeTexto(z).tipo === 'carpeta');
+  if (carpetas.length && !permitirCarpetas) {
+    return { codigo: 2, mensaje: `El reclamo debe listar archivos exactos, no carpetas: ${carpetas.join(', ')}. Lista cada archivo con Glob (código, pruebas, tipos, fixtures, documentación). Si de verdad no se puede saber (por ejemplo, archivos generados), repite con --permitir-carpetas y explica el motivo en --porque.` };
+  }
+  if (carpetas.length && !porque.trim()) return { codigo: 2, mensaje: 'Con --permitir-carpetas, --porque debe explicar por qué no se pueden listar los archivos.' };
+  const rutasDeArchivo = listaZonas.filter((z) => zonaDeTexto(z).tipo !== 'carpeta').map((z) => z.split('#')[0]);
+  const yaExisten = listaNuevos.filter((r) => fs.existsSync(path.join(repo.raiz, r)));
+  if (yaExisten.length) return { codigo: 2, mensaje: `Estos archivos ya existen y no pueden ir en --nuevos: ${yaExisten.join(', ')}.` };
+  const sinExistir = [...new Set(rutasDeArchivo)].filter((r) => !fs.existsSync(path.join(repo.raiz, r)) && !listaNuevos.includes(r));
+  if (sinExistir.length) {
+    return { codigo: 2, mensaje: `Estas rutas no existen en el repo: ${sinExistir.join(', ')}. Si el ticket pide crearlas, pásalas también en --nuevos "ruta1,ruta2"; si no, corrige la ruta.` };
+  }
+  const sobrantes = listaNuevos.filter((r) => !rutasDeArchivo.includes(r));
+  if (sobrantes.length) return { codigo: 2, mensaje: `--nuevos trae rutas que no están en --zonas: ${sobrantes.join(', ')}.` };
   if (!Number.isInteger(confianza) || confianza < 1 || confianza > 100) return { codigo: 2, mensaje: 'Falta --confianza: un número entero entre 1 y 100.' };
 
   const importacion = importarClaims(repo, { fetch: true });
@@ -194,7 +211,7 @@ function reclamar(repo, { issue, responsable, confianza, zonas, compartidos = []
   }
 
   const preCommit = instalarPreCommit(repo.raiz);
-  const texto = construirClaim({ issue: issueFinal, rama: repo.rama, responsable, confianza, zonas: listaZonas, compartidos: listaCompartidos, porque });
+  const texto = construirClaim({ issue: issueFinal, rama: repo.rama, responsable, confianza, zonas: listaZonas, compartidos: listaCompartidos, porque, nuevos: listaNuevos, carpetasPermitidas: carpetas });
   fs.writeFileSync(lib.rutaDelClaim(repo.raiz), texto);
   lib.registrarAutorizado(repo, lib.hashDeClaim(texto));
   const agregado = correrGit(repo.raiz, ['add', '--', lib.ARCHIVO_RECLAMO]);

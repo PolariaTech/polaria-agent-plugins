@@ -64,7 +64,7 @@ test('iniciar-rama: con cambios sin guardar se detiene (código 6) y no cambia d
 test('iniciar-rama: si la rama actual tiene reclamo activo se detiene (código 7) salvo --pausar', () => {
   const e = crearEscenario();
   assert.strictEqual(ejecutarParalelo(e.daniel, 'iniciar-rama', 'daniel/pol-102-login').codigo, 0);
-  const rec = ejecutarParalelo(e.daniel, 'reclamar', '--zonas', 'src/ui/', '--confianza', '80', '--responsable', 'Daniel', '--porque', 'Prueba');
+  const rec = ejecutarParalelo(e.daniel, 'reclamar', '--zonas', 'src/ui/a.ts', '--confianza', '80', '--responsable', 'Daniel', '--porque', 'Prueba');
   assert.strictEqual(rec.codigo, 0, rec.error + rec.salida);
   const r = ejecutarParalelo(e.daniel, 'iniciar-rama', 'daniel/pol-103-otra');
   assert.strictEqual(r.codigo, 7);
@@ -77,7 +77,7 @@ test('iniciar-rama: si la rama actual tiene reclamo activo se detiene (código 7
 test('liberar --volver: libera, vuelve a main en el mismo clon y conserva la rama si no está mergeada', () => {
   const e = crearEscenario();
   ejecutarParalelo(e.daniel, 'iniciar-rama', 'daniel/pol-102-login');
-  ejecutarParalelo(e.daniel, 'reclamar', '--zonas', 'src/ui/', '--confianza', '80', '--responsable', 'Daniel', '--porque', 'Prueba');
+  ejecutarParalelo(e.daniel, 'reclamar', '--zonas', 'src/ui/a.ts', '--confianza', '80', '--responsable', 'Daniel', '--porque', 'Prueba');
   const r = ejecutarParalelo(e.daniel, 'liberar', '--volver');
   assert.strictEqual(r.codigo, 0, r.error + r.salida);
   assert.strictEqual(git(e.daniel, 'rev-parse', '--abbrev-ref', 'HEAD'), 'main');
