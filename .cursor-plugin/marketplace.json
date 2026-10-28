@@ -77,8 +77,8 @@
       "name": "trabajo-en-paralelo",
       "displayName": "Trabajo en Paralelo (Polaria)",
       "source": "trabajo-en-paralelo",
-      "description": "Evita que dos devs o sus asistentes de IA toquen lo mismo con cambios en local: estima las zonas de cada ticket (Linear o Sheet) con % de confianza, las reclama como CLAIM.md en la rama, cambia a su rama dentro del mismo proyecto, impide escribir fuera de esas zonas y avisa de solapes al editar y antes del push.",
-      "version": "1.1.0",
+      "description": "Evita que dos devs o sus asistentes de IA toquen lo mismo con cambios en local: estima las zonas de cada ticket (Linear o Sheet) con % de confianza, las reclama como CLAIM.md en la rama, cambia a su rama dentro del mismo proyecto, impide escribir fuera de esas zonas, avisa de solapes al editar y antes del push, descarga los cambios nuevos al empezar, exige liberar el CLAIM.md antes del PR y actualiza Estado y Asignado a del REQ-NNN en el Sheet.",
+      "version": "1.2.0",
       "author": { "name": "Polaria Tech" },
       "keywords": ["paralelo", "rama", "merge", "reclamos", "claim", "polaria"]
     }

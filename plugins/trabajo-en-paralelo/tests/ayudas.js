@@ -78,6 +78,19 @@ function ejecutarParalelo(directorio, ...argumentos) {
   return { codigo: r.status, salida: r.stdout, error: r.stderr };
 }
 
+// Igual que ejecutarParalelo, con variables de entorno extra. Además aísla la configuración global y de sistema de git
+// para que el user.name de la máquina que corre las pruebas no influya.
+function ejecutarParaleloConEntorno(directorio, entorno, ...argumentos) {
+  const vacio = path.join(os.tmpdir(), 'paralelo-gitconfig-vacio');
+  fs.writeFileSync(vacio, '');
+  const r = spawnSync(process.execPath, [PARALELO, ...argumentos], {
+    cwd: directorio,
+    encoding: 'utf8',
+    env: entornoLimpio({ GIT_CONFIG_GLOBAL: vacio, GIT_CONFIG_NOSYSTEM: '1', ...entorno }),
+  });
+  return { codigo: r.status, salida: r.stdout, error: r.stderr };
+}
+
 // Entrega el evento por stdin igual que el editor. bom: antepone U+FEFF, como Cursor en Windows.
 function ejecutarHook(nombre, evento, { cursor = false, env = {}, bom = false, cwd } = {}) {
   const texto = typeof evento === 'string' ? evento : JSON.stringify(evento);
@@ -178,6 +191,7 @@ module.exports = {
   escribir,
   crearEscenario,
   ejecutarParalelo,
+  ejecutarParaleloConEntorno,
   ejecutarHook,
   cuerpoDeReclamo,
   importarReclamos,
