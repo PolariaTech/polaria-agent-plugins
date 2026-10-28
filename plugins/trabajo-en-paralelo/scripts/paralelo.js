@@ -1,24 +1,25 @@
 #!/usr/bin/env node
-// CLI de la skill trabajo-en-paralelo-polaria. Desde cualquier carpeta del repo (o de uno de sus worktrees):
+// CLI de la skill trabajo-en-paralelo-polaria. Desde cualquier carpeta del repo:
 //   node paralelo.js importar-claims [--sin-fetch]
 //                                              Copia a la caché local el CLAIM.md de cada rama remota (y el propio).
 //   node paralelo.js estado                    Muestra qué hay en la caché y qué antigüedad tiene.
 //   node paralelo.js comparar --zonas "a/,b.ts#fn" [--issue POL-1]
 //                                              Cruza las zonas que se piensa reclamar con los reclamos ajenos.
 //   node paralelo.js solapes [--sin-fetch]     Chequea la rama actual contra las ramas y reclamos de los demás.
-//   node paralelo.js crear-worktree <rama>     Crea la rama desde la principal y su worktree, sin tracking.
+//   node paralelo.js iniciar-rama <rama> [--pausar]
+//                                              Cambia a la rama del ticket dentro del mismo proyecto (nueva desde la principal, sin tracking).
+//                                              Códigos: 6 hay cambios sin guardar, 7 la rama actual tiene un reclamo activo.
 //   node paralelo.js reclamar --zonas "a/,b.ts" --confianza 80 [--compartidos "package.json"] [--responsable R]
 //                             [--issue POL-1] [--porque "texto"]
 //                                              Crea el CLAIM.md, lo commitea y publica la rama. Se detiene si choca.
 //   node paralelo.js autorizar <ruta>...       Amplía el CLAIM.md. SOLO lo corre una persona: pide confirmación en una
 //                                              terminal interactiva; sin terminal no hace nada.
-//   node paralelo.js liberar                   Borra el CLAIM.md (commit y push) y deja el resultado en el mensaje.
+//   node paralelo.js liberar [--volver]        Borra el CLAIM.md (commit y push) y deja el resultado en el mensaje. Con --volver,
+//                                              vuelve a la rama principal y borra la rama local si ya está mergeada.
 //   node paralelo.js base                      Imprime la rama principal (origin/main, origin/master...).
 // Salida siempre en texto. Códigos: 0 bien, 1 cancelado por el usuario, 2 error de uso, 3 choca con otra rama,
-// 4 falta una terminal interactiva, 5 el commit quedó pero el push falló.
+// 4 falta una terminal interactiva, 5 el commit quedó pero el push falló, 6 hay cambios sin guardar, 7 la rama actual tiene un reclamo activo.
 
-const fs = require('fs');
-const path = require('path');
 const readline = require('readline');
 const lib = require('./lib');
 const claims = require('./claims');
@@ -82,35 +83,81 @@ function comparar(argumentos) {
   hallazgos.forEach((h) => console.log(claims.formatearChoque(h)));
 }
 
-function crearWorktree(argumentos) {
-  const rama = argumentos[0];
-  if (!rama || !/^[\w./-]+$/.test(rama)) falla('Uso: paralelo.js crear-worktree <rama> (solo letras, números, ., _, - y /).');
+// Cambia de rama dentro del mismo proyecto (sin carpetas nuevas): la rama del ticket sale de la principal, sin tracking.
+// Se detiene con el árbol sucio (6) o si la rama actual tiene un reclamo activo de otro ticket (7), salvo --pausar.
+function iniciarRama(argumentos) {
+  const rama = argumentos.find((a) => !a.startsWith('--'));
+  if (!rama || !/^[\w./-]+$/.test(rama)) falla('Uso: paralelo.js iniciar-rama <rama> [--pausar] (solo letras, números, ., _, - y /).');
   const repo = repoActual();
+  if (repo.rama === rama) return console.log(`Ya estás en ${rama}: no hay nada que cambiar.`);
+  let sucio = '';
+  try {
+    sucio = lib.git(repo.raiz, ['status', '--porcelain']);
+  } catch (error) {
+    falla(`No pude leer el estado de git: ${error.message}`);
+  }
+  if (sucio) falla(`Hay cambios sin guardar en ${repo.rama || 'HEAD suelto'}. Haz commit o guárdalos antes de cambiar de rama:\n${sucio}`, 6);
+  const claimActual = repo.rama ? lib.leerClaimPropio(repo.raiz) : null;
+  if (claimActual && claimActual.estado === 'ACTIVO' && !argumentos.includes('--pausar')) {
+    falla(`La rama ${repo.rama} tiene un reclamo activo (${claimActual.issue || 'sin ticket'}). Pregúntale al dev si ese trabajo terminó (paralelo.js liberar --volver, y luego repite este comando) o si lo deja pausado (repite este comando con --pausar: el reclamo sigue vigente).`, 7);
+  }
   try {
     lib.git(repo.raiz, ['fetch', '--prune', '--quiet', 'origin'], { timeoutMs: 30000 });
   } catch {
-    process.stderr.write('AVISO: no pude hacer git fetch; el worktree sale de la última copia local de la rama principal.\n');
+    process.stderr.write('AVISO: no pude hacer git fetch; la rama sale de la última copia local de la rama principal.\n');
   }
   const base = ramaBase(repo.raiz);
   if (!base) falla('No encontré la rama principal (origin/HEAD, origin/main ni origin/master).');
-  // Carpeta hermana del repo: <repo>-<rama>, sin barras.
-  const nombreDelRepo = path.basename(path.resolve(repo.directorioComun, '..'));
-  const destino = path.resolve(repo.raiz, '..', `${nombreDelRepo}-${rama.replace(/[\\/]/g, '-')}`);
-  if (fs.existsSync(destino)) falla(`Ya existe ${destino}. Si es el worktree de esta tarea, úsalo; si no, elige otra rama.`);
-  let existe = true;
-  try {
-    lib.git(repo.raiz, ['rev-parse', '--verify', '-q', `refs/heads/${rama}`]);
-  } catch {
-    existe = false;
-  }
+  const existe = (ref) => {
+    try {
+      lib.git(repo.raiz, ['rev-parse', '--verify', '-q', ref]);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const local = existe(`refs/heads/${rama}`);
+  const remota = existe(`refs/remotes/origin/${rama}`);
   // --no-track: sin esto la rama nueva queda siguiendo a origin/main y un push iría a la rama principal.
-  const argumentosGit = existe ? ['worktree', 'add', destino, rama] : ['worktree', 'add', '--no-track', '-b', rama, destino, base];
+  const argumentosGit = local ? ['switch', rama] : remota ? ['switch', '--track', `origin/${rama}`] : ['switch', '--no-track', '-c', rama, base];
   try {
     lib.git(repo.raiz, argumentosGit, { timeoutMs: 60000 });
   } catch (error) {
-    falla(`git worktree add falló: ${error.message}`);
+    falla(`git switch falló: ${error.message}`);
   }
-  console.log(`Worktree creado: ${destino}\nRama: ${rama}${existe ? ' (ya existía)' : ` (desde ${base}, sin tracking)`}`);
+  console.log(`Rama activa: ${rama} ${local ? '(ya existía)' : remota ? '(traída de origin)' : `(nueva, desde ${base}, sin tracking)`}. Carpeta: ${repo.raiz}`);
+}
+
+// Tras liberar: vuelve a la rama principal en el mismo proyecto y borra la rama local si ya está mergeada.
+function volverALaPrincipal(repo) {
+  const base = ramaBase(repo.raiz);
+  if (!base) return console.log('AVISO: no encontré la rama principal; te quedas en la rama actual.');
+  const principal = base.replace(/^origin\//, '');
+  const anterior = repo.rama;
+  try {
+    lib.git(repo.raiz, ['fetch', '--prune', '--quiet', 'origin'], { timeoutMs: 30000 });
+  } catch {
+    // Sin red: se vuelve igual con la copia local.
+  }
+  try {
+    lib.git(repo.raiz, ['switch', principal], { timeoutMs: 60000 });
+  } catch (error) {
+    return console.log(`AVISO: no pude volver a ${principal} (${error.message.split('\n')[0]}); te quedas en ${anterior}.`);
+  }
+  try {
+    lib.git(repo.raiz, ['merge', '--ff-only', '--quiet', base], { timeoutMs: 60000 });
+  } catch {
+    // Principal local desactualizada y no avanzable: no es grave.
+  }
+  console.log(`Ahora estás en ${principal}.`);
+  try {
+    // Mergeada a la principal (no basta con estar subida a su remota, que es lo que acepta "branch -d" por sí solo).
+    lib.git(repo.raiz, ['merge-base', '--is-ancestor', anterior, principal]);
+    lib.git(repo.raiz, ['branch', '-d', anterior]);
+    console.log(`Rama local ${anterior} borrada (ya estaba mergeada).`);
+  } catch {
+    console.log(`La rama local ${anterior} se conserva: aún no está mergeada a ${principal}.`);
+  }
 }
 
 function reclamar(argumentos) {
@@ -145,6 +192,15 @@ async function autorizar(argumentos) {
   terminarCon(await claims.ampliar(repoActual(), argumentos.filter((a) => !a.startsWith('--')), { confirmar: confirmarEnTerminal }));
 }
 
+function liberarYVolver(argumentos) {
+  const repo = repoActual();
+  const resultado = claims.liberar(repo);
+  if (resultado.codigo !== 0 || !argumentos.includes('--volver')) return terminarCon(resultado);
+  console.log(resultado.mensaje);
+  volverALaPrincipal(repo);
+  process.exit(0);
+}
+
 const [comando, ...argumentos] = process.argv.slice(2);
 switch (comando) {
   case 'importar-claims':
@@ -159,8 +215,8 @@ switch (comando) {
   case 'solapes':
     console.log(formatear(analizar(process.cwd(), { fetch: !argumentos.includes('--sin-fetch') })));
     break;
-  case 'crear-worktree':
-    crearWorktree(argumentos);
+  case 'iniciar-rama':
+    iniciarRama(argumentos);
     break;
   case 'reclamar':
     reclamar(argumentos);
@@ -169,11 +225,11 @@ switch (comando) {
     autorizar(argumentos);
     break;
   case 'liberar':
-    terminarCon(claims.liberar(repoActual()));
+    liberarYVolver(argumentos);
     break;
   case 'base':
     console.log(ramaBase(repoActual().raiz) || 'sin rama principal');
     break;
   default:
-    falla('Comandos: importar-claims | estado | comparar | solapes | crear-worktree | reclamar | autorizar | liberar | base. Ver la cabecera de paralelo.js.');
+    falla('Comandos: importar-claims | estado | comparar | solapes | iniciar-rama | reclamar | autorizar | liberar | base. Ver la cabecera de paralelo.js.');
 }

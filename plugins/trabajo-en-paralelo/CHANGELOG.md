@@ -2,6 +2,15 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según [SemVer](https://semver.org/lang/es/).
 
+## [1.1.0] — 2026-10-28
+
+Sube la versión porque Claude Code indexa su caché de plugins por número de versión: quien instaló la 1.0.0 antes del rediseño con `CLAIM.md` (diseño anterior, que leía los reclamos de comentarios de Linear) no recibía el cambio al actualizar.
+
+### Cambiado
+- **Una rama por ticket dentro del mismo proyecto, sin carpetas nuevas.** `crear-worktree` se reemplaza por `iniciar-rama <rama>`: cambia de rama en la carpeta actual (nueva desde la principal y sin tracking). Se detiene con código 6 si hay cambios sin guardar y con código 7 si la rama actual tiene un reclamo activo; en ese caso la skill pregunta al dev si terminó (`liberar --volver`) o lo deja pausado (`iniciar-rama --pausar`, el reclamo sigue vigente).
+- `liberar --volver` libera el reclamo, vuelve a la rama principal en el mismo proyecto y borra la rama local solo si ya está mergeada.
+- La skill dice de forma explícita que los reclamos activos se buscan solo en el `CLAIM.md` de las ramas remotas; Linear y el Sheet solo se leen para conocer el ticket que se va a trabajar.
+
 ## [1.0.0] — 2026-10-26
 
 Primera versión. Nadie la había instalado cuando se rediseñó el 27/10/2026, así que el rediseño se hizo sobre esta misma versión y no cambió el número.
