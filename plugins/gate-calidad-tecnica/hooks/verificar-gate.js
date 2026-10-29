@@ -11,7 +11,8 @@
 //   "<ref local> <sha local> <ref remota> <sha remota>" por cada ref; salida distinta de 0 = bloquea.
 //   Cubre el push que la IA no ve: terminal, panel de Git del editor o una IA sin el plugin cargado.
 // En un repo que no es de software (es-repo-de-software.js) deja pasar siempre: el gate no aplica.
-// Tampoco exige veredicto al push que solo publica el CLAIM.md del reclamo del ticket (soloPublicaElReclamo).
+// Tampoco exige veredicto al push que solo publica el CLAIM.md del reclamo del ticket (soloPublicaElReclamo) ni
+// al que solo cambia documentación (soloPublicaDocumentacion, es-documentacion.js, POL-396).
 
 const { execFileSync } = require('child_process');
 const fs = require('fs');
@@ -26,7 +27,15 @@ try {
   // Se queda la versión que siempre verifica.
 }
 
-const VEREDICTOS_QUE_PERMITEN_PUSH = /^VEREDICTO: (APROBADO|RECHAZADO_JUSTIFICADO)\s*$/;
+// Si falta el módulo (copia incompleta), nada cuenta como documentación: el push sigue exigiendo veredicto.
+let esDocumentacion = () => false;
+try {
+  ({ esDocumentacion } = require('./es-documentacion'));
+} catch {
+  // Se queda la versión que nunca exime.
+}
+
+const VEREDICTOS_QUE_PERMITEN_PUSH =/^VEREDICTO: (APROBADO|RECHAZADO_JUSTIFICADO)\s*$/;
 const SHA_VACIO = /^0+$/;
 
 // Cursor define CURSOR_VERSION: así responde JSON aunque el evento llegue ilegible.
@@ -60,13 +69,10 @@ function tieneVeredicto(directorioGit, commit) {
   }
 }
 
-// El push que publica el reclamo del ticket (trabajo-en-paralelo) no lleva código que revisar y debe salir
-// sin demora para que nadie más toque lo mismo. Pasa sin veredicto solo si TODO lo que se publica (los commits
-// que ningún remoto tiene todavía) son commits normales que cambian únicamente CLAIM.md en la raíz.
+// Hay pushes que no llevan código que revisar. Pasan sin veredicto solo si TODO lo que se publica (los commits
+// que ningún remoto tiene todavía) son commits normales cuyos archivos cambiados cumplen `esAceptable`.
 // Cualquier duda (merge, commit vacío, error de git) devuelve false: el push sigue exigiendo veredicto.
-const ARCHIVO_DEL_RECLAMO = 'CLAIM.md';
-
-function soloPublicaElReclamo(git, sha) {
+function soloPublicaArchivos(git, sha, esAceptable) {
   try {
     const commits = git('rev-list', '--parents', sha, '--not', '--remotes').split(/\r?\n/).filter(Boolean);
     if (!commits.length) return false;
@@ -76,11 +82,28 @@ function soloPublicaElReclamo(git, sha) {
       const archivos = git('diff-tree', '-r', '--name-only', '--no-renames', '--no-commit-id', '-z', commit)
         .split('\0')
         .filter(Boolean);
-      return archivos.length > 0 && archivos.every((archivo) => archivo === ARCHIVO_DEL_RECLAMO);
+      return archivos.length > 0 && archivos.every(esAceptable);
     });
   } catch {
     return false;
   }
+}
+
+// El push que publica el reclamo del ticket (trabajo-en-paralelo) debe salir sin demora para que nadie más
+// toque lo mismo: solo cambia CLAIM.md en la raíz.
+const ARCHIVO_DEL_RECLAMO = 'CLAIM.md';
+
+function soloPublicaElReclamo(git, sha) {
+  return soloPublicaArchivos(git, sha, (archivo) => archivo === ARCHIVO_DEL_RECLAMO);
+}
+
+// El push cuyos archivos cambiados son todos documentación (es-documentacion.js) no tiene código que revisar.
+function soloPublicaDocumentacion(git, sha) {
+  return soloPublicaArchivos(git, sha, esDocumentacion);
+}
+
+function sePuedePublicarSinVeredicto(git, sha) {
+  return soloPublicaElReclamo(git, sha) || soloPublicaDocumentacion(git, sha);
 }
 
 function mensajeSinVeredicto(commit) {
@@ -103,7 +126,7 @@ function verificarPrePushDeGit(entrada) {
     if (!refLocal || !shaLocal) continue;
     if (SHA_VACIO.test(shaLocal)) continue; // Borrar una rama remota no publica código.
     if (refLocal.startsWith('refs/tags/')) continue; // El tag apunta a un commit que ya pasó por el gate en su rama.
-    if (!tieneVeredicto(directorioGit, shaLocal) && !soloPublicaElReclamo(git, shaLocal)) {
+    if (!tieneVeredicto(directorioGit, shaLocal) && !sePuedePublicarSinVeredicto(git, shaLocal)) {
       process.stderr.write(`${mensajeSinVeredicto(shaLocal)}\n`);
       process.exit(1);
     }
@@ -140,7 +163,7 @@ function verificarEventoDelAgente(evento) {
   }
   if (!esRepoDeSoftware(raizDelRepo)) return permitir();
 
-  if (tieneVeredicto(directorioGit, commitActual) || soloPublicaElReclamo(git, commitActual)) return permitir();
+  if (tieneVeredicto(directorioGit, commitActual) || sePuedePublicarSinVeredicto(git, commitActual)) return permitir();
   return bloquear(mensajeSinVeredicto(commitActual));
 }
 
