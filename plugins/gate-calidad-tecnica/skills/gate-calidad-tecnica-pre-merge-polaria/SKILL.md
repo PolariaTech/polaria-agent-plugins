@@ -87,7 +87,7 @@ Si el dev te pide mergear tú mismo (`gh pr merge`), confirma antes: es una acci
 
 ## Si el hook bloquea un push
 
-El hook de la IA o el `pre-push` de git se disparan cuando el commit que se va a publicar no tiene marca `APROBADO` ni `RECHAZADO_JUSTIFICADO`. La única excepción es el push que solo publica el `CLAIM.md` del reclamo del ticket (`trabajo-en-paralelo`): no lleva código que revisar y pasa sin veredicto. Un push que mezcla `CLAIM.md` con cualquier otro cambio sí lo exige. No los esquives (ni borrando el hook, ni con `git push --no-verify`, ni escribiendo la marca sin revisión, ni pidiendo al dev que haga el `push` por otra vía para saltarlo): corre esta skill desde el Paso 1 sobre el commit actual.
+El hook de la IA o el `pre-push` de git se disparan cuando el commit que se va a publicar no tiene marca `APROBADO` ni `RECHAZADO_JUSTIFICADO`. Hay dos excepciones, y las decide el hook, no tú: (1) el push cuyos archivos cambiados son todos documentación (`es-documentacion.js`: `.md`, `README`, `CHANGELOG`, `LICENSE`, `docs/`; no cuentan `CLAUDE.md`, `AGENTS.md`, `SKILL.md` ni nada en `.claude/`, `.cursor/`, `agents/`, `skills/`, `hooks/`), y (2) el push que solo publica el `CLAIM.md` del reclamo del ticket (`trabajo-en-paralelo`). Ninguno lleva código que revisar y pasa sin veredicto. Un push que mezcla cualquiera de los dos con otro tipo de archivo sí lo exige. No los esquives (ni borrando el hook, ni con `git push --no-verify`, ni escribiendo la marca sin revisión, ni pidiendo al dev que haga el `push` por otra vía para saltarlo): corre esta skill desde el Paso 1 sobre el commit actual.
 
 ## Excepciones (sección 5 del protocolo)
 

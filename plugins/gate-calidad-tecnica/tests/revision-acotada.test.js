@@ -224,10 +224,16 @@ test('hook pre-push: código sin publicar debajo de un commit de CLAIM.md no se 
   assert.strictEqual(pushDeGit(carpeta, sha).status, 1);
 });
 
-test('hook pre-push: un CLAIM.md dentro de una subcarpeta no es el reclamo', () => {
+test('hook pre-push: un CLAIM.md dentro de una subcarpeta no es el reclamo; junto a código sigue bloqueado', () => {
+  const carpeta = crearRepo();
+  const sha = commitear(carpeta, { 'docs/CLAIM.md': '# no es el reclamo\n', 'src/app.js': 'module.exports = 1;\n' });
+  assert.strictEqual(pushDeGit(carpeta, sha).status, 1);
+});
+
+test('hook pre-push: un CLAIM.md dentro de una subcarpeta pasa solo como documentación (POL-396), no como reclamo', () => {
   const carpeta = crearRepo();
   const sha = commitear(carpeta, { 'docs/CLAIM.md': '# no es el reclamo\n' });
-  assert.strictEqual(pushDeGit(carpeta, sha).status, 1);
+  assert.strictEqual(pushDeGit(carpeta, sha).status, 0);
 });
 
 test('hook pre-push: un merge nunca se exime aunque solo traiga CLAIM.md', () => {

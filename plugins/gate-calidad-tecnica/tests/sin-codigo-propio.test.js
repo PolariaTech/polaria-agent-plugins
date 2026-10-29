@@ -108,24 +108,27 @@ test('clasificar-diff.js: un archivo de código borrado cuenta como código prop
   assert.deepStrictEqual(clasificarEnRepo(carpeta).stdout.trim().split('\n'), ['CON_CODIGO_PROPIO', 'src/viejo.js']);
 });
 
-test('hook pre-push: el commit de solo documentación sin marca sigue bloqueado', () => {
+// Desde POL-396 el push de documentación pura (README, CHANGELOG, docs/) sale sin veredicto (solo-documentacion.test.js).
+// Estas pruebas usan CLAUDE.md: clasifica SIN_CODIGO_PROPIO (es .md) pero son instrucciones de IA, no documentación
+// para el hook, así que sin marca sigue bloqueado. El repo no tiene origen publicado: el commit base también cuenta.
+test('hook pre-push: el commit sin código propio que no es documentación pura sin marca sigue bloqueado', () => {
   const carpeta = crearRepo();
-  const sha = commitear(carpeta, { 'README.md': '# hola\n' });
+  const sha = commitear(carpeta, { 'CLAUDE.md': '# instrucciones\n' });
   const resultado = pushDeGit(carpeta, sha);
   assert.strictEqual(resultado.status, 1);
   assert.match(resultado.stderr, /no tiene veredicto/);
 });
 
-test('hook pre-push: el commit de solo documentación con la marca APROBADO que registra la skill pasa', () => {
+test('hook pre-push: el commit sin código propio con la marca APROBADO que registra la skill pasa', () => {
   const carpeta = crearRepo();
-  const sha = commitear(carpeta, { 'README.md': '# hola\n' });
+  const sha = commitear(carpeta, { 'CLAUDE.md': '# instrucciones\n' });
   assert.strictEqual(registrar(carpeta, 'APROBADO').status, 0);
   assert.strictEqual(pushDeGit(carpeta, sha).status, 0);
 });
 
-test('hook pre-push: RECHAZADO nunca deja pasar, tampoco en solo documentación', () => {
+test('hook pre-push: RECHAZADO nunca deja pasar, tampoco en un cambio sin código propio', () => {
   const carpeta = crearRepo();
-  const sha = commitear(carpeta, { 'README.md': '# hola\n' });
+  const sha = commitear(carpeta, { 'CLAUDE.md': '# instrucciones\n' });
   assert.strictEqual(registrar(carpeta, 'RECHAZADO').status, 0);
   assert.strictEqual(pushDeGit(carpeta, sha).status, 1);
 });

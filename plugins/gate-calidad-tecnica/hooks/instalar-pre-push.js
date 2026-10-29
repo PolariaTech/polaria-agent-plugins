@@ -3,7 +3,8 @@
 // Lo ejecuta el inicio de sesión (SessionStart en Claude Code, sessionStart en Cursor), y la skill
 // a mano si falta. Es idempotente: se puede correr en cada sesión.
 //
-// - Copia verificar-gate.js y registrar-veredicto.js a <git-common-dir>/polaria-gate/, así el hook
+// - Copia verificar-gate.js, registrar-veredicto.js y los módulos que usan (es-repo-de-software.js,
+//   es-documentacion.js) a <git-common-dir>/polaria-gate/, así el hook
 //   y la skill no dependen de la ruta del plugin (que cambia con cada versión) y quedan
 //   actualizados en cada sesión.
 // - Escribe <hooks>/pre-push, que ejecuta esa copia. Nunca pisa un pre-push ajeno ni escribe
@@ -76,7 +77,7 @@ function instalar(directorio) {
 
   // Los scripts se copian aunque el pre-push no se pueda instalar: la skill los usa igual.
   fs.mkdirSync(carpetaGate, { recursive: true });
-  for (const script of ['verificar-gate.js', 'registrar-veredicto.js', 'es-repo-de-software.js']) {
+  for (const script of ['verificar-gate.js', 'registrar-veredicto.js', 'es-repo-de-software.js', 'es-documentacion.js']) {
     fs.copyFileSync(path.join(__dirname, script), path.join(carpetaGate, script));
   }
   // Los scripts son CommonJS: sin esto heredan el "type": "module" del package.json del repo y fallan.
