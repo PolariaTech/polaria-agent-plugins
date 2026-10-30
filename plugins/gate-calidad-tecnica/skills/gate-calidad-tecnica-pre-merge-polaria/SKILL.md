@@ -5,7 +5,7 @@ description: Ejecuta el gate de calidad técnica de Polaria sobre los commits lo
 
 # Skill: Gate de Calidad Técnica Pre-Merge
 
-Ejecuta, paso a paso, `GATE_DE_CALIDAD_TECNICA_PRE_MERGE_v1.4.md` (documento hermano de esta skill, en la carpeta superior) — fuente de verdad de cada paso, regla, excepción y métrica. Esta skill orquesta; **no revisa el código ella misma**. La revisión la hace el subagente `revisor-tecnico-pre-merge` (`agents/revisor-tecnico-pre-merge.md`), que es la fuente ejecutable de los 8 criterios, el formato de salida y el ejemplo.
+Ejecuta, paso a paso, `GATE_DE_CALIDAD_TECNICA_PRE_MERGE_v1.4.md` (documento hermano de esta skill, en la carpeta superior) — fuente de verdad de cada paso, regla, excepción y métrica. Esta skill orquesta; **no revisa el código ella misma**. La revisión la hace el subagente `revisor-tecnico-pre-merge` (`agents/revisor-tecnico-pre-merge.md`), que es la fuente ejecutable de los 9 criterios, el formato de salida y el ejemplo.
 
 > **Todo el gate es solo lectura.** Desde "Antes de empezar" hasta entregar el reporte (y después, hasta que el dev pida otra cosa en un mensaje nuevo), NUNCA edites, crees ni borres archivos del proyecto (código, tests, schemas, docs, config) ni ejecutes comandos que cambien git (`commit`, `commit --amend`, `stash`, `checkout`, `reset`, `rebase`), en este repo ni en otro del workspace. El gate reporta; el dev corrige. En particular, NUNCA cambies un schema de formulario para que el criterio 7 pase: si el schema está mal, se corrige aparte con `validacion-formularios-polaria`. La única escritura permitida es la marca de `registrar-veredicto.js` dentro de `.git/`.
 
@@ -24,9 +24,10 @@ Si el dev te da un número de PR ya abierto (cambio publicado antes de esta vers
 
 ## Paso 1 — Diff y contexto (Paso 2 del protocolo)
 
-- **Ronda de revisión:** corre `node "<raíz del plugin>/hooks/ronda-previa.js" <principal>` desde la raíz del repo y copia su salida en `<contexto>`. Si responde `{"ronda":"COMPLETA"}` (primera ronda de la rama, o la última revisión no fue un rechazo con reporte guardado), revisas el diff completo y los 8 criterios. Si responde `ACOTADA`, es la ronda 2 o posterior sobre la misma rama: el diff que usas es el delta de `comandoDelta` (`git diff <shaPrevio>..HEAD`) en vez del diff completo, y el revisor re-evalúa solo `criteriosFail` más `criteriosSiempre`. La decisión la toma el script, nunca tú.
+- **Ronda de revisión:** corre `node "<raíz del plugin>/hooks/ronda-previa.js" <principal>` desde la raíz del repo y copia su salida en `<contexto>`. Si responde `{"ronda":"COMPLETA"}` (primera ronda de la rama, o la última revisión no fue un rechazo con reporte guardado), revisas el diff completo y los 9 criterios. Si responde `ACOTADA`, es la ronda 2 o posterior sobre la misma rama: el diff que usas es el delta de `comandoDelta` (`git diff <shaPrevio>..HEAD`) en vez del diff completo, y el revisor re-evalúa solo `criteriosFail` más `criteriosSiempre`, y siempre el criterio 9 (ver «Tamaño»). La decisión la toma el script, nunca tú.
 - **Diff:** `git diff <principal>...HEAD`; en ronda `ACOTADA`, el delta de `comandoDelta`.
-- **Código propio:** corre `node "<raíz del plugin>/hooks/clasificar-diff.js" <principal>` desde la raíz del repo (siempre contra el diff completo de la rama, también en ronda acotada) y copia su salida en `<contexto>`. Si responde `SIN_CODIGO_PROPIO` (todo el diff es documentación `.md` o código de terceros generado por spec-kit), el gate sigue completo y el revisor marca el criterio 6 como `[N/A]`. Si responde `CON_CODIGO_PROPIO`, se evalúan los 8 criterios. La clasificación la decide el script, nunca tú.
+- **Código propio:** corre `node "<raíz del plugin>/hooks/clasificar-diff.js" <principal>` desde la raíz del repo (siempre contra el diff completo de la rama, también en ronda acotada) y copia su salida en `<contexto>`. Si responde `SIN_CODIGO_PROPIO` (todo el diff es documentación `.md` o código de terceros generado por spec-kit), el gate sigue completo y el revisor marca los criterios 6 y 9 como `[N/A]`. Si responde `CON_CODIGO_PROPIO`, se evalúan los 9 criterios. La clasificación la decide el script, nunca tú.
+- **Tamaño (criterio 9):** corre `node "<raíz del plugin>/hooks/medir-tamano.js" <principal>` desde la raíz del repo (siempre contra el diff completo de la rama, también en ronda acotada, porque el trinquete compara contra la rama principal) y copia su salida tal cual en `<contexto>`. Responde `TAMANO: SIN_FAIL` o `TAMANO: CON_FAIL` y una línea por hallazgo (`FAIL` o `ADVERTENCIA`, con regla, archivo, valor medido y límite). Si el script falla, díselo al dev y no inventes la medición. Las líneas por función y la complejidad las mide el revisor con ESLint; si el repo no tiene las reglas, el dev las agrega con la plantilla `plantillas/eslint-limites/` del plugin, y el baseline (`eslint-suppressions.json`) lo genera el dev, nunca el gate. La medición la decide el script, nunca tú.
 - **Tipo de cambio:** si la rama o los commits citan un issue (`POL-XX`), lee su tipo (Bug / Feature / Improvement) con el MCP de Linear (`get_issue`). Si no hay issue o no hay MCP de Linear, pregúntaselo al dev. El tipo decide si se exige test de regresión (criterio 6b).
 - **Salida de pruebas y de build:** si el dev ya corrió las pruebas o el build en otro entorno (CI, staging, `vercel env run -e preview`, preview de Vercel) porque no se pueden correr en local, pide esa salida real (Excepción de la sección 5).
 - **Despliegue, criterio 8 (Vercel — temporal):** averigua si el repo se despliega y con qué comando, en este orden, y detente en el primero que responda:
@@ -49,7 +50,7 @@ Despacha el subagente `revisor-tecnico-pre-merge` con el diff entre `<code_diff>
 
 **Ronda `ACOTADA`:** en `<code_diff>` pasa solo el delta (`comandoDelta`), no el diff completo de la rama, y deja en `<contexto>` la salida de `ronda-previa.js` tal cual. No le pases el reporte de la ronda anterior: el revisor aplica las reglas de su modo acotado y escribe él mismo la línea de criterios heredados.
 
-Devuelve al dev el reporte del subagente tal cual, sin reescribirlo ni suavizarlo.
+Devuelve al dev el reporte del subagente tal cual, sin reescribirlo ni suavizarlo. Si trae «Advertencias no bloqueantes» (archivos heredados de más de 300 líneas que están en el diff y no crecieron), déjalas visibles: informan, no cambian el veredicto.
 
 **Si el entorno no soporta subagentes nativos** (mismo respaldo que `CLAUDE.md` del repo de metodología): despacha `subagent_type: general-purpose` con el contenido completo de `agents/revisor-tecnico-pre-merge.md` como instrucciones, seguido del diff y el contexto. Si tampoco eso es posible, aplica ese archivo tú mismo en el hilo actual y agrega al reporte la línea `Revisión sin aislamiento: la ejecutó la misma sesión que escribió el código.`
 
@@ -112,6 +113,7 @@ No corrijas el commit ya mergeado. Guía al dev a revertirlo y generar una versi
 - NUNCA publiques el reporte en GitHub/Linear, abras el PR o mergees sin que el dev lo confirme.
 - NUNCA uses el MCP de Vercel para escribir (redesplegar, promover, cambiar variables o configuración): en este gate solo lee.
 - NUNCA decidas tú lo que el protocolo deja al Responsable en una Excepción.
+- NUNCA generes ni cambies `eslint-suppressions.json` ni corras `eslint --suppress-all`: el baseline lo genera el dev.
 - NUNCA decidas tú que una ronda es `ACOTADA` ni qué criterios se re-evalúan: lo decide `ronda-previa.js`. Si el script falla o no responde, haz la revisión completa.
 
 ## Verificación

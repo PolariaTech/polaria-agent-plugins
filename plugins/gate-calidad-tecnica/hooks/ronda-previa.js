@@ -11,20 +11,20 @@
 // guardó el veredicto, la revisión es COMPLETA.
 // Salida: una línea JSON.
 //   {"ronda":"COMPLETA"}
-//   {"ronda":"ACOTADA","shaPrevio":"<sha>","criteriosFail":[2,4],"criteriosSiempre":[6,8],"comandoDelta":"git diff <sha>..HEAD"}
+//   {"ronda":"ACOTADA","shaPrevio":"<sha>","criteriosFail":[2,4],"criteriosSiempre":[6,8,9],"comandoDelta":"git diff <sha>..HEAD"}
 
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
 // Criterios mecánicos que se re-ejecutan en toda ronda acotada: dependen de correr pruebas y build.
-const CRITERIOS_SIEMPRE = [6, 8];
+const CRITERIOS_SIEMPRE = [6, 8, 9];
 
 // Recibe el texto de una marca y devuelve { veredicto, criteriosFail }.
 function leerMarca(texto) {
   const veredicto = (/^VEREDICTO: (\S+)/m.exec(texto) || [])[1] || null;
   const linea = (/^CRITERIOS_FAIL: ([\d,]+)\s*$/m.exec(texto) || [])[1];
-  const criteriosFail = linea ? linea.split(',').map(Number).filter((n) => n >= 1 && n <= 8) : [];
+  const criteriosFail = linea ? linea.split(',').map(Number).filter((n) => n >= 1 && n <= 9) : [];
   return { veredicto, criteriosFail };
 }
 

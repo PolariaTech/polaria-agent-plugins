@@ -130,7 +130,7 @@ test('leerMarca y decidirRonda: solo un RECHAZADO con CRITERIOS_FAIL acota la ro
   assert.strictEqual(decidirRonda(['bbb', 'aaa'], leer).ronda, 'COMPLETA', 'la marca más cercana manda');
   assert.strictEqual(decidirRonda(['ccc'], leer).ronda, 'COMPLETA', 'rechazo viejo sin reporte guardado');
   assert.strictEqual(decidirRonda(['zzz'], leer).ronda, 'COMPLETA', 'ninguna marca');
-  assert.deepStrictEqual(decidirRonda(['aaa'], leer).criteriosSiempre, [6, 8]);
+  assert.deepStrictEqual(decidirRonda(['aaa'], leer).criteriosSiempre, [6, 8, 9]);
 });
 
 test('ronda-previa.js: la primera ronda de una rama es completa (CA4)', () => {
@@ -148,7 +148,7 @@ test('ronda-previa.js: tras un RECHAZADO con reporte, el commit siguiente se rev
     ronda: 'ACOTADA',
     shaPrevio: primero,
     criteriosFail: [2, 4],
-    criteriosSiempre: [6, 8],
+    criteriosSiempre: [6, 8, 9],
     comandoDelta: `git diff ${primero}..HEAD`,
   });
 });

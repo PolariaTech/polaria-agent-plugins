@@ -19,7 +19,7 @@ const path = require('path');
 const VEREDICTOS = ['APROBADO', 'RECHAZADO', 'RECHAZADO_JUSTIFICADO'];
 
 // Fila de la tabla del reporte: | **3. Secretos / Credenciales** | `[FAIL]` | ...
-const FILA_FAIL = /^\|\s*\*\*\s*([1-8])\.[^|]*\|\s*`?\[?\s*FAIL\s*\]?`?\s*\|/;
+const FILA_FAIL = /^\|\s*\*\*\s*([1-9])\.[^|]*\|\s*`?\[?\s*FAIL\s*\]?`?\s*\|/;
 
 // Devuelve los números de criterio que el reporte marca como [FAIL], sin repetir y en orden.
 function criteriosConFail(reporte) {
