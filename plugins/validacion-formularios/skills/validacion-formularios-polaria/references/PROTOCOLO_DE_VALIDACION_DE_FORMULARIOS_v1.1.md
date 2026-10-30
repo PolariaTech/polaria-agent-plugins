@@ -2,6 +2,10 @@
 
 *Polaria | Técnico*
 
+| Versión | Creado por | Aprobado por | Fecha |
+|---|---|---|---|
+| v1.1 | Responsable Metodología | Pendiente | Pendiente |
+
 > **ESTADO DEL DOCUMENTO:** v1.1 en revisión (23/09/2026). La v1.0 aprobada el 14/09/2026 sigue siendo la publicada en Drive hasta que esta versión se apruebe.
 
 ## Glosario
@@ -160,9 +164,3 @@ Si una validación ya desplegada rompe algo en producción, se revierte el despl
 | `GATE_DE_CALIDAD_TECNICA_PRE_MERGE_v1.2.md` | Siempre, antes del `push` de un cambio que crea o modifica un formulario (criterio 7). |
 | `ADENDA_VERSIONAMIENTO_EXCEPCIONES_Y_ROLLBACK_v1.1.md` | Cuando hay que revertir una validación desplegada. |
 | `SPEC_AUTOMATIZACION_VALIDACION_FORMULARIOS_N8N_v1.0.md` | Spec para automatizar la prueba manual del Paso 5. Todavía no está construida, así que ese paso sigue siendo manual. |
-
-## Versión y revisión
-
-v1.1 · pendiente de aprobación · Responsable Técnico · próxima revisión: cada 6 meses, o antes si cambia la forma de construir formularios en Polaria
-
-_Historial: v1.0 (14/09/2026) con el stack fijo en Next.js/NestJS/Prisma y la revisión final en "Revisión de Pares". v1.1 (23/09/2026): se ejecuta con el plugin `validacion-formularios` (skill + hook del schema), sirve para cualquier stack (la skill detecta las librerías de cada repo y el dev las confirma), la revisión final pasa al Gate de Calidad Técnica antes del `push`, y el documento pasa al formato "Cómo funciona". Ajuste del 24/09/2026 (plugin 1.2.0): si el repo no tiene el schema, la skill lo busca en el repo de flujos y en las demás carpetas del workspace antes de entrevistar al dev, para no crear un schema duplicado._

@@ -1,8 +1,8 @@
 {
   "name": "validacion-formularios",
   "displayName": "Validacion de Formularios (Polaria)",
-  "version": "1.2.1",
-  "description": "Construye la validacion de formularios en 5 niveles desde un schema de campos entrevistado con el dev, con el stack que ya usa el repo, y avisa (hook) si el schema queda con texto de plantilla.",
+  "version": "1.3.0",
+  "description": "Construye la validacion de formularios en 5 niveles desde un schema de campos entrevistado con el dev, con el stack que ya usa el repo, avisa (hook) si el schema queda con texto de plantilla y verifica el Nivel 2 con un runner de Playwright (MCP incluido).",
   "author": {
     "name": "Polaria Tech",
     "url": "https://polaria.tech"
