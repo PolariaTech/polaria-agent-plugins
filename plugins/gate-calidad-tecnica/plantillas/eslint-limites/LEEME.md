@@ -28,6 +28,8 @@ El gate es de solo lectura: nunca genera el baseline. Lo genera el dev en una ra
   - Archivo heredado ya excedido que crece: `FAIL`. Si pasa de 1.000 líneas, el aviso lo dice, y no tiene excepción.
   - Archivo heredado ya excedido que no crece: advertencia que no bloquea.
   - `eslint-suppressions.json` que suma incumplimientos respecto de la rama principal: `FAIL`.
+  - `eslint-suppressions.json` que no es un JSON válido: `FAIL`.
+  - `eslint-suppressions.json` que no existía en la rama principal (el baseline inicial del repo): advertencia, porque no hay con qué comparar. La primera vez que un repo adopta el criterio, alguien debe revisar a mano que el baseline liste solo código que ya existía.
 - El revisor corre `npx eslint --max-warnings 0 <archivos del diff>` para las líneas por función y la complejidad. Lo congelado en `eslint-suppressions.json` no se reporta; una función nueva que pasa de 50 líneas o de 15 de complejidad, sí.
 
 ## Qué hacer cuando el gate rechaza

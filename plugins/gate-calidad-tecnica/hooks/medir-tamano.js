@@ -9,7 +9,8 @@
 // ni comentarios. El código que ya incumplía antes del cambio (trinquete) puede quedar igual o mejorar, pero
 // no crecer. Un archivo nuevo o que cruza el límite es FAIL; uno heredado que crece es FAIL; uno heredado que
 // no crece es ADVERTENCIA (no bloquea). Un eslint-suppressions.json que suma incumplimientos respecto de la
-// rama principal es FAIL: es la forma de esconder código nuevo bajo el trinquete.
+// rama principal, o que no es un JSON válido, es FAIL: es la forma de esconder código nuevo bajo el trinquete.
+// Si el archivo no existía en la rama principal (el baseline inicial) no hay con qué comparar: es ADVERTENCIA.
 // Las líneas por función y la complejidad cognitiva (R2 y R3) las mide ESLint, no este script.
 //
 // Salida: primera línea TAMANO: SIN_FAIL o TAMANO: CON_FAIL, y una línea por hallazgo:
@@ -34,46 +35,54 @@ function esCodigoMedible(ruta) {
 // Cuenta las líneas con código: ni en blanco ni solo comentario (igual que skipBlankLines y skipComments de
 // max-lines). Una línea con código y un comentario al final cuenta. Es una lectura de caracteres, no un
 // parser: reconoce // , /* */ y comillas simples, dobles y de plantilla.
-function contarLineasDeCodigo(texto) {
-  let cuenta = 0;
-  let enBloque = false;
-  let comilla = null;
-  for (const linea of texto.split(/\r?\n/)) {
-    let hayCodigo = false;
-    for (let i = 0; i < linea.length; i += 1) {
-      const caracter = linea[i];
-      const siguiente = linea[i + 1];
-      if (enBloque) {
-        if (caracter === '*' && siguiente === '/') {
-          enBloque = false;
-          i += 1;
-        }
-        continue;
-      }
-      if (comilla) {
-        hayCodigo = true;
-        if (caracter === '\\') i += 1;
-        else if (caracter === comilla) comilla = null;
-        continue;
-      }
-      if (caracter === '/' && siguiente === '/') break;
-      if (caracter === '/' && siguiente === '*') {
-        enBloque = true;
-        i += 1;
-        continue;
-      }
-      if (caracter === '"' || caracter === "'" || caracter === '`') {
-        comilla = caracter;
-        hayCodigo = true;
-        continue;
-      }
-      if (!/\s/.test(caracter)) hayCodigo = true;
-    }
-    // Una comilla simple o doble sin cerrar no pasa de línea; la de plantilla sí.
-    if (comilla && comilla !== '`') comilla = null;
-    if (hayCodigo) cuenta += 1;
+// El estado ({ enBloque, comilla, hayCodigo }) pasa de una línea a la siguiente: un comentario de bloque o una
+// plantilla pueden abarcar varias. Cada función devuelve el índice por el que sigue la lectura de la línea.
+function leerDentroDeBloque(linea, i, estado) {
+  if (linea[i] === '*' && linea[i + 1] === '/') {
+    estado.enBloque = false;
+    return i + 1;
   }
-  return cuenta;
+  return i;
+}
+
+function leerDentroDeComilla(linea, i, estado) {
+  estado.hayCodigo = true;
+  if (linea[i] === '\\') return i + 1;
+  if (linea[i] === estado.comilla) estado.comilla = null;
+  return i;
+}
+
+function leerCaracter(linea, i, estado) {
+  const caracter = linea[i];
+  if (caracter === '/' && linea[i + 1] === '/') return linea.length; // El resto de la línea es comentario.
+  if (caracter === '/' && linea[i + 1] === '*') {
+    estado.enBloque = true;
+    return i + 1;
+  }
+  if (caracter === '"' || caracter === "'" || caracter === '`') {
+    estado.comilla = caracter;
+    estado.hayCodigo = true;
+  } else if (!/\s/.test(caracter)) {
+    estado.hayCodigo = true;
+  }
+  return i;
+}
+
+function lineaTieneCodigo(linea, estado) {
+  estado.hayCodigo = false;
+  for (let i = 0; i < linea.length; i += 1) {
+    if (estado.enBloque) i = leerDentroDeBloque(linea, i, estado);
+    else if (estado.comilla) i = leerDentroDeComilla(linea, i, estado);
+    else i = leerCaracter(linea, i, estado);
+  }
+  // Una comilla simple o doble sin cerrar no pasa de línea; la de plantilla sí.
+  if (estado.comilla && estado.comilla !== '`') estado.comilla = null;
+  return estado.hayCodigo;
+}
+
+function contarLineasDeCodigo(texto) {
+  const estado = { enBloque: false, comilla: null, hayCodigo: false };
+  return texto.split(/\r?\n/).filter((linea) => lineaTieneCodigo(linea, estado)).length;
 }
 
 // archivo: { ruta, antes, despues }. "antes" es el contenido en la rama principal (null si el archivo es
@@ -142,10 +151,28 @@ function evaluarCambio({ archivos, suppressions }) {
     const hallazgo = evaluarArchivo(archivo);
     if (hallazgo) hallazgos.push(hallazgo);
   }
-  for (const { ruta, antes, despues } of suppressions) {
-    hallazgos.push(...compararSuppressions(ruta, antes, despues));
-  }
+  for (const suppression of suppressions) hallazgos.push(...evaluarSuppressions(suppression));
   return hallazgos;
+}
+
+function totalIncumplimientos(suppressions) {
+  return Object.values(suppressions || {})
+    .flatMap((reglas) => Object.values(reglas || {}))
+    .reduce((suma, datos) => suma + (Number(datos && datos.count) || 0), 0);
+}
+
+// suppression: { ruta, antes, despues, nuevo, ilegible }. "nuevo" es que el archivo no existía en la rama
+// principal (baseline inicial) e "ilegible" que el de HEAD no es un JSON válido.
+function evaluarSuppressions({ ruta, antes, despues, nuevo, ilegible }) {
+  if (ilegible) {
+    return [{ tipo: 'FAIL', regla: 'eslint-suppressions', ruta, texto: '(JSON inválido en HEAD: no se puede verificar el trinquete)' }];
+  }
+  if (nuevo) {
+    // No hay con qué comparar: el baseline inicial lo congela el dev y aquí solo se avisa para que alguien lo revise.
+    const total = totalIncumplimientos(despues);
+    return [{ tipo: 'ADVERTENCIA', regla: 'eslint-suppressions', ruta, texto: `(baseline inicial: ${total} incumplimientos congelados; no se compara con la rama principal, revísalo)` }];
+  }
+  return compararSuppressions(ruta, antes, despues);
 }
 
 function formatear(hallazgos) {
@@ -206,7 +233,16 @@ function main() {
   const suppressions = [];
   for (const { ruta } of cambios) {
     if (path.basename(ruta) === 'eslint-suppressions.json') {
-      suppressions.push({ ruta, antes: parsearJson(leerEn(base, ruta)), despues: parsearJson(leerEn('HEAD', ruta)) });
+      const textoAntes = leerEn(base, ruta);
+      const textoDespues = leerEn('HEAD', ruta);
+      const despues = parsearJson(textoDespues);
+      suppressions.push({
+        ruta,
+        antes: parsearJson(textoAntes),
+        despues,
+        nuevo: textoAntes === null,
+        ilegible: textoDespues !== null && despues === null,
+      });
     } else if (esCodigoMedible(ruta)) {
       const despues = leerEn('HEAD', ruta);
       if (despues !== null) archivos.push({ ruta, antes: leerEn(base, ruta), despues });

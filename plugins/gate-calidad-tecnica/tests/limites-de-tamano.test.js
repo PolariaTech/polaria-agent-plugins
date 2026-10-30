@@ -138,3 +138,21 @@ test('registrar-veredicto: el criterio 9 en FAIL queda en CRITERIOS_FAIL', () =>
   const reporte = '| **9. Tamaño y complejidad** | `[FAIL]` | src/nuevo.ts 301 > 300 |\n| **8. Build de Despliegue** | `[PASS]` | ok |';
   assert.deepStrictEqual(criteriosConFail(reporte), [9]);
 });
+
+test('un eslint-suppressions.json que no es JSON válido es FAIL y no se deja pasar en silencio', () => {
+  const carpeta = crearRepo({ 'eslint-suppressions.json': '{}\n' });
+  commitear(carpeta, { 'eslint-suppressions.json': '{ esto no es json' });
+  const { stdout } = medir(carpeta);
+  assert.match(stdout, /^TAMANO: CON_FAIL$/m);
+  assert.match(stdout, /^FAIL eslint-suppressions eslint-suppressions\.json \(JSON inválido en HEAD/m);
+});
+
+test('el baseline inicial (eslint-suppressions.json que no existía en main) es advertencia, no FAIL', () => {
+  const carpeta = crearRepo({});
+  commitear(carpeta, {
+    'eslint-suppressions.json': JSON.stringify({ 'src/viejo.ts': { 'max-lines': { count: 1 } }, 'src/otro.ts': { 'max-lines': { count: 2 } } }),
+  });
+  const { stdout } = medir(carpeta);
+  assert.match(stdout, /^TAMANO: SIN_FAIL$/m);
+  assert.match(stdout, /^ADVERTENCIA eslint-suppressions eslint-suppressions\.json \(baseline inicial: 3 incumplimientos congelados/m);
+});
