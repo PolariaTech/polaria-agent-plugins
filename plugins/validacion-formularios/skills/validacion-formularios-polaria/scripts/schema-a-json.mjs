@@ -86,9 +86,9 @@ export function convertFile(mdPath, outPath) {
   if (!outPath) throw new Error('Falta la ruta del JSON de salida');
   const abs = resolve(mdPath);
   const md = readFileSync(abs, 'utf8');
-  const archivo_origen = basename(abs);
-  const ruta_origen = relative(REPO_ROOT, abs).replace(/\\/g, '/');
-  const json = convertSchemaMarkdown(md, { archivo_origen, ruta_origen });
+  const archivoOrigen = basename(abs);
+  const rutaOrigen = relative(REPO_ROOT, abs).replace(/\\/g, '/');
+  const json = convertSchemaMarkdown(md, { archivo_origen: archivoOrigen, ruta_origen: rutaOrigen });
   mkdirSync(dirname(outPath), { recursive: true });
   writeFileSync(outPath, `${JSON.stringify(json, null, 2)}\n`, 'utf8');
   return { out: outPath, json };
