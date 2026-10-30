@@ -479,24 +479,19 @@ async function ejecutarCaso(adaptador, caso, contexto) {
   const { guardar, advertencia_confirmar: confirmar, cancelar, descarte_confirmar: descartar } = caso.inputs;
   const notaC8 = caso.case_id === 'C8' ? ' (verificar que el registro de prueba tenga la discrepancia entre IA y BD)' : '';
   const expected = `al intentar guardar aparece una advertencia que no desaparece sola ni con clic afuera y solo se cierra con su botón${caso.case_id === 'C8' ? ', porque las dos fuentes del campo no coinciden' : ''}`;
-  const guardia = await adaptador.protegerContraGuardado();
-  let hubo;
-  try {
-    await adaptador.clic(guardar);
-    hubo = await adaptador.esperarVisible(confirmar);
-    if (!hubo) {
-      const intentos = guardia.bloqueadas();
-      return falla(expected, `no apareció la advertencia${intentos.length ? ` y la aplicación intentó guardar (petición bloqueada: ${intentos.join(', ')})` : ''}${notaC8}`);
-    }
-    await adaptador.esperar(input.options.warning_wait_ms ?? ESPERA_ADVERTENCIA_MS);
-    if (!(await adaptador.visible(confirmar))) return falla(expected, 'la advertencia desapareció sola');
-    await adaptador.clicAfuera(caso.inputs.modal);
-    if (!(await adaptador.visible(confirmar))) return falla(expected, 'la advertencia se cerró con un clic afuera');
-    await adaptador.clic(confirmar);
-    if (!(await adaptador.esperarOculto(confirmar))) return falla(expected, 'el botón de confirmación no cerró la advertencia');
-  } finally {
-    await guardia.liberar();
+  const { guardia } = contexto;
+  const yaBloqueadas = guardia.bloqueadas().length;
+  await adaptador.clic(guardar);
+  if (!(await adaptador.esperarVisible(confirmar))) {
+    const intentos = guardia.bloqueadas().slice(yaBloqueadas);
+    return falla(expected, `no apareció la advertencia${intentos.length ? ` y la aplicación intentó guardar (petición bloqueada: ${intentos.join(', ')})` : ''}${notaC8}`);
   }
+  await adaptador.esperar(input.options.warning_wait_ms ?? ESPERA_ADVERTENCIA_MS);
+  if (!(await adaptador.visible(confirmar))) return falla(expected, 'la advertencia desapareció sola');
+  await adaptador.clicAfuera(caso.inputs.modal);
+  if (!(await adaptador.visible(confirmar))) return falla(expected, 'la advertencia se cerró con un clic afuera');
+  await adaptador.clic(confirmar);
+  if (!(await adaptador.esperarOculto(confirmar))) return falla(expected, 'el botón de confirmación no cerró la advertencia');
   // Descarta sin guardar: el único cierre del formulario permitido.
   if (cancelar && descartar) {
     try {
@@ -560,17 +555,23 @@ async function ejecutarConAdaptador(adaptadorRecibido, input, fabricaDeAdaptador
   } catch (error) {
     return terminar({ stage: error instanceof ErrorDeAmbiente ? error.stage : 'abrir', message: `no se pudo abrir el formulario: ${mensajeDeError(error)}` });
   }
-  for (const caso of plan) {
-    if (caso.reason) {
-      reporte.cases.push(noEjecutable(caso, 'el caso necesita datos del schema', caso.reason));
-      continue;
+  // La guardia cubre todo el recorrido, no solo C7 y C8: ningún caso puede guardar datos.
+  contexto.guardia = await adaptador.protegerContraGuardado();
+  try {
+    for (const caso of plan) {
+      if (caso.reason) {
+        reporte.cases.push(noEjecutable(caso, 'el caso necesita datos del schema', caso.reason));
+        continue;
+      }
+      try {
+        reporte.cases.push(await ejecutarCaso(adaptador, caso, contexto));
+      } catch (error) {
+        const motivo = error instanceof ErrorDeCaso ? (error.tipo === 'tiempo_agotado' ? `tiempo agotado: ${error.message}` : error.message) : `error inesperado: ${mensajeDeError(error)}`;
+        reporte.cases.push(noEjecutable(caso, 'el caso se ejecuta con los datos del schema', motivo));
+      }
     }
-    try {
-      reporte.cases.push(await ejecutarCaso(adaptador, caso, contexto));
-    } catch (error) {
-      const motivo = error instanceof ErrorDeCaso ? (error.tipo === 'tiempo_agotado' ? `tiempo agotado: ${error.message}` : error.message) : `error inesperado: ${mensajeDeError(error)}`;
-      reporte.cases.push(noEjecutable(caso, 'el caso se ejecuta con los datos del schema', motivo));
-    }
+  } finally {
+    await contexto.guardia.liberar();
   }
   return terminar(null);
 }

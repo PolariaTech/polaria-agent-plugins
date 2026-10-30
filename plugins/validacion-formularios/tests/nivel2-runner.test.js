@@ -153,6 +153,8 @@ function adaptadorSimulado(sobrescribe = {}) {
     llamadas,
     iniciarSesion: async () => { llamadas.push('iniciarSesion'); },
     abrir: async () => { llamadas.push('abrir'); },
+    protegerContraGuardado: async () => ({ bloqueadas: () => [], liberar: async () => {} }),
+    captura: async () => null,
     ...sobrescribe,
   };
 }
@@ -224,4 +226,123 @@ test('ejecutarConAdaptador: un caso con motivo sale not_executable con ese motiv
   assert.deepStrictEqual(reporte.cases.map((caso) => `${caso.case_id}:${caso.field_id}:${caso.result}`), ['C1:observaciones:not_executable', 'C2:observaciones:not_executable']);
   assert.match(reporte.cases[1].reason, /deshabilitado condicional/);
   assert.strictEqual(reporte.summary, 'could_not_validate');
+});
+
+// --- ejecutarCaso, a través de ejecutarConAdaptador -------------------------------------------
+// Los métodos del adaptador que un caso no necesita no se definen: si el caso los llamara, saldría
+// not_executable por "error inesperado" y la prueba lo vería.
+
+const casoEjecutado = (reporte, caseId, fieldId = null) => reporte.cases.find((caso) => caso.case_id === caseId && caso.field_id === fieldId);
+
+function adaptadorDeTab(recorrido) {
+  let paso = 0;
+  return adaptadorSimulado({
+    existe: async () => true,
+    enfocar: async () => {},
+    presionar: async () => { paso += 1; },
+    campoConFoco: async () => recorrido[paso] ?? null,
+  });
+}
+
+test('ejecutarCaso C1: el orden de Tab esperado da pass y un desvío da fail con la posición del desvío', async () => {
+  const { ejecutarConAdaptador } = await cargarRunner();
+  const ok = await ejecutarConAdaptador(adaptadorDeTab(['nombre', 'ciudad', 'capacidad_m3']), entrada(), null);
+  assert.strictEqual(casoEjecutado(ok, 'C1').result, 'pass');
+
+  const desviado = await ejecutarConAdaptador(adaptadorDeTab(['nombre', 'capacidad_m3', 'ciudad']), entrada(), null);
+  const c1 = casoEjecutado(desviado, 'C1');
+  assert.strictEqual(c1.result, 'fail');
+  assert.match(c1.observed, /primer desvío en la posición 2/);
+  assert.strictEqual(desviado.summary, 'fails');
+});
+
+function schemaConAdvertencia() {
+  const schema = clonar(leer(FIXTURE));
+  schema.tabla_3_prellenado = [{ campo: 'nombre', origen: { valor: 'extraccion_ia' } }];
+  schema.prueba_nivel_2.botones.advertencia_confirmar = localizadorTestid('btn-confirmar');
+  return schema;
+}
+
+function adaptadorDeAdvertencia({ apareceAdvertencia, bloqueadas = [] }) {
+  const clics = [];
+  let guardado = false;
+  return {
+    clics,
+    adaptador: adaptadorSimulado({
+      llenar: async () => {},
+      valorDe: async () => '',
+      clic: async (loc) => { clics.push(loc.testid || loc.nombre); if (loc.nombre === 'Guardar') guardado = true; },
+      clicAfuera: async () => {},
+      esperar: async () => {},
+      esperarVisible: async () => apareceAdvertencia,
+      visible: async () => true,
+      esperarOculto: async () => true,
+      // La petición bloqueada aparece recién al pulsar Guardar, como en la aplicación real.
+      protegerContraGuardado: async () => ({ bloqueadas: () => (guardado ? bloqueadas : []), liberar: async () => {} }),
+    }),
+  };
+}
+
+test('ejecutarCaso C7: la advertencia que no aparece da fail y nombra la petición de guardado bloqueada', async () => {
+  const { ejecutarConAdaptador } = await cargarRunner();
+  const { adaptador } = adaptadorDeAdvertencia({ apareceAdvertencia: false, bloqueadas: ['POST /api/bodegas'] });
+  const reporte = await ejecutarConAdaptador(adaptador, entrada({ schema: schemaConAdvertencia() }), null);
+  const c7 = casoEjecutado(reporte, 'C7');
+  assert.strictEqual(c7.result, 'fail');
+  assert.ok(c7.observed.includes('no apareció la advertencia y la aplicación intentó guardar (petición bloqueada: POST /api/bodegas)'), c7.observed);
+});
+
+test('ejecutarCaso C7: la advertencia que aparece, resiste y se cierra con su botón da pass', async () => {
+  const { ejecutarConAdaptador } = await cargarRunner();
+  const { adaptador, clics } = adaptadorDeAdvertencia({ apareceAdvertencia: true });
+  const reporte = await ejecutarConAdaptador(adaptador, entrada({ schema: schemaConAdvertencia() }), null);
+  assert.strictEqual(casoEjecutado(reporte, 'C7').result, 'pass');
+  assert.ok(clics.includes('btn-confirmar'));
+});
+
+test('ejecutarConAdaptador: la guardia se instala una vez para todo el recorrido y se libera al terminar, también si un caso falla', async () => {
+  const { ejecutarConAdaptador } = await cargarRunner();
+  const eventos = [];
+  const adaptador = adaptadorDeTab(['nombre', 'ciudad', 'capacidad_m3']);
+  adaptador.protegerContraGuardado = async () => {
+    eventos.push('instalada');
+    return { bloqueadas: () => [], liberar: async () => { eventos.push('liberada'); } };
+  };
+  await ejecutarConAdaptador(adaptador, entrada(), null);
+  assert.deepStrictEqual(eventos, ['instalada', 'liberada']);
+});
+
+// --- protegerContraGuardado (con una página simulada) ------------------------------------------
+
+test('protegerContraGuardado: aborta las peticiones que escriben, deja pasar las de lectura y las anota sin parámetros', async () => {
+  const { crearAdaptador } = await cargarRunner();
+  let manejador = null;
+  let patron = null;
+  const page = {
+    on: () => {},
+    route: async (p, m) => { patron = p; manejador = m; },
+    unroute: async (p, m) => { assert.strictEqual(p, patron); assert.strictEqual(m, manejador); manejador = null; },
+  };
+  const ruta = (method, url) => {
+    const resultado = { accion: null };
+    return {
+      resultado,
+      request: () => ({ method: () => method, url: () => url }),
+      fallback: () => { resultado.accion = 'fallback'; },
+      abort: (motivo) => { resultado.accion = `abort:${motivo}`; },
+    };
+  };
+  const guardia = await crearAdaptador(page, {}, null).protegerContraGuardado();
+
+  const lectura = ruta('GET', 'http://localhost:3001/api/bodegas?pagina=1');
+  await manejador(lectura);
+  assert.strictEqual(lectura.resultado.accion, 'fallback');
+
+  const escritura = ruta('POST', 'http://localhost:3001/api/bodegas?token=secreto');
+  await manejador(escritura);
+  assert.strictEqual(escritura.resultado.accion, 'abort:blockedbyclient');
+  assert.deepStrictEqual(guardia.bloqueadas(), ['POST /api/bodegas']);
+
+  await guardia.liberar();
+  assert.strictEqual(manejador, null);
 });
