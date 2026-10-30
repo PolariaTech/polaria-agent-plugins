@@ -18,6 +18,7 @@
 - `plugins/gate-calidad-tecnica/plantillas/eslint-limites/LEEME.md` — archivo nuevo
 - `plugins/gate-calidad-tecnica/.claude-plugin/plugin.json`
 - `plugins/gate-calidad-tecnica/.cursor-plugin/plugin.json`
+- `plugins/gate-calidad-tecnica/hooks/ronda-previa.js` — autorizada por el usuario el 2026-10-30
 
 ### Compartidos (cambio mínimo y aviso)
 - `.claude-plugin/marketplace.json`
