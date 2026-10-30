@@ -43,6 +43,7 @@ A diferencia de la versión original (atada siempre a "Mateo Support"), esta ski
    Este filtro depende de que el equipo cierre formalmente cada proyecto terminado a tiempo (skill "Cerrar Proyecto en Linear", Regla 1 del Protocolo de Ciclo de Vida en Linear) — si esa disciplina se rompe, un proyecto ya terminado pero sin cerrar aparecería como "activo" aquí.
 4. **Repo del proyecto:** con el proyecto ya elegido, `get_project` y lee la primera línea de su `description`. Si empieza con `Repo:` seguido de un repo entre backticks (p. ej. ``Repo: `PolariaTech/polaria-wms-api` ``), ese es el repo de todos los issues del proyecto: úsalo en el preview (campo `Repo`) y en las rutas de la Especificación técnica.
    - Si la descripción no tiene esa línea (proyectos que no están ligados a un solo repo, como una épica), pon `Repo: no aplica` en el preview y no preguntes.
+   - Si `get_project` falla o no devuelve la descripción, detente y avisa al usuario. Nunca uses `Repo: no aplica` como respaldo de un error.
    - Si el cambio que describe el usuario toca más de un repo (p. ej. un endpoint nuevo y la pantalla que lo usa), no lo metas en un solo issue: propón crear un issue por repo, cada uno en el proyecto de su repo, y vincúlalos con una relación `related` o `blocks` después de crearlos. Espera la decisión del usuario antes de seguir.
 
 ## Protocolo de ejecución
