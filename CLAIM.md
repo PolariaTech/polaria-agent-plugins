@@ -15,6 +15,7 @@
 - `plugins/gestion-linear/.cursor-plugin/plugin.json`
 - `.claude-plugin/marketplace.json`
 - `.cursor-plugin/marketplace.json`
+- `plugins/gestion-linear/tests/skills-repo.test.js` — autorizada por el usuario el 2026-10-30
 
 ### Compartidos (cambio mínimo y aviso)
 Ninguno.
