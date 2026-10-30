@@ -2,6 +2,15 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según [SemVer](https://semver.org/lang/es/). Las versiones anteriores a 1.2.0 están descritas en los commits del repo (`git log -- plugins/gestion-linear`).
 
+## [1.3.0] — 2026-10-30
+
+### Agregado
+- `linear-crear-issue`: lee el repo del issue de la primera línea de la descripción del proyecto (``Repo: `PolariaTech/...` ``), lo muestra en el preview (campo `Repo`) y lo usa en las rutas de la Especificación técnica. Si el cambio toca más de un repo, propone un issue por repo, cada uno en el proyecto de su repo, vinculados con `related` o `blocks`.
+- `linear-transicionar-estado`: MODO INICIO indica el nombre de rama que genera Linear (`gitBranchName`) y el repo del PR.
+
+### Sin cambios
+- `doc-updater`, `linear-crear-proyecto`, `linear-cerrar-proyecto` y los hooks no cambian. Los proyectos sin línea `Repo:` siguen funcionando igual (`Repo: no aplica`).
+
 ## [1.2.2] — 2026-10-28
 
 ### Cambiado

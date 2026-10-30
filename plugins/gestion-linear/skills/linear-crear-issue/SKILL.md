@@ -41,6 +41,10 @@ A diferencia de la versión original (atada siempre a "Mateo Support"), esta ski
    - Si no queda ninguno → detente y pregunta — no asumas ni inventes un proyecto.
 
    Este filtro depende de que el equipo cierre formalmente cada proyecto terminado a tiempo (skill "Cerrar Proyecto en Linear", Regla 1 del Protocolo de Ciclo de Vida en Linear) — si esa disciplina se rompe, un proyecto ya terminado pero sin cerrar aparecería como "activo" aquí.
+4. **Repo del proyecto:** con el proyecto ya elegido, `get_project` y lee la primera línea de su `description`. Si empieza con `Repo:` seguido de un repo entre backticks (p. ej. ``Repo: `PolariaTech/polaria-wms-api` ``), ese es el repo de todos los issues del proyecto: úsalo en el preview (campo `Repo`) y en las rutas de la Especificación técnica.
+   - Si la descripción no tiene esa línea (proyectos que no están ligados a un solo repo, como una épica), pon `Repo: no aplica` en el preview y no preguntes.
+   - Si `get_project` falla o no devuelve la descripción, detente y avisa al usuario. Nunca uses `Repo: no aplica` como respaldo de un error.
+   - Si el cambio que describe el usuario toca más de un repo (p. ej. un endpoint nuevo y la pantalla que lo usa), no lo metas en un solo issue: propón crear un issue por repo, cada uno en el proyecto de su repo, y vincúlalos con una relación `related` o `blocks` después de crearlos. Espera la decisión del usuario antes de seguir.
 
 ## Protocolo de ejecución
 
@@ -83,6 +87,7 @@ Título:     [título]
 Tipo:       [Bug / Feature / Improvement (+ segundo tipo si aplica la excepción)]
 Prioridad:  [Urgent / High / Medium / Low]
 Proyecto:   [proyecto confirmado en el Paso 1]
+Repo:       [repo leído de la descripción del proyecto, o "no aplica"]
 Estado:     Backlog
 Asignado a: [persona confirmada en el Paso 1]
 Especificación: [completa / mínima / no aplica (Question)] — [motivo en una línea]
@@ -280,6 +285,7 @@ Sugiere dividir si: la estimación cae en ≥XL, mezcla varias tareas distintas,
 
 - **Nunca preguntar** qué es el problema o cómo reproducirlo — eso está en el contexto disponible.
 - **Siempre preguntar (o inferir y confirmar en una línea) el proyecto destino** — nunca asumir en silencio.
+- **El repo sale del proyecto, nunca de una etiqueta ni de una pregunta:** se lee de la línea `Repo:` de la descripción del proyecto. Un issue que toca dos repos se divide en un issue por repo.
 - **Nunca preguntar quién debe quedar asignado** salvo que el proyecto no tenga lead — por defecto, el lead resuelto vía `get_project`.
 - **Nunca preguntar datos de estimación** — infiérelos del contexto; pregunta solo si falta algo crítico.
 - **Nunca crear** sin mostrar el preview y recibir confirmación.
