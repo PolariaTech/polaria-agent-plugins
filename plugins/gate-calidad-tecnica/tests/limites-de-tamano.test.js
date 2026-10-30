@@ -156,3 +156,16 @@ test('el baseline inicial (eslint-suppressions.json que no existía en main) es 
   assert.match(stdout, /^TAMANO: SIN_FAIL$/m);
   assert.match(stdout, /^ADVERTENCIA eslint-suppressions eslint-suppressions\.json \(baseline inicial: 3 incumplimientos congelados/m);
 });
+
+// Los números esperados son los que ESLint 9.24.0 (max-lines con skipBlankLines y skipComments) dio sobre estas
+// mismas muestras. En una comparación con los 48 archivos .js de este repo, el conteo del script y el de ESLint
+// coincidieron en todos.
+test('contarLineasDeCodigo coincide con max-lines de ESLint: comentarios, plantillas multilínea, comillas y regex', () => {
+  const muestra = "// comentario\nconst a = 1; // al final\n/* bloque\n   varias líneas */\nconst b = `plantilla\n// no es comentario\ny sigue`;\n\nconst c = \"http://x.com/*no*/\";\nconst re = /\\/\\*/;\n/** doc */ const d = 2;\nconst e = 'it\\'s'; /* x */ const f = 3;\n";
+  assert.strictEqual(contarLineasDeCodigo(muestra), 8);
+});
+
+test('contarLineasDeCodigo coincide con max-lines de ESLint: shebang, regex con comillas invertidas y plantillas anidadas', () => {
+  const muestra = "#!/usr/bin/env node\n// regex con comillas invertidas y plantilla anidada\nconst re = /^\\s*[-*]\\s*`([^`]+)`/;\nconst dividir = (a, b) => a / b; // una división, no una regex\nconst lista = [1, 2].map((n) => `<${[n].map((m) => `(${m})`).join(',')}>`);\nconst t = `una ${lista.length > 0 ? `con ${lista[0]}` : 'vacía'}\n// esto es texto de la plantilla\ny cierra`;\n// comentario final\n";
+  assert.strictEqual(contarLineasDeCodigo(muestra), 6);
+});

@@ -35,7 +35,7 @@ function esCodigoMedible(ruta) {
 // Cuenta las líneas con código: ni en blanco ni solo comentario (igual que skipBlankLines y skipComments de
 // max-lines). Una línea con código y un comentario al final cuenta. Es una lectura de caracteres, no un
 // parser: reconoce // , /* */ y comillas simples, dobles y de plantilla.
-// El estado ({ enBloque, comilla, hayCodigo }) pasa de una línea a la siguiente: un comentario de bloque o una
+// El estado ({ enBloque, comilla, hayCodigo, ultimo, pila }) pasa de una línea a la siguiente: un comentario de bloque o una
 // plantilla pueden abarcar varias. Cada función devuelve el índice por el que sigue la lectura de la línea.
 function leerDentroDeBloque(linea, i, estado) {
   if (linea[i] === '*' && linea[i + 1] === '/') {
@@ -48,8 +48,49 @@ function leerDentroDeBloque(linea, i, estado) {
 function leerDentroDeComilla(linea, i, estado) {
   estado.hayCodigo = true;
   if (linea[i] === '\\') return i + 1;
+  if (estado.comilla === '`' && linea[i] === '$' && linea[i + 1] === '{') {
+    // Una expresión ${...} es código: se anota en la pila para volver a la plantilla cuando cierre.
+    estado.pila.push({ llaves: 0 });
+    estado.comilla = null;
+    estado.ultimo = '{';
+    return i + 1;
+  }
   if (linea[i] === estado.comilla) estado.comilla = null;
   return i;
+}
+
+// Dentro de una expresión ${...}, cuenta las llaves; la que la cierra devuelve la lectura a la plantilla.
+function seguirLlaves(caracter, estado) {
+  const expresion = estado.pila[estado.pila.length - 1];
+  if (caracter === '{') {
+    expresion.llaves += 1;
+  } else if (expresion.llaves === 0) {
+    estado.pila.pop();
+    estado.comilla = '`';
+  } else {
+    expresion.llaves -= 1;
+  }
+  estado.hayCodigo = true;
+  estado.ultimo = caracter;
+}
+
+// Una "/" abre una regex (y no es una división) si antes hay un operador, un paréntesis que abre, una coma, un
+// punto y coma, una llave, el inicio del archivo o una palabra como return o typeof.
+function empiezaRegex(linea, i, estado) {
+  if (estado.ultimo === null || '(,=:[!&|?{};+-*%<>~^'.includes(estado.ultimo)) return true;
+  return /\b(return|typeof|case|in|of|delete|void|throw|new)\s*$/.test(linea.slice(0, i));
+}
+
+// Devuelve el índice del "/" que cierra la regex de esta línea, o -1 si no cierra (entonces era una división).
+function cerrarRegex(linea, i) {
+  let enClase = false;
+  for (let j = i + 1; j < linea.length; j += 1) {
+    if (linea[j] === '\\') j += 1;
+    else if (linea[j] === '[') enClase = true;
+    else if (linea[j] === ']') enClase = false;
+    else if (linea[j] === '/' && !enClase) return j;
+  }
+  return -1;
 }
 
 function leerCaracter(linea, i, estado) {
@@ -59,11 +100,25 @@ function leerCaracter(linea, i, estado) {
     estado.enBloque = true;
     return i + 1;
   }
+  if (estado.pila.length && (caracter === '{' || caracter === '}')) {
+    seguirLlaves(caracter, estado);
+    return i;
+  }
+  if (caracter === '/' && empiezaRegex(linea, i, estado)) {
+    const cierre = cerrarRegex(linea, i);
+    if (cierre !== -1) {
+      estado.hayCodigo = true;
+      estado.ultimo = '/';
+      return cierre;
+    }
+  }
   if (caracter === '"' || caracter === "'" || caracter === '`') {
     estado.comilla = caracter;
     estado.hayCodigo = true;
+    estado.ultimo = caracter;
   } else if (!/\s/.test(caracter)) {
     estado.hayCodigo = true;
+    estado.ultimo = caracter;
   }
   return i;
 }
@@ -81,8 +136,10 @@ function lineaTieneCodigo(linea, estado) {
 }
 
 function contarLineasDeCodigo(texto) {
-  const estado = { enBloque: false, comilla: null, hayCodigo: false };
-  return texto.split(/\r?\n/).filter((linea) => lineaTieneCodigo(linea, estado)).length;
+  const estado = { enBloque: false, comilla: null, hayCodigo: false, ultimo: null, pila: [] };
+  const lineas = texto.split(/\r?\n/);
+  if (lineas[0].startsWith('#!')) lineas.shift(); // La línea del intérprete cuenta como comentario, igual que en ESLint.
+  return lineas.filter((linea) => lineaTieneCodigo(linea, estado)).length;
 }
 
 // archivo: { ruta, antes, despues }. "antes" es el contenido en la rama principal (null si el archivo es
