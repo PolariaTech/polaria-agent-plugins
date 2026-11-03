@@ -37,11 +37,11 @@ Si `linear-transicionar-estado` también se activa por la misma frase, déjala m
    - `8`: el prefijo de la rama no es el del dev (o no se pudo determinar). Corrige el prefijo como dice el paso 2 y repite.
    - `6`: hay cambios sin guardar en la rama actual. Dile al dev cuáles son y que los guarde (commit) antes; no los descartes ni los muevas tú.
    - `7`: la rama actual tiene un reclamo activo de otro ticket. **Pregúntale al dev una sola vez** si ese trabajo terminó o lo deja pausado. Si terminó, ejecuta `paralelo.js liberar --volver` (Modo D) y repite este paso. Si lo deja pausado, repite este paso con `--pausar`: el reclamo de ese ticket sigue vigente.
-7. **Reclama.** Ejecuta `node "<raíz del plugin>/scripts/paralelo.js" reclamar --issue <ID> --zonas "<zonas>" --nuevos "<archivos que el ticket crea>" --compartidos "<compartidos>" --confianza <N> --responsable "<asignado>" --porque "<una frase>"`. El comando vuelve a cruzar con las otras ramas, escribe el `CLAIM.md`, lo commitea como primer commit y publica la rama. NUNCA escribas el `CLAIM.md` a mano. Según el código de salida:
+7. **Reclama.** Ejecuta `node "<raíz del plugin>/scripts/paralelo.js" reclamar --issue <ID> --zonas "<zonas>" --compartidos "<compartidos>" --confianza <N> --responsable "<asignado>" --porque "<una frase>"`. El comando vuelve a cruzar con las otras ramas, escribe el `CLAIM.md`, lo commitea como primer commit y publica la rama. NUNCA escribas el `CLAIM.md` a mano. Según el código de salida:
    - `0`: listo.
    - `3`: apareció un choque entre el paso 5 y ahora; vuelve al paso 5.
    - `5`: el commit quedó pero el push falló. Lee el error, díselo al dev y, si lo bloqueó el gate de calidad, sigue sus instrucciones. Los demás no ven el reclamo hasta que la rama se publique.
-   - `2`: error de uso; corrige el argumento que dice el mensaje. Si rechaza una carpeta, lista los archivos con Glob y repite; si dice que una ruta no existe, corrígela o agrégala a `--nuevos`.
+   - `2`: error de uso; corrige el argumento que dice el mensaje. Si rechaza una carpeta, lista los archivos con Glob y repite; si dice que una ruta no existe en `origin/main`, quítala de `--zonas` y `--compartidos`: esa ruta no se reclama y el archivo se crea sin pasar por el `CLAIM.md`. Si dice que `--nuevos` ya no existe, repite el comando sin esa bandera.
 8. **Marca el Sheet (solo si el ticket es `REQ-NNN`).** Sigue `references/sheet-requerimientos.md`: Estado = `En Progreso` y Asignado a = el dev. Los `POL-X` no se marcan aquí.
 9. **Informa al dev en 4 líneas:** zonas reclamadas, confianza, rama activa y si hay solapes en compartidos. No pegues el `CLAIM.md` completo.
 
@@ -91,7 +91,7 @@ Se activa cuando el dev dice que terminó de escribir el código de un `REQ-NNN`
 
 ## Modo E: Salir de las zonas (cuando un hook o el pre-commit rechaza)
 
-Se activa cuando un hook rechaza una edición con "no puedes editar ... fuera de las zonas", cuando el pre-commit rechaza un commit, o cuando `solapes` dice "ARCHIVOS PROPIOS FUERA DE LO QUE ... RECLAMÓ". Solo el usuario puede ampliar el alcance.
+Se activa cuando un hook rechaza una edición con "no puedes editar ... fuera de las zonas", cuando el pre-commit rechaza un commit, o cuando `solapes` dice "ARCHIVOS PROPIOS FUERA DE LO QUE ... RECLAMÓ". Solo el usuario puede ampliar el alcance. Un archivo que `origin/main` no tiene NO activa este modo: se crea y se edita sin reclamo.
 
 1. Detén la edición. NUNCA busques otro camino para escribir ese archivo: ni por la terminal, ni editando el `CLAIM.md`, ni con `--no-verify`.
 2. Dile al dev, en 3 líneas: qué archivo, que está fuera del `CLAIM.md` y por qué lo necesitas.
@@ -109,7 +109,7 @@ Se activa cuando un hook rechaza una edición con "no puedes editar ... fuera de
 - NUNCA crees el PR con el `CLAIM.md` puesto: libéralo antes con `paralelo.js liberar` (sin `--volver`).
 - NUNCA armes el prefijo de la rama con el usuario del sistema operativo: sale de `paralelo.js prefijo`.
 - NUNCA descargues cambios con un `git pull` que cree un commit de merge, ni con `--force`: solo `paralelo.js sincronizar` (`--ff-only`).
-- NUNCA reclames zonas inventadas: cada ruta DEBE existir en el repo o ser un archivo nuevo que el ticket pide crear (va en `--nuevos`).
+- NUNCA reclames una ruta que no existe en `origin/main`. El reclamo solo cubre archivos que ya están en `origin/main`. Los archivos que el ticket crea no se reclaman: créalos y edítalos sin pasar por el `CLAIM.md` (el hook y el pre-commit los dejan pasar). Dos ramas pueden crear la misma ruta nueva sin verse: ese choque aparece en el merge, no antes. Si no se puede consultar `origin/main` (sin rama principal remota o git falla), el hook exige el reclamo como siempre.
 - NUNCA reclames una carpeta para evitarte listar archivos. `--permitir-carpetas` solo se usa cuando los archivos no se pueden conocer antes de trabajar, y el motivo va en `--porque`.
 - NUNCA crees carpetas ni worktrees por rama, y nunca uses `git push --force` ni `git branch -D`.
 - NUNCA busques reclamos en Linear ni en el Sheet: los reclamos activos salen solo del `CLAIM.md` de las ramas (`importar-claims`).

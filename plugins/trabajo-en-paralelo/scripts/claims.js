@@ -118,8 +118,8 @@ function rutaValida(ruta) {
   return Boolean(ruta) && ruta !== '/' && !/(^|\/)\.\.(\/|$)/.test(ruta) && !/[`\n\r]/.test(ruta) && !/^[a-zA-Z]:/.test(ruta);
 }
 
-function construirClaim({ issue, rama, responsable, confianza, zonas, compartidos = [], porque = '', nuevos = [], carpetasPermitidas = [] }) {
-  const nota = (r) => (nuevos.includes(r) ? ' — archivo nuevo' : carpetasPermitidas.includes(r) ? ' — carpeta (excepción)' : '');
+function construirClaim({ issue, rama, responsable, confianza, zonas, compartidos = [], porque = '', carpetasPermitidas = [] }) {
+  const nota = (r) => (carpetasPermitidas.includes(r) ? ' — carpeta (excepción)' : '');
   const lista = (rutas) => (rutas.length ? rutas.map((r) => `- \`${r}\`${nota(r)}`).join('\n') : 'Ninguno.');
   return [
     '<!-- polaria-reclamo v1 -->',
@@ -183,21 +183,21 @@ function reclamar(repo, { issue, responsable, confianza, zonas, compartidos = []
   if (!listaZonas.length) return { codigo: 2, mensaje: 'Falta --zonas: lista al menos una zona.' };
   const invalida = [...listaZonas, ...listaCompartidos].find((z) => !rutaValida(z.split('#')[0]));
   if (invalida) return { codigo: 2, mensaje: `Ruta no válida: "${invalida}". Usa rutas relativas a la raíz del repo, sin "..", sin "/" a secas y sin comillas invertidas.` };
-  const listaNuevos = (nuevos || []).map((z) => lib.normalizarRuta(z.trim())).filter(Boolean);
+  if ((nuevos || []).length) {
+    return { codigo: 2, mensaje: '--nuevos ya no existe: el reclamo solo cubre archivos que existen en origin/main y los archivos nuevos se crean sin reclamar. Repite el comando sin --nuevos y sin los archivos nuevos en --zonas.' };
+  }
   const carpetas = listaZonas.filter((z) => zonaDeTexto(z).tipo === 'carpeta');
   if (carpetas.length && !permitirCarpetas) {
     return { codigo: 2, mensaje: `El reclamo debe listar archivos exactos, no carpetas: ${carpetas.join(', ')}. Lista cada archivo con Glob (código, pruebas, tipos, fixtures, documentación). Si de verdad no se puede saber (por ejemplo, archivos generados), repite con --permitir-carpetas y explica el motivo en --porque.` };
   }
   if (carpetas.length && !porque.trim()) return { codigo: 2, mensaje: 'Con --permitir-carpetas, --porque debe explicar por qué no se pueden listar los archivos.' };
-  const rutasDeArchivo = listaZonas.filter((z) => zonaDeTexto(z).tipo !== 'carpeta').map((z) => z.split('#')[0]);
-  const yaExisten = listaNuevos.filter((r) => fs.existsSync(path.join(repo.raiz, r)));
-  if (yaExisten.length) return { codigo: 2, mensaje: `Estos archivos ya existen y no pueden ir en --nuevos: ${yaExisten.join(', ')}.` };
-  const sinExistir = [...new Set(rutasDeArchivo)].filter((r) => !fs.existsSync(path.join(repo.raiz, r)) && !listaNuevos.includes(r));
-  if (sinExistir.length) {
-    return { codigo: 2, mensaje: `Estas rutas no existen en el repo: ${sinExistir.join(', ')}. Si el ticket pide crearlas, pásalas también en --nuevos "ruta1,ruta2"; si no, corrige la ruta.` };
+  // POL-403: el reclamo solo cubre archivos que ya existen en origin/main. Los que el ticket crea se crean sin reclamar.
+  const rutasDeArchivo = [...new Set([...listaZonas, ...listaCompartidos].filter((z) => zonaDeTexto(z).tipo !== 'carpeta').map((z) => z.split('#')[0]))];
+  const enMain = new Set(lib.rutasEnMain(repo.raiz, rutasDeArchivo));
+  const ausentes = rutasDeArchivo.filter((r) => !enMain.has(r));
+  if (ausentes.length) {
+    return { codigo: 2, mensaje: `Estas rutas no existen en origin/main: ${ausentes.join(', ')}. Esa ruta no se reclama: quítala de --zonas y --compartidos y créala o edítala sin pasar por el CLAIM.md. Si la ruta debía existir, corrígela. Si otro dev la acaba de subir a main, corre "paralelo.js sincronizar" y repite.` };
   }
-  const sobrantes = listaNuevos.filter((r) => !rutasDeArchivo.includes(r));
-  if (sobrantes.length) return { codigo: 2, mensaje: `--nuevos trae rutas que no están en --zonas: ${sobrantes.join(', ')}.` };
   if (!Number.isInteger(confianza) || confianza < 1 || confianza > 100) return { codigo: 2, mensaje: 'Falta --confianza: un número entero entre 1 y 100.' };
 
   const importacion = importarClaims(repo, { fetch: true });
@@ -211,7 +211,7 @@ function reclamar(repo, { issue, responsable, confianza, zonas, compartidos = []
   }
 
   const preCommit = instalarPreCommit(repo.raiz);
-  const texto = construirClaim({ issue: issueFinal, rama: repo.rama, responsable, confianza, zonas: listaZonas, compartidos: listaCompartidos, porque, nuevos: listaNuevos, carpetasPermitidas: carpetas });
+  const texto = construirClaim({ issue: issueFinal, rama: repo.rama, responsable, confianza, zonas: listaZonas, compartidos: listaCompartidos, porque, carpetasPermitidas: carpetas });
   fs.writeFileSync(lib.rutaDelClaim(repo.raiz), texto);
   lib.registrarAutorizado(repo, lib.hashDeClaim(texto));
   const agregado = correrGit(repo.raiz, ['add', '--', lib.ARCHIVO_RECLAMO]);
@@ -246,8 +246,15 @@ async function ampliar(repo, rutas, { confirmar }) {
   if (!nuevas.length) return { codigo: 2, mensaje: 'Uso: paralelo.js autorizar <ruta> [<ruta>...] (carpetas terminadas en /).' };
   const invalida = nuevas.find((r) => !rutaValida(r.split('#')[0]));
   if (invalida) return { codigo: 2, mensaje: `Ruta no válida: "${invalida}".` };
-  const faltantes = nuevas.filter((r) => !lib.claimCubreArchivo(claim, r.split('#')[0]));
-  if (!faltantes.length) return { codigo: 0, mensaje: 'Todas esas rutas ya están dentro de lo que reclamaste: no hay nada que ampliar.' };
+  const sinCubrir = nuevas.filter((r) => !lib.claimCubreArchivo(claim, r.split('#')[0]));
+  if (!sinCubrir.length) return { codigo: 0, mensaje: 'Todas esas rutas ya están dentro de lo que reclamaste: no hay nada que ampliar.' };
+  // POL-403: lo que origin/main no tiene no se reclama; no hace falta ampliar ni pedir confirmación por eso.
+  // Las carpetas (terminan en /) no son un archivo concreto: se amplían como siempre.
+  const rutasConcretas = sinCubrir.filter((r) => zonaDeTexto(r).tipo !== 'carpeta').map((r) => r.split('#')[0]);
+  const enMain = new Set(lib.rutasEnMain(repo.raiz, rutasConcretas));
+  const libres = sinCubrir.filter((r) => zonaDeTexto(r).tipo !== 'carpeta' && !enMain.has(r.split('#')[0]));
+  const faltantes = sinCubrir.filter((r) => !libres.includes(r));
+  if (!faltantes.length) return { codigo: 0, mensaje: `No hay nada que ampliar: ${libres.join(', ')} no existe(n) en origin/main y esa ruta no se reclama. Créala(s) o edítala(s) sin pasar por el CLAIM.md.` };
 
   const importacion = importarClaims(repo, { fetch: true });
   const choques = buscarChoques({ reclamos: importacion.reclamos }, issue, faltantes.map(zonaDeTexto));
@@ -275,6 +282,7 @@ async function ampliar(repo, rutas, { confirmar }) {
     return { codigo: 2, mensaje: `No pude crear el commit de la ampliación (${resultado.paso}): ${resultado.error}` };
   }
   const salida = [`CLAIM.md ampliado con ${faltantes.join(', ')} (commit local hecho).`];
+  if (libres.length) salida.push(`No se reclamaron ${libres.join(', ')}: no existe(n) en origin/main.`);
   const nueva = importarClaims(repo, { fetch: resultado.subido });
   const despues = buscarChoques({ reclamos: nueva.reclamos }, issue, faltantes.map(zonaDeTexto)).filter((c) => c.nivel === 'ZONA');
   despues.forEach((c) => salida.push(`AVISO: después de publicar apareció un solape: ${formatearChoque(c)}. Coordina con esa persona.`));

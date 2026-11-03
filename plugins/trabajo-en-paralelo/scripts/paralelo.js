@@ -15,9 +15,9 @@
 //                                              Cambia a la rama del ticket dentro del mismo proyecto (nueva desde la principal, sin tracking).
 //                                              Una rama nueva de un REQ-NNN debe empezar con el prefijo del dev (código 8 si no).
 //                                              Códigos: 6 hay cambios sin guardar, 7 la rama actual tiene un reclamo activo.
-//   node paralelo.js reclamar --zonas "src/a.ts,src/b.ts#fn,src/nuevo.ts" --nuevos "src/nuevo.ts" --confianza 80 [--compartidos "package.json"] [--responsable R]
+//   node paralelo.js reclamar --zonas "src/a.ts,src/b.ts#fn" --confianza 80 [--compartidos "package.json"] [--responsable R]
 //                             [--issue POL-1] [--porque "texto"] [--permitir-carpetas (excepción; exige --porque)]
-//                             Las zonas son archivos exactos que existen; los que se van a crear van también en --nuevos.
+//                             Las zonas son archivos exactos que existen en origin/main. Los archivos nuevos no se reclaman: se crean sin pasar por el CLAIM.md.
 //                                              Crea el CLAIM.md, lo commitea y publica la rama. Se detiene si choca.
 //   node paralelo.js autorizar <ruta>...       Amplía el CLAIM.md. SOLO lo corre una persona: pide confirmación en una
 //                                              terminal interactiva; sin terminal no hace nada.

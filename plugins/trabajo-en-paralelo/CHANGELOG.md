@@ -2,6 +2,17 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según [SemVer](https://semver.org/lang/es/).
 
+## [1.4.0] — 2026-11-03
+
+### Cambiado (POL-403)
+- **El reclamo solo cubre archivos que existen en `origin/main`.** Una ruta que main no tiene se crea y se edita sin pasarla por el `CLAIM.md`: el hook `limitar-escritura.js` y el pre-commit la dejan pasar. Una ruta que sí está en main y no está en zonas ni compartidos se rechaza igual que antes. "Existe en main" se mira en la última copia local de `origin/main` (los hooks no hacen fetch), nunca en la rama ni en el árbol de trabajo. Si no se puede consultar, se exige el reclamo como antes.
+- `paralelo.js reclamar` rechaza (código 2) las rutas de archivo que `origin/main` no tiene ("esa ruta no se reclama") y ya no acepta `--nuevos` (responde que no existe). El `CLAIM.md` ya no trae la marca "archivo nuevo".
+- `paralelo.js autorizar` no pregunta ni amplía por rutas que `origin/main` no tiene; si se mezclan, solo pregunta por las de main.
+- `solapes` y `liberar` no cuentan como "fuera de lo reclamado" los archivos que main no tiene.
+- La skill (`SKILL.md`, Modo A paso 7, Modo E y Restricciones) y las referencias `estimacion-de-zonas.md` y `formato-reclamo.md` reflejan la regla nueva.
+- Costo aceptado: dos ramas pueden crear la misma ruta nueva sin verse en el `CLAIM.md`; el choque aparece en el merge.
+- Sin cambios: el rechazo de editar el `CLAIM.md` a mano y el de tocar el plugin, su caché y los hooks de git durante un reclamo activo.
+
 ## [1.3.0] — 2026-10-28
 
 ### Cambiado

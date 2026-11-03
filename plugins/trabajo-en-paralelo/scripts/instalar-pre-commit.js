@@ -3,7 +3,7 @@
 // reclama). Es la cuarta capa del límite de escritura: rechaza el commit de archivos fuera de las zonas del CLAIM.md,
 // incluidos los escritos por Bash. Es idempotente: se puede correr en cada sesión.
 //
-// - Copia lib.js y verificar-commit.js a <git-common-dir>/polaria-paralelo/bin/, así el hook no depende de la ruta del
+// - Copia lib.js, main-remoto.js y verificar-commit.js a <git-common-dir>/polaria-paralelo/bin/, así el hook no depende de la ruta del
 //   plugin (que cambia con cada versión) y queda actualizado en cada sesión.
 // - Escribe <hooks>/pre-commit, que ejecuta esa copia. Nunca pisa un pre-commit ajeno ni escribe dentro del repo
 //   versionado (core.hooksPath de husky u otro): en esos casos solo avisa.
@@ -40,7 +40,7 @@ function instalarPreCommit(directorio) {
   // Los scripts se copian aunque el hook no se pueda instalar: así se pueden enlazar a mano.
   const bin = path.join(comun, 'polaria-paralelo', 'bin');
   fs.mkdirSync(bin, { recursive: true });
-  for (const script of ['lib.js', 'verificar-commit.js']) fs.copyFileSync(path.join(__dirname, script), path.join(bin, script));
+  for (const script of ['lib.js', 'main-remoto.js', 'verificar-commit.js']) fs.copyFileSync(path.join(__dirname, script), path.join(bin, script));
   // Los scripts son CommonJS: sin esto heredan el "type": "module" del package.json del repo y fallan.
   fs.writeFileSync(path.join(bin, 'package.json'), '{ "type": "commonjs" }\n');
   fs.writeFileSync(path.join(bin, 'paralelo-ruta.txt'), path.join(__dirname, 'paralelo.js'));

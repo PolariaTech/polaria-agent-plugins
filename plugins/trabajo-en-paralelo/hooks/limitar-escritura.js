@@ -59,6 +59,8 @@ function evaluar(evento) {
 
   if (!claim || claim.estado !== 'ACTIVO' || !destino.relativa) return null;
   if (lib.claimCubreArchivo(claim, destino.relativa)) return null;
+  // POL-403: el reclamo solo protege archivos que ya existen en origin/main; uno que main no tiene se crea y edita libre.
+  if (!lib.existeEnMain(destino.repo.raiz, destino.relativa)) return null;
   return (
     `Trabajo en paralelo: no puedes editar \`${destino.relativa}\`: está fuera de las zonas y compartidos del CLAIM.md de esta rama (${claim.issue || destino.repo.rama}). ` +
     'No busques otro camino para escribirlo (ni por la terminal ni tocando el CLAIM.md). Dile al usuario que ese archivo está fuera de lo reclamado y pregúntale si autoriza ampliarlo. ' +

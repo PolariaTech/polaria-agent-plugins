@@ -377,5 +377,5 @@ module.exports = {
   leerEvento,
   directorioDelEvento,
   resolverArchivoDeEdicion,
-  salir,
+  salir, ...require('./main-remoto'), // + ramaBase, rutasEnMain, existeEnMain (POL-403)
 };
