@@ -22,20 +22,20 @@ La definición de cada criterio (cuándo es `FAIL`) vive en la sección 6 de `..
 3. **Secretos (3):** ninguna llave, token, contraseña ni credencial en el código, ni siquiera de prueba. Léelos de una variable de entorno. Si necesitas una credencial nueva, usa la skill `nomenclatura-credenciales-polaria` para nombrarla.
 4. **Código de debug (4):** no dejes `console.log`, `print`, `debugger`, `TODO borrar` ni código comentado o muerto. Si necesitas ver un valor mientras trabajas, bórralo antes de dar el cambio por terminado.
 5. **Convenciones (5):** copia el estilo del archivo y del lenguaje donde escribes: comillas, punto y coma, orden de imports, nombres de archivos. Corre el formateador y el linter del repo si existen.
-6. **Pruebas (6):** escribe la prueba en el mismo cambio que el código, no después. Si es un Bug, escribe primero el test que reproduce el error y comprueba que falla. Corre las pruebas del repo y conserva la salida real. Si el cambio no se puede automatizar, documenta una prueba manual con pasos y resultado.
+6. **Pruebas (6):** escribe la prueba en el mismo cambio que el código, no después. Si es un Bug, escribe primero el test que reproduce el error y comprueba que falla. Cada archivo JS/TS que escribas lleva su archivo de prueba junto a él (`precio.test.ts`) o en `__tests__/`, `tests/`, `test/` o `spec/`. Corre las pruebas del repo y conserva la salida real. Si el cambio no se puede automatizar, documenta una prueba manual con pasos y resultado.
 7. **Formularios (7):** ya cubierto en «Antes de escribir», paso 3.
 8. **Build (8):** antes de dar el cambio por terminado, corre el comando de build del repo. Las pruebas no revisan los tipos y el build sí. Después corre `git status` y comprueba que el build no dejó archivos versionados modificados.
 9. **Tamaño y complejidad (9):** un archivo de código no pasa de 300 líneas (sin blancos ni comentarios), una función no pasa de 50 líneas ni de complejidad cognitiva 15. Si un archivo va a pasar del límite, créalo dividido desde el principio. Nunca agregues código a un archivo que ya pasa del límite: extrae a un archivo nuevo. Nunca edites `eslint-suppressions.json` para esconder un incumplimiento.
 
 ## El hook de aviso
 
-El plugin trae un hook que, después de cada edición, avisa de los criterios 3, 4 y 9 que se miden sin juicio. Si el hook te devuelve un aviso:
+El plugin trae un hook que, después de cada edición, avisa de los criterios 3, 4, 6 y 9 que se miden sin juicio. En el 6 solo comprueba que exista el archivo de prueba del archivo que editaste, no que lo cubra. Si el hook te devuelve un aviso:
 
 1. Corrige exactamente lo que dice, en el mismo archivo, antes de seguir con otra cosa.
 2. Si el aviso es de un secreto, no copies su valor a ninguna parte. Muévelo a una variable de entorno y dile al dev que debe rotar esa credencial.
 3. Si crees que el aviso es un falso positivo, díselo al dev con la línea y el motivo. No lo ignores en silencio.
 
-El hook solo avisa. Que no avise no significa que el código cumpla: los criterios 1, 2, 5, 6 y 8 no los mide el hook.
+El hook solo avisa. Que no avise no significa que el código cumpla: los criterios 1, 2, 5 y 8 no los mide el hook, y del 6 solo mide que exista el archivo de prueba.
 
 ## Al terminar
 

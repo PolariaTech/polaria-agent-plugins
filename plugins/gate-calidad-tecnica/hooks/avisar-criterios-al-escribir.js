@@ -7,8 +7,10 @@
 //   - Criterio 9 (tamaño y complejidad): más de 300 líneas de código en el archivo (medir-tamano.js) y, si el
 //     repo tiene ESLint local con las reglas de la plantilla plantillas/eslint-limites/, funciones de más de
 //     50 líneas o complejidad cognitiva mayor de 15.
+//   - Criterio 6 (pruebas): si el archivo JS/TS no tiene su archivo de prueba (buscar-prueba.js). Solo comprueba
+//     que exista; que la prueba cubra el cambio lo revisa el gate.
 // Solo avisa: nunca borra ni revierte nada. El veredicto lo da el revisor aislado del gate, no este hook.
-// Los demás criterios (1, 2, 5, 6, 7, 8) piden juicio y los guía la skill escribir-codigo-conforme-al-gate.
+// Los demás criterios (1, 2, 5, 7, 8) piden juicio y los guía la skill escribir-codigo-conforme-al-gate.
 //
 // Claude Code (PostToolUse sobre Write|Edit|MultiEdit, hooks.json): recibe
 //   { hook_event_name: "PostToolUse", tool_input: { file_path }, cwd };
@@ -23,6 +25,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { LIMITE_LINEAS, contarLineasDeCodigo, esCodigoMedible } = require('./medir-tamano');
+const { avisoDePruebaFaltante } = require('./buscar-prueba');
 
 const EXTENSIONES_DE_CODIGO = new Set([
   '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.mts', '.cts',
@@ -143,7 +146,7 @@ function formatear(archivo, hallazgos) {
     `Gate de Calidad Técnica: ${path.basename(archivo)} no cumpliría estos criterios en la revisión final:`,
     ...lista,
     ...resto,
-    'Corrígelo ahora en este archivo. Si es un secreto, no lo copies a ninguna parte: muévelo a una variable de entorno y avisa al dev para que lo rote.',
+    'Corrígelo ahora. Si es un secreto, no lo copies a ninguna parte: muévelo a una variable de entorno y avisa al dev para que lo rote.',
   ].join('\n');
 }
 
@@ -192,7 +195,8 @@ function main() {
       nadaQueDecir(); // El archivo no existe (ej. se borró): nada que verificar.
     }
 
-    const hallazgos = [...analizarArchivo(archivo, contenido), ...avisosDeEslint(archivo)];
+    const sinPrueba = avisoDePruebaFaltante(archivo);
+    const hallazgos = [...analizarArchivo(archivo, contenido), ...(sinPrueba ? [sinPrueba] : []), ...avisosDeEslint(archivo)];
     if (hallazgos.length === 0) nadaQueDecir();
     avisar(formatear(archivo, hallazgos));
   });
