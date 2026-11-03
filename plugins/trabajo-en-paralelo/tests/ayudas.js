@@ -57,6 +57,8 @@ function crearEscenario() {
   escribir(mauro, 'src/auth/session.ts', 'export function login(){return 1}\n\n\n\nexport function logout(){return 2}\n');
   escribir(mauro, 'src/ui/a.ts', 'ui\n');
   escribir(mauro, 'package.json', '{}\n');
+  // Archivos de main fuera de las zonas que reclaman las pruebas (POL-403: solo lo que está en origin/main se reclama).
+  for (const ruta of ['src/otro/x.ts', 'src/otro/fuera.ts', 'src/otro/n.ipynb', 'src/afuera/c.ts', 'src/otro.ts']) escribir(mauro, ruta, 'main\n');
   git(mauro, 'add', '-A');
   git(mauro, 'commit', '-q', '-m', 'base');
   git(mauro, 'branch', '-M', 'main');

@@ -166,10 +166,10 @@ test('solapes: trabajo en archivos distintos no genera hallazgos de ramas', () =
 test('solapes: cambios sin commit también cuentan (zona ajena y fuera del reclamo propio)', () => {
   const e = danielConWorktree({ chocar: false });
   importarReclamos(e.worktree, [RECLAMO_DE_MAURO, RECLAMO_DE_DANIEL]);
-  escribir(e.worktree, 'src/auth/nuevo.ts', 'x\n'); // Dentro de la carpeta de Mauro y fuera de lo que Daniel reclamó.
+  ['src/auth/nuevo.ts', 'src/otro.ts'].forEach((f) => escribir(e.worktree, f, 'x\n')); // nuevo.ts: dentro de la carpeta de Mauro y sin existir en main (no se reclama, POL-403); otro.ts: existe en main y Daniel no lo reclamó.
   const r = ejecutarParalelo(e.worktree, 'solapes', '--sin-fetch').salida;
   assert.match(r, /ARCHIVOS DENTRO DE UNA ZONA RECLAMADA POR OTRO ISSUE:\n {2}- POL-101 \(Mauro\): `src\/auth\/nuevo\.ts`/);
-  assert.match(r, /FUERA DE LO QUE POL-102 RECLAMÓ[^\n]*\n {2}- `src\/auth\/nuevo\.ts`/);
+  assert.match(r, /FUERA DE LO QUE POL-102 RECLAMÓ[^\n]*\n {2}- `src\/otro\.ts`/);
 });
 
 test('solapes: un reclamo liberado deja de contar como zona ajena', () => {

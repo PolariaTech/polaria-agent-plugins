@@ -64,7 +64,10 @@ function verificar() {
   }
   const reclamo = claimEnIndice === null ? null : lib.parsearReclamo(claimEnIndice);
   if (reclamo && reclamo.estado === 'ACTIVO') {
-    const fuera = cambios.filter((c) => c.archivo !== lib.ARCHIVO_RECLAMO && !lib.claimCubreArchivo(reclamo, c.archivo)).map((c) => c.archivo);
+    const sinCubrir = cambios.filter((c) => c.archivo !== lib.ARCHIVO_RECLAMO && !lib.claimCubreArchivo(reclamo, c.archivo)).map((c) => c.archivo);
+    // POL-403: lo que origin/main no tiene no se reclama, así que no cuenta como fuera de las zonas.
+    const enMain = new Set(lib.rutasEnMain(repo.raiz, sinCubrir));
+    const fuera = sinCubrir.filter((a) => enMain.has(a));
     if (fuera.length) {
       problemas.push(`El commit incluye archivos fuera de las zonas de tu CLAIM.md:\n${fuera.slice(0, 15).map((a) => `  - ${a}`).join('\n')}${fuera.length > 15 ? `\n  - y ${fuera.length - 15} más` : ''}`);
       problemas.push(`No uses --no-verify. Si el usuario autoriza salir de la zona, él debe correr en su terminal: ${comandoParaAutorizar(__dirname)}`);

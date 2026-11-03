@@ -13,20 +13,7 @@ const MAXIMO_DE_RAMAS = 30;
 
 const esDeTrabajo = (archivo) => archivo !== lib.ARCHIVO_RECLAMO;
 
-function ramaBase(directorio) {
-  for (const candidata of [
-    () => lib.git(directorio, ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']),
-    () => (lib.git(directorio, ['rev-parse', '--verify', '-q', 'origin/main']), 'origin/main'),
-    () => (lib.git(directorio, ['rev-parse', '--verify', '-q', 'origin/master']), 'origin/master'),
-  ]) {
-    try {
-      return candidata();
-    } catch {
-      // Se prueba la siguiente.
-    }
-  }
-  return null;
-}
+const { ramaBase } = lib;
 
 function lineas(texto) {
   return texto.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
@@ -141,7 +128,10 @@ function analizar(directorio, opciones = {}) {
   // El reclamo propio es el CLAIM.md del árbol de trabajo; la caché solo es el respaldo si el archivo no se puede leer.
   const propio = lib.leerClaimPropio(repo.raiz) || lib.reclamoPropio(cache, issuePropio);
   if (propio) {
-    resultado.fueraDelReclamo = propios.archivos.filter((a) => !lib.claimCubreArchivo(propio, a));
+    // Un archivo que origin/main no tiene no se reclama (POL-403): nunca cuenta como fuera de lo reclamado.
+    const sinCubrir = propios.archivos.filter((a) => !lib.claimCubreArchivo(propio, a));
+    const enMain = new Set(lib.rutasEnMain(directorio, sinCubrir));
+    resultado.fueraDelReclamo = sinCubrir.filter((a) => enMain.has(a));
   } else if (issuePropio && propios.archivos.length) {
     resultado.avisos.push(`Esta rama (${issuePropio}) no tiene CLAIM.md: corre la skill trabajo-en-paralelo-polaria (modo reclamar) antes de seguir editando.`);
   }

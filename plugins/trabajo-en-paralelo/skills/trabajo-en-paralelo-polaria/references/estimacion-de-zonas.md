@@ -7,20 +7,20 @@ Objetivo: decir, **antes de escribir código**, qué carpetas, archivos y funcio
 ## 1. Reunir la evidencia
 
 1. Lee del ticket, en este orden de confiabilidad. En **Linear**: la Especificación técnica (rutas y criterios de aceptación), la descripción 5W2H, los comentarios, los issues relacionados (`relations`). En el **Sheet de requerimientos**: la descripción, el tipo, y los tickets de las columnas "Relacionado con" y "Duplicado de" (sus comentarios dicen qué se cambió la última vez).
-2. Toma como punto de partida las rutas que el issue nombra. Verifica cada una con Glob: una ruta que no existe es un archivo nuevo (se marca así) o un dato malo (baja la confianza).
+2. Toma como punto de partida las rutas que el issue nombra. Verifica cada una con Glob: una ruta que no existe en `origin/main` es un archivo nuevo (no se reclama: se crea sin pasar por el `CLAIM.md`) o un dato malo (baja la confianza).
 3. Busca con Grep los términos del ticket: nombres de funciones, componentes, tablas, rutas de API, textos de pantalla, mensajes de error. Cada archivo con coincidencias directas es candidato.
 4. Sube una capa: quién llama o importa lo que vas a cambiar (Grep del nombre exportado) y qué prueba lo cubre. Los llamadores solo entran si el cambio rompe su contrato (firma, forma del dato, nombre); las pruebas del archivo cambiado entran siempre.
 5. Para cada criterio de aceptación pregúntate "¿qué archivo cambia para que este criterio se cumpla?". Un criterio sin archivo claro es una incertidumbre y descuenta confianza (paso 3).
 
 ## 2. Elegir la granularidad de cada zona
 
-**Cada zona es una ruta exacta de archivo, no una carpeta.** El reclamo debe decirle a los demás qué archivos se van a tocar, no en qué zona del proyecto se trabaja. `paralelo.js reclamar` rechaza las carpetas y las rutas que no existen.
+**Cada zona es una ruta exacta de archivo, no una carpeta.** El reclamo debe decirle a los demás qué archivos se van a tocar, no en qué zona del proyecto se trabaja. `paralelo.js reclamar` rechaza las carpetas y las rutas que no existen en `origin/main`.
 
 | Situación | Zona |
 |---|---|
 | Un archivo existente que el cambio modifica | Su ruta completa |
 | Un archivo de más de 300 líneas y el cambio cae en funciones identificables | `archivo#función` (una por función) |
-| El ticket pide crear un archivo | Su ruta completa, también en `--nuevos` (el `CLAIM.md` lo marca "archivo nuevo") |
+| El ticket pide crear un archivo | Nada: un archivo que `origin/main` no tiene no se reclama y se crea sin pasar por el `CLAIM.md` |
 
 Cómo armar la lista:
 
