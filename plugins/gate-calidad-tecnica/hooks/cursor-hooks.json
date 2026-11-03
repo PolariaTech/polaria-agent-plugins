@@ -12,6 +12,12 @@
         "matcher": "git",
         "failClosed": false
       }
+    ],
+    "postToolUse": [
+      {
+        "command": "node \"${CURSOR_PLUGIN_ROOT}/hooks/avisar-criterios-al-escribir.js\"",
+        "matcher": "Write"
+      }
     ]
   }
 }

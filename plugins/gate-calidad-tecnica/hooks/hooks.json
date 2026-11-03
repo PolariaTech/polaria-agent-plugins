@@ -1,5 +1,5 @@
 {
-  "description": "Instala el hook pre-push de git del gate al iniciar sesión y bloquea git push sin veredicto del Gate de Calidad Técnica Pre-Merge para el commit actual.",
+  "description": "Instala el hook pre-push de git del gate al iniciar sesión y bloquea git push sin veredicto del Gate de Calidad Técnica Pre-Merge para el commit actual. Avisa mientras se escribe código si incumple los criterios 3, 4 o 9 que se pueden medir sin juicio.",
   "hooks": {
     "SessionStart": [
       {
@@ -18,6 +18,17 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/verificar-gate.js\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/avisar-criterios-al-escribir.js\""
           }
         ]
       }
