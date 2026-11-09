@@ -43,7 +43,7 @@ Lee este archivo completo antes de hacer nada. Después lee solo lo listado en l
 [Acción literal y ejecutable. Ej.: "Lee `src/api/registro.ts`, función `validarRegistro`, y propón la regla de backend para el campo teléfono según `schemas/schema_registro.md`."]
 
 ## 6. Criterio de terminado
-- [Condición observable que indica que la tarea terminó. Ej.: "La prueba `registro.test.ts` pasa y POL-84 está en En Pruebas."]
+- [Condición observable que indica que la tarea terminó. Ej.: "La prueba `registro.test.ts` pasa y POL-84 está en En paso a producción."]
 
 ## 7. Restricciones activas
 - [Regla del proyecto, protocolo de Polaria o acuerdo del equipo que aplica a ESTA tarea, por nombre.]

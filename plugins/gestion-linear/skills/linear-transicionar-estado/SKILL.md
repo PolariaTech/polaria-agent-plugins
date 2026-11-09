@@ -1,6 +1,6 @@
 ---
 name: linear-transicionar-estado
-description: "Gestiona el estado de issues de Linear a lo largo del ciclo de vida real del trabajo, para cualquier proyecto de un equipo — el equipo POLARIA (prefijo POL-) es el ejemplo/default, fácil de reemplazar por otro equipo (ver \"Configuración rápida\"). Actívala en estos momentos, sin esperar a que el usuario lo pida explícitamente salvo el primero: (1) el usuario dice \"vamos a trabajar en POL-X\" / \"sigamos con POL-X\" / \"retomemos POL-X\" → mueve a En Progreso si no lo está; (2) el trabajo sobre un issue en curso termina el desarrollo y está a punto de correr la primera prueba de cualquier tipo (automatizada, manual, smoke test, ejecución en un ambiente) → En Pruebas ANTES de correrla, no después; (3) aparece algo que impide seguir → Bloqueado, comenta la causa y enlaza blockedBy; (4) se decide que el issue quedó resuelto → actualiza la documentación del proyecto con los cambios del issue, comenta cómo se resolvió y qué pruebas pasó, y solo tras el merge mueve a Completado (si el issue tiene Especificación técnica, prueba y cierra contra su tabla de criterios de aceptación); (4b) se abre el PR del issue → En paso a producción; (5) el issue es duplicado de otro → Duplicate, vinculado al original; (6) se pausa un issue en curso por falta de capacidad → regresa a Backlog con motivo. Actívala también cuando el usuario mencione un identificador de issue junto con verbos como \"trabajar\", \"seguir\", \"retomar\", \"probar\", \"validar\", \"bloqueado por\", \"cerrar\", \"duplicado\", o \"marcar como listo\"."
+description: "Gestiona el estado de issues de Linear a lo largo del ciclo de vida real del trabajo, para cualquier proyecto de un equipo. Actívala en estos momentos, sin esperar a que el usuario lo pida explícitamente salvo el primero: (1) el usuario dice \"vamos a trabajar en POL-X\" / \"sigamos con POL-X\" / \"retomemos POL-X\" → mueve a En Progreso si no lo está; (2) el trabajo sobre un issue en curso termina el desarrollo y está a punto de correr la primera prueba de cualquier tipo (automatizada, manual, smoke test, ejecución en un ambiente) → el issue sigue en En Progreso; escribe y ejecuta las pruebas y reporta con evidencia; (3) aparece algo que impide seguir → Bloqueado, comenta la causa y enlaza blockedBy; (4) se decide que el issue quedó resuelto → actualiza la documentación del proyecto con los cambios del issue, comenta cómo se resolvió y qué pruebas pasó, y solo tras el merge mueve a Completado (si el issue tiene Especificación técnica, prueba y cierra contra su tabla de criterios de aceptación); (4b) se abre el PR del issue → En paso a producción; (5) el issue es duplicado de otro → Duplicate, vinculado al original; (6) se pausa un issue en curso por falta de capacidad → regresa a Backlog con motivo. Actívala también cuando el usuario mencione un identificador de issue junto con verbos como \"trabajar\", \"seguir\", \"retomar\", \"probar\", \"validar\", \"bloqueado por\", \"cerrar\", \"duplicado\", o \"marcar como listo\"."
 compatibility: "Requiere MCP de Linear conectado. Los nombres de herramienta varían por cliente — ver tabla abajo."
 ---
 
@@ -16,7 +16,7 @@ compatibility: "Requiere MCP de Linear conectado. Los nombres de herramienta var
 
 ## Estados del equipo y su equivalencia con el Sheet de requerimientos
 
-Los estados de Linear usan los mismos nombres del Sheet de requerimientos (columna Estado), en español. `Triage` y `Duplicate` conservan su nombre en inglés porque Linear no permite renombrarlos. Tres estados existen solo en Linear: `En Pruebas`, `Bloqueado` y `Duplicate`.
+Los estados de Linear usan los mismos nombres del Sheet de requerimientos (columna Estado), en español. `Triage` y `Duplicate` conservan su nombre en inglés porque Linear no permite renombrarlos. Dos estados existen solo en Linear: `Bloqueado` y `Duplicate`. No hay un estado de pruebas: el issue sigue en `En Progreso` mientras se prueba.
 
 | Sheet (Estado) | Linear | Significa | Quién lo mueve |
 |---|---|---|---|
@@ -25,7 +25,6 @@ Los estados de Linear usan los mismos nombres del Sheet de requerimientos (colum
 | Backlog | Backlog | Se va a hacer, en lista de espera | Una persona |
 | Proximo Sprint | Proximo Sprint | Se va a hacer, no de inmediato; lo define Edgar | Una persona |
 | En Progreso | En Progreso | Alguien lo tiene asignado y empezó, aunque sea solo investigación | La IA, al empezar (MODO INICIO) |
-| (sin equivalente) | En Pruebas | El desarrollo terminó y se están corriendo las pruebas. En el Sheet sigue como En Progreso | La IA, antes de la primera prueba (MODO PRUEBAS) |
 | En paso a producción | En paso a producción | PR abierto, sin mergear a main | La IA, al abrir el PR |
 | Completado | Completado | Mergeado a main | La IA, en MODO CIERRE |
 | Rechazado | Rechazado | Se descartó | Una persona (MODO RECHAZADO) |
@@ -33,7 +32,7 @@ Los estados de Linear usan los mismos nombres del Sheet de requerimientos (colum
 
 La casilla **Validado** del Sheet no es un estado: la marca el solicitante cuando verifica que el requerimiento funciona. En Linear se refleja con el label `Validado`, que pone una persona, nunca esta skill.
 
-Si `list_issue_statuses` no devuelve uno de estos nombres (por ejemplo `En paso a producción` o `En Pruebas` en un equipo que aún no los creó), no inventes la transición: dile al usuario qué estado falta y que lo cree o renombre en Settings → Teams → Workflow.
+Si `list_issue_statuses` no devuelve uno de estos nombres (por ejemplo `En paso a producción` en un equipo que aún no lo creó), no inventes la transición: dile al usuario qué estado falta y que lo cree o renombre en Settings → Teams → Workflow.
 
 ## Por qué existe esta skill
 
@@ -105,21 +104,17 @@ Desde `gestion-linear` 1.2.0, `linear-crear-issue` agrega a los issues una secci
 
 ## MODO PRUEBAS
 
-**Cuándo:** el desarrollo terminó y estás a punto de correr la primera prueba de cualquier tipo — pruebas automatizadas, prueba manual, smoke test, `curl` contra un endpoint, ejecución de un workflow en un ambiente. Mueve el issue **antes** de correr esa primera prueba, nunca durante ni después.
+**Cuándo:** el desarrollo terminó y estás a punto de correr la primera prueba de cualquier tipo — pruebas automatizadas, prueba manual, smoke test, `curl` contra un endpoint, ejecución de un workflow en un ambiente. Este modo no cambia el estado: el issue sigue en `En Progreso` mientras se prueba, porque el equipo no tiene un estado de pruebas.
 
-`En Pruebas` significa "en pruebas": el issue está siendo validado. No significa "terminado, falta revisión humana". Si ya corriste pruebas y el issue sigue en `En Progreso`, muévelo a `En Pruebas` en ese mismo momento, sin esperar a terminar la batería.
+Ejemplos del momento: en un cambio de código, después del último commit de desarrollo y antes de correr `npm test`; en un workflow de n8n, después de `publish_workflow` y antes del primer smoke test.
 
-Ejemplos del momento exacto: en un cambio de código, después del último commit de desarrollo y antes de correr `npm test`; en un workflow de n8n, después de `publish_workflow` y antes del primer smoke test.
-
-1. `get_issue` para confirmar el estado actual — evita mover algo que ya esté en `En Pruebas`, `Bloqueado` o `Completado`.
-2. `save_issue` con `state: "En Pruebas"`.
-3. Confirmar: `POL-X → En Pruebas`.
-4. Escribir las pruebas correspondientes a lo implementado (o extender las existentes si ya hay batería de pruebas para ese módulo) y ejecutarlas.
+1. `get_issue` para confirmar el estado actual. Si está en `Bloqueado` o `Completado`, díselo al usuario y pregunta si se vuelve a trabajar.
+2. Escribir las pruebas correspondientes a lo implementado (o extender las existentes si ya hay batería de pruebas para ese módulo) y ejecutarlas.
    - **(con Especificación técnica)** Cada fila de la tabla de criterios de aceptación es un caso obligatorio: ejecuta exactamente lo de "Cómo se verifica", en "Dónde corre", y compara contra "Resultado esperado". PUEDES agregar pruebas extra, pero NUNCA reemplazar un criterio por otra prueba.
-5. Reportar el resultado de forma concreta: qué se probó, qué pasó y qué falló — nunca "todo funcionó" sin mostrar la evidencia (casos ejecutados y su resultado real).
+3. Reportar el resultado de forma concreta: qué se probó, qué pasó y qué falló — nunca "todo funcionó" sin mostrar la evidencia (casos ejecutados y su resultado real).
    - **(con Especificación técnica)** El reporte DEBE ser la tabla de criterios con dos columnas más: resultado real (✅ / ❌) y evidencia (comando con su salida, log o enlace al CI). Un criterio que no se pudo ejecutar va ❌ con el motivo, nunca ✅.
-6. Si todas las pruebas pasaron sin hallazgos: sugerir en una sola línea abrir el PR (MODO PASO A PRODUCCIÓN). No mover el issue a `Completado` automáticamente: `Completado` es solo después del merge a main (MODO CIERRE).
-7. Si alguna prueba falló o reveló un impedimento real: no sugerir el PR. Señalarlo explícitamente y, si el impedimento detiene el trabajo, aplicar MODO BLOQUEO en su lugar.
+4. Si todas las pruebas pasaron sin hallazgos: sugerir en una sola línea abrir el PR (MODO PASO A PRODUCCIÓN). No mover el issue a `Completado` automáticamente: `Completado` es solo después del merge a main (MODO CIERRE).
+5. Si alguna prueba falló o reveló un impedimento real: no sugerir el PR. Señalarlo explícitamente y, si el impedimento detiene el trabajo, aplicar MODO BLOQUEO en su lugar.
 
 ---
 
@@ -191,14 +186,14 @@ No se continúa trabajando en un issue marcado Rechazado.
 
 1. Documentar en el proyecto **todos** los cambios hechos dentro de este issue: aplica la skill `doc-updater` en MODO A para que la documentación del proyecto (README, CHANGELOG, ADRs, glosario y el resto de los artefactos que correspondan) refleje cada cambio. No sigas al paso 2 hasta que esa documentación esté actualizada.
 2. `save_comment` documentando, antes de tocar el estado, todos los cambios realizados: cada cambio con qué cambió y dónde (archivo, workflow, versión publicada, commit), cómo se resolvió el problema, qué pruebas pasó con su resultado y qué documentación se actualizó. No cierres con un comentario que omita alguno de los cambios hechos.
-   - **(con Especificación técnica)** Antes del comentario, verifica la tabla de criterios del último MODO PRUEBAS. Si algún criterio quedó ❌ o sin evidencia, NO sigas: dilo y deja el issue en `En Pruebas`. Solo continúa si el usuario excluye explícitamente ese criterio — en ese caso la exclusión, con su motivo y quién la decidió, DEBE quedar escrita en el comentario.
+   - **(con Especificación técnica)** Antes del comentario, verifica la tabla de criterios del último MODO PRUEBAS. Si algún criterio quedó ❌ o sin evidencia, NO sigas: dilo y deja el issue en `En Progreso`. Solo continúa si el usuario excluye explícitamente ese criterio — en ese caso la exclusión, con su motivo y quién la decidió, DEBE quedar escrita en el comentario.
    - **(con Especificación técnica)** El comentario DEBE incluir la tabla de criterios con su resultado (✅ / ❌ excluido) y su evidencia.
 3. Solo después: `save_issue` con `state: "Completado"`.
 4. Confirmar: `POL-X → Completado` (mencionar que la documentación y el comentario de resolución ya quedaron publicados).
 
 Orden obligatorio: documentación del proyecto → comentario de resolución → `Completado`. Mientras la documentación esté pendiente, el issue se queda en `En paso a producción`.
 
-Si el estado actual permite validación de 4 ojos (Metodología de Trabajo v1.2 §7 — alguien distinto al dev valida en En Pruebas) y hay un segundo miembro disponible, confirma que esa validación ya ocurrió antes de mover a Completado. Si hoy no hay un segundo humano disponible en el proyecto, el mismo Responsable puede autovalidarse — pero debe dejarlo explícito en el comentario de resolución (p. ej. "Autovalidado — no hay un segundo miembro disponible en este proyecto").
+Si el estado actual permite validación de 4 ojos (Metodología de Trabajo v1.2 §7 — alguien distinto al dev valida antes del cierre) y hay un segundo miembro disponible, confirma que esa validación ya ocurrió antes de mover a Completado. Si hoy no hay un segundo humano disponible en el proyecto, el mismo Responsable puede autovalidarse — pero debe dejarlo explícito en el comentario de resolución (p. ej. "Autovalidado — no hay un segundo miembro disponible en este proyecto").
 
 **Issues reportados por un cliente externo (Ruta cliente):** además de mover a Completado, el ciclo real de cierre no termina ahí — sigue una ventana de 24h hábiles de confirmación del cliente (ver Protocolo de Ciclo de Vida en Linear, Paso 8 y Regla de Ruta cliente). Esta skill mueve el estado; el envío de la notificación y el manejo de la ventana de confirmación son responsabilidad del canal de comunicación con el cliente (Mateo u otro), no de esta skill.
 
@@ -240,5 +235,5 @@ Cuando se abre un PR por un issue de Linear, la descripción del PR lleva una l�
 
 1. Antes de `gh pr create`, lista los issues que cubre la rama (el nombre de la rama solo trae uno) y escribe `Refs` con todos en la descripción. El hook `verificar-pr-refs.js` del plugin bloquea `gh pr create` sin ninguno de los tres caminos o con una palabra que cierra el issue.
 2. Después de abrir el PR, llama `get_issue` de cada issue y confirma que el PR aparece en sus `attachments`. Si falta alguno, agrégalo con `create_attachment`.
-3. Al abrirse el PR, Linear mueve el issue a En Progreso. Muévelo a `En paso a producción` con MODO PASO A PRODUCCIÓN. No lo regreses a En Pruebas hasta que empiece MODO PRUEBAS, y no lo muevas a Completado hasta el merge y MODO CIERRE.
+3. Al abrirse el PR, Linear mueve el issue a En Progreso. Muévelo a `En paso a producción` con MODO PASO A PRODUCCIÓN. No lo muevas a Completado hasta el merge y MODO CIERRE.
 4. El hook revisa el comando completo, título incluido: un título como `Fix POL-5 login` se bloquea aunque la descripción tenga `Refs POL-5`. Escribe el título sin esas palabras seguidas de un `POL-N`.

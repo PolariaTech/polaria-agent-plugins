@@ -30,7 +30,7 @@ Cerrar formalmente un proyecto en Linear en dos actos:
 ## Precondición — verificar ANTES de cerrar
 
 1. Lista los issues del proyecto y confirma que **todos** están en `Completado`, `Rechazado` o `Duplicate`.
-2. Si hay algún issue abierto (Backlog / Proximo Sprint / En Progreso / En Pruebas / En paso a producción / Bloqueado), **DETENTE** y repórtalo. No cierres un proyecto con trabajo pendiente sin confirmación explícita del usuario — y si el usuario confirma cerrar igual, cada issue abierto debe resolverse individualmente primero (Cancelar con motivo, o mover a otro Project) antes de continuar, no quedar huérfano dentro del proyecto cerrado.
+2. Si hay algún issue abierto (Backlog / Proximo Sprint / En Progreso / En paso a producción / Bloqueado), **DETENTE** y repórtalo. No cierres un proyecto con trabajo pendiente sin confirmación explícita del usuario — y si el usuario confirma cerrar igual, cada issue abierto debe resolverse individualmente primero (Cancelar con motivo, o mover a otro Project) antes de continuar, no quedar huérfano dentro del proyecto cerrado.
 
 ## Pasos (en este orden — el orden importa)
 

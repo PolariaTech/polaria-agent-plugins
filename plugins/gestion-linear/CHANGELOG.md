@@ -5,7 +5,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 ## [1.4.0] — 2026-11-09
 
 ### Cambiado
-- **Los estados de Linear usan los nombres del Sheet de requerimientos, en español.** `Todo` → `Proximo Sprint`, `In Progress` → `En Progreso`, `Done` → `Completado`, `Canceled` → `Rechazado`, `In Review` (pruebas) → `En Pruebas`, `Blocked` → `Bloqueado` y `Duplicate` → `Duplicate`. `Triage` conserva su nombre porque Linear no permite renombrarlo. Los renombres se hacen en Settings → Teams → Workflow; las skills usan los nombres nuevos. `linear-transicionar-estado`, `linear-cerrar-proyecto` y `doc-updater` se actualizaron.
+- **Los estados de Linear usan los nombres del Sheet de requerimientos, en español.** `Todo` → `Proximo Sprint`, `In Progress` → `En Progreso`, `Done` → `Completado`, `Canceled` → `Rechazado`, `Blocked` → `Bloqueado` y `Duplicate` no se renombra. `Triage` conserva su nombre porque Linear no permite renombrarlo. Los renombres se hacen en Settings → Teams → Workflow; las skills usan los nombres nuevos. `linear-transicionar-estado`, `linear-cerrar-proyecto` y `doc-updater` se actualizaron.
 - `linear-transicionar-estado`: agrega la tabla de equivalencia Sheet ↔ Linear y el aviso cuando falta un estado en el equipo. MODO CANCELADO pasa a MODO RECHAZADO. MODO CIERRE solo aplica con el PR mergeado a main.
 
 ### Cambiado (integración con trabajo-en-paralelo)

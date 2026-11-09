@@ -20,7 +20,7 @@ Una celda de Estado vacía significa que el ticket se creó y nadie lo ha revisa
 | `En Revisión` | Se evalúa si se hará o no | Una persona (Edgar) | Triage |
 | `Backlog` | Se va a hacer, en lista de espera | Una persona | Backlog |
 | `Proximo Sprint` | Se va a hacer, no de inmediato; lo define Edgar, no el equipo de desarrollo (sin tilde, tal como está en la lista) | Una persona | Proximo Sprint |
-| `En Progreso` | Alguien lo tiene asignado y empezó, aunque sea solo investigación | **El asistente**, al reclamar | En Progreso (y En Pruebas durante las pruebas) |
+| `En Progreso` | Alguien lo tiene asignado y empezó, aunque sea solo investigación | **El asistente**, al reclamar | En Progreso |
 | `En paso a producción` | PR abierto, todavía sin mergear a main | **El asistente**, al crear el PR | En paso a producción |
 | `Completado` | Ya está mergeado a main | Una persona | Completado |
 | `Rechazado` | Se descartó | Una persona | Rechazado |
