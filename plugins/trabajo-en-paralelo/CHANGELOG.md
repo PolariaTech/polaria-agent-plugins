@@ -2,6 +2,21 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según [SemVer](https://semver.org/lang/es/).
 
+## [1.5.0] — 2026-11-09
+
+### Agregado
+- **Skill `iniciar-ticket-polaria`**: flujo para empezar un ticket Bug, Feature o Improvement. Lee el ticket y sus imágenes, las guarda en `TMP/evidencias/<ID>/`, marca el ticket en progreso, investiga la causa con un subagente de solo lectura, estima los archivos, cruza con los demás reclamos sin escribir, planea (Plan Mode en Claude Code, Plan en Cursor; los cambios triviales no llevan plan). La investigación puede incluir n8n y Supabase en solo lectura, con una lista cerrada de herramientas permitidas y prohibidas (`references/fuentes-solo-lectura.md`) y reclama con los archivos del plan. Si el reclamo falla o hay solape, guarda el plan en `TMP/<ID>-plan.md`. Toma el disparador "vamos a trabajar en POL-X / REQ-NNN" y llama a los pasos del Modo A en vez de copiarlos.
+- `references/glosario.md`: significado de tickets, estados, términos del reclamo, avisos de choque, códigos de salida 0 a 8, comandos y términos del flujo de inicio.
+
+### Cambiado
+- **`references/sheet-requerimientos.md` se alinea con el Sheet real.** Las columnas ya no se dan por letra: el asistente lee la fila 1 y ubica `ID`, `ESTADO` y `ASIGNADO` por su encabezado (el Sheet movió Estado de G a H y Asignado de J a I, y quitó "Duplicado de"). Se agregan el paso de ubicación de columnas y `fields` en la lectura de la lista desplegable.
+- Lista de estados actualizada: se agrega `Backlog`, se documenta que la celda vacía es "nadie lo ha revisado" y se agregan la tabla de transiciones y la equivalencia con los estados de Linear.
+- Si el Estado ya es `En paso a producción`, el asistente avisa y pregunta antes de volver a trabajarlo.
+- `SKILL.md` e `instalar-conectores.md`: las referencias a columnas fijas pasan a encabezados; el asistente tampoco escribe `Backlog` ni marca la casilla `VALIDADO`.
+
+### Eliminado
+- **Modo F ("En validación").** El estado ya no existe en la lista del Sheet. Las pruebas se hacen con el REQ en `En Progreso` y el siguiente cambio de Estado es `En paso a producción` al crear el PR.
+
 ## [1.4.0] — 2026-11-03
 
 ### Cambiado (POL-403)

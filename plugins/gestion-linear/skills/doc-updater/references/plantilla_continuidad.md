@@ -6,7 +6,7 @@ Plantilla que usa el Paso B5 del `doc-updater` para escribir `CONTINUIDAD.md` en
 
 - Cada sección DEBE llenarse con información verificable de la sesión que cierra, del Project Update recién publicado (Paso B4), de los issues de Linear del proyecto o de la documentación del repo. NUNCA inventar ni rellenar con texto genérico.
 - Si una sección no tiene contenido real, se escribe `Ninguno.` — nunca se omite la sección ni se rellena.
-- El objetivo es UNA sola tarea, idealmente un solo issue de Linear (`POL-XX`). Si hay varias pendientes, se elige la siguiente por este orden: el issue que quedó In Progress sin terminar → el de mayor prioridad en Todo del mismo Project → lo que el usuario haya dicho que sigue. Las demás van en "Fuera de alcance".
+- El objetivo es UNA sola tarea, idealmente un solo issue de Linear (`POL-XX`). Si hay varias pendientes, se elige la siguiente por este orden: el issue que quedó En Progreso sin terminar → el de mayor prioridad en Todo del mismo Project → lo que el usuario haya dicho que sigue. Las demás van en "Fuera de alcance".
 - Rutas siempre relativas a la raíz del repo, con la sección exacta cuando aplique.
 - El primer paso DEBE ser literal y ejecutable sin interpretar: "Lee X, sección Y, y propón Z", nunca "sigue con lo de X".
 - Cada párrafo o viñeta en una sola línea, sin saltos de línea manuales.
@@ -43,7 +43,7 @@ Lee este archivo completo antes de hacer nada. Después lee solo lo listado en l
 [Acción literal y ejecutable. Ej.: "Lee `src/api/registro.ts`, función `validarRegistro`, y propón la regla de backend para el campo teléfono según `schemas/schema_registro.md`."]
 
 ## 6. Criterio de terminado
-- [Condición observable que indica que la tarea terminó. Ej.: "La prueba `registro.test.ts` pasa y POL-84 está en In Review."]
+- [Condición observable que indica que la tarea terminó. Ej.: "La prueba `registro.test.ts` pasa y POL-84 está en En paso a producción."]
 
 ## 7. Restricciones activas
 - [Regla del proyecto, protocolo de Polaria o acuerdo del equipo que aplica a ESTA tarea, por nombre.]
