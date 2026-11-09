@@ -38,4 +38,4 @@ Si el dev ya tiene el conector de Linear de claude.ai no hace falta instalar nad
 
 Si el dev no puede instalarlo en ese momento, que pegue la fila o la descripción del ticket en el chat y sigue desde ahí.
 
-El conector se usa para **leer** el ticket y para cambiar únicamente el Estado (columna G) y el Asignado a (columna J) de la fila de un `REQ-NNN`, como dice `sheet-requerimientos.md`. Nunca llames a sus otras herramientas de escritura (agregar filas u hojas, borrar o limpiar celdas, cambiar otras columnas).
+El conector se usa para **leer** el ticket y para cambiar únicamente el Estado (columna `ESTADO`) y el Asignado (columna `ASIGNADO`) de la fila de un `REQ-NNN`, como dice `sheet-requerimientos.md`. Nunca llames a sus otras herramientas de escritura (agregar filas u hojas, borrar o limpiar celdas, cambiar otras columnas).

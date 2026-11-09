@@ -2,6 +2,19 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según [SemVer](https://semver.org/lang/es/). Las versiones anteriores a 1.2.0 están descritas en los commits del repo (`git log -- plugins/gestion-linear`).
 
+## [1.4.0] — 2026-11-09
+
+### Cambiado
+- **Los estados de Linear usan los nombres del Sheet de requerimientos, en español.** `Todo` → `Proximo Sprint`, `In Progress` → `En Progreso`, `Done` → `Completado`, `Canceled` → `Rechazado`, `In Review` (pruebas) → `En Pruebas`, `Blocked` → `Bloqueado` y `Duplicate` → `Duplicado`. `Triage` conserva su nombre porque Linear no permite renombrarlo. Los renombres se hacen en Settings → Teams → Workflow; las skills usan los nombres nuevos. `linear-transicionar-estado`, `linear-cerrar-proyecto` y `doc-updater` se actualizaron.
+- `linear-transicionar-estado`: agrega la tabla de equivalencia Sheet ↔ Linear y el aviso cuando falta un estado en el equipo. MODO CANCELADO pasa a MODO RECHAZADO. MODO CIERRE solo aplica con el PR mergeado a main.
+
+### Cambiado (integración con trabajo-en-paralelo)
+- `linear-transicionar-estado`: si el plugin `trabajo-en-paralelo` está instalado, el MODO INICIO aplica solo los pasos 1 a 5 y omite los pasos 6 y 7, porque `iniciar-ticket-polaria` investiga y planea.
+
+### Agregado
+- `linear-transicionar-estado`: estado `En paso a producción` (el mismo nombre del Sheet) y MODO PASO A PRODUCCIÓN, que lo aplica al abrir el PR. Antes Linear dejaba el issue en In Progress hasta el cierre. El estado debe crearse en el equipo antes de usar el plugin.
+- `linear-cerrar-proyecto`: la precondición también cuenta `En paso a producción` como trabajo abierto.
+
 ## [1.3.0] — 2026-10-30
 
 ### Agregado
