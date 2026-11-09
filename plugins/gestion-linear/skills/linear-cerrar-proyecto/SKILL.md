@@ -29,7 +29,7 @@ Cerrar formalmente un proyecto en Linear en dos actos:
 
 ## Precondición — verificar ANTES de cerrar
 
-1. Lista los issues del proyecto y confirma que **todos** están en `Completado`, `Rechazado` o `Duplicado`.
+1. Lista los issues del proyecto y confirma que **todos** están en `Completado`, `Rechazado` o `Duplicate`.
 2. Si hay algún issue abierto (Backlog / Proximo Sprint / En Progreso / En Pruebas / En paso a producción / Bloqueado), **DETENTE** y repórtalo. No cierres un proyecto con trabajo pendiente sin confirmación explícita del usuario — y si el usuario confirma cerrar igual, cada issue abierto debe resolverse individualmente primero (Cancelar con motivo, o mover a otro Project) antes de continuar, no quedar huérfano dentro del proyecto cerrado.
 
 ## Pasos (en este orden — el orden importa)
@@ -82,6 +82,6 @@ Los <N> issues del proyecto están cerrados. <Una línea con el logro principal.
 
 - Si el proyecto no tiene un estado "Completed" disponible en su equipo, usa el estado terminal equivalente (`type: completed`) y repórtalo.
 - No inventes issues ni resultados: el resumen se construye desde la lista real de issues del proyecto.
-- Si algún issue está `Rechazado` o `Duplicado` (no `Completado`), acláralo en el resumen (p. ej. tickets de prueba, o issues duplicados y su canónico).
+- Si algún issue está `Rechazado` o `Duplicate` (no `Completado`), acláralo en el resumen (p. ej. tickets de prueba, o issues duplicados y su canónico).
 - Pide confirmación al usuario antes de ejecutar las mutaciones (publicar el update y marcar Completed) si no te lo indicó explícitamente.
 - Si el Paso 4 (marcar Completed) falla después de que el Paso 3 (publicar el update) ya se ejecutó con éxito, no reintentes el Paso 3 — el update ya quedó publicado. Repórtalo explícitamente y reintenta solo el Paso 4.

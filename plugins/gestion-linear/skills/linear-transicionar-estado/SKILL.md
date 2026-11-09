@@ -1,6 +1,6 @@
 ---
 name: linear-transicionar-estado
-description: "Gestiona el estado de issues de Linear a lo largo del ciclo de vida real del trabajo, para cualquier proyecto de un equipo — el equipo POLARIA (prefijo POL-) es el ejemplo/default, fácil de reemplazar por otro equipo (ver \"Configuración rápida\"). Actívala en estos momentos, sin esperar a que el usuario lo pida explícitamente salvo el primero: (1) el usuario dice \"vamos a trabajar en POL-X\" / \"sigamos con POL-X\" / \"retomemos POL-X\" → mueve a En Progreso si no lo está; (2) el trabajo sobre un issue en curso termina el desarrollo y está a punto de correr la primera prueba de cualquier tipo (automatizada, manual, smoke test, ejecución en un ambiente) → En Pruebas ANTES de correrla, no después; (3) aparece algo que impide seguir → Bloqueado, comenta la causa y enlaza blockedBy; (4) se decide que el issue quedó resuelto → actualiza la documentación del proyecto con los cambios del issue, comenta cómo se resolvió y qué pruebas pasó, y solo tras el merge mueve a Completado (si el issue tiene Especificación técnica, prueba y cierra contra su tabla de criterios de aceptación); (4b) se abre el PR del issue → En paso a producción; (5) el issue es duplicado de otro → Duplicado, vinculado al original; (6) se pausa un issue en curso por falta de capacidad → regresa a Backlog con motivo. Actívala también cuando el usuario mencione un identificador de issue junto con verbos como \"trabajar\", \"seguir\", \"retomar\", \"probar\", \"validar\", \"bloqueado por\", \"cerrar\", \"duplicado\", o \"marcar como listo\"."
+description: "Gestiona el estado de issues de Linear a lo largo del ciclo de vida real del trabajo, para cualquier proyecto de un equipo — el equipo POLARIA (prefijo POL-) es el ejemplo/default, fácil de reemplazar por otro equipo (ver \"Configuración rápida\"). Actívala en estos momentos, sin esperar a que el usuario lo pida explícitamente salvo el primero: (1) el usuario dice \"vamos a trabajar en POL-X\" / \"sigamos con POL-X\" / \"retomemos POL-X\" → mueve a En Progreso si no lo está; (2) el trabajo sobre un issue en curso termina el desarrollo y está a punto de correr la primera prueba de cualquier tipo (automatizada, manual, smoke test, ejecución en un ambiente) → En Pruebas ANTES de correrla, no después; (3) aparece algo que impide seguir → Bloqueado, comenta la causa y enlaza blockedBy; (4) se decide que el issue quedó resuelto → actualiza la documentación del proyecto con los cambios del issue, comenta cómo se resolvió y qué pruebas pasó, y solo tras el merge mueve a Completado (si el issue tiene Especificación técnica, prueba y cierra contra su tabla de criterios de aceptación); (4b) se abre el PR del issue → En paso a producción; (5) el issue es duplicado de otro → Duplicate, vinculado al original; (6) se pausa un issue en curso por falta de capacidad → regresa a Backlog con motivo. Actívala también cuando el usuario mencione un identificador de issue junto con verbos como \"trabajar\", \"seguir\", \"retomar\", \"probar\", \"validar\", \"bloqueado por\", \"cerrar\", \"duplicado\", o \"marcar como listo\"."
 compatibility: "Requiere MCP de Linear conectado. Los nombres de herramienta varían por cliente — ver tabla abajo."
 ---
 
@@ -16,7 +16,7 @@ compatibility: "Requiere MCP de Linear conectado. Los nombres de herramienta var
 
 ## Estados del equipo y su equivalencia con el Sheet de requerimientos
 
-Los estados de Linear usan los mismos nombres del Sheet de requerimientos (columna Estado), en español. `Triage` conserva su nombre en inglés porque Linear no permite renombrarlo. Tres estados existen solo en Linear: `En Pruebas`, `Bloqueado` y `Duplicado`.
+Los estados de Linear usan los mismos nombres del Sheet de requerimientos (columna Estado), en español. `Triage` y `Duplicate` conservan su nombre en inglés porque Linear no permite renombrarlos. Tres estados existen solo en Linear: `En Pruebas`, `Bloqueado` y `Duplicate`.
 
 | Sheet (Estado) | Linear | Significa | Quién lo mueve |
 |---|---|---|---|
@@ -29,7 +29,7 @@ Los estados de Linear usan los mismos nombres del Sheet de requerimientos (colum
 | En paso a producción | En paso a producción | PR abierto, sin mergear a main | La IA, al abrir el PR |
 | Completado | Completado | Mergeado a main | La IA, en MODO CIERRE |
 | Rechazado | Rechazado | Se descartó | Una persona (MODO RECHAZADO) |
-| (sin equivalente) | Bloqueado, Duplicado | Solo existen en Linear | La IA |
+| (sin equivalente) | Bloqueado, Duplicate | Solo existen en Linear | La IA |
 
 La casilla **Validado** del Sheet no es un estado: la marca el solicitante cuando verifica que el requerimiento funciona. En Linear se refleja con el label `Validado`, que pone una persona, nunca esta skill.
 
@@ -164,11 +164,11 @@ Ejemplos del momento exacto: en un cambio de código, después del último commi
 **Cuándo:** el issue describe el mismo problema/solicitud que otro ya existente.
 
 1. `get_issue` sobre ambos issues para confirmar que efectivamente se trata del mismo caso.
-2. `save_issue` sobre el issue duplicado con `state: "Duplicado"` y la relación estructurada hacia el issue canónico (`duplicateOf` o equivalente del cliente).
+2. `save_issue` sobre el issue duplicado con `state: "Duplicate"` y la relación estructurada hacia el issue canónico (`duplicateOf` o equivalente del cliente).
 3. `save_comment` señalando explícitamente cuál es el issue canónico.
-4. Confirmar: `POL-X → Duplicado (de POL-Y)`.
+4. Confirmar: `POL-X → Duplicate (de POL-Y)`.
 
-No se continúa trabajando en un issue marcado Duplicado.
+No se continúa trabajando en un issue marcado Duplicate.
 
 ---
 
