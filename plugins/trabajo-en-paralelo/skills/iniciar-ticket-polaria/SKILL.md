@@ -48,6 +48,10 @@ Haz el Modo A, paso 1. Si el ID empieza con `REQ-`, el ticket está en el Sheet 
 1. Aplica `../trabajo-en-paralelo-polaria/references/estimacion-de-zonas.md` de principio a fin, partiendo de lo que devolvió el subagente. Obtienes zonas (archivos exactos), compartidos y confianza.
 2. Ejecuta `paralelo.js importar-claims` y luego `paralelo.js comparar --zonas "<zonas>" --issue <ID>` (Modo A, pasos 4 y 5). Este cruce solo lee.
 3. Si sale `SOLAPE` de zona: detente. Muéstrale al dev la tabla corta del Modo A, paso 5, y ofrece las dos opciones (coordinar o tomar otro ticket). Antes de terminar, guarda el plan como dice `references/plantilla-plan.md`. El ticket queda en progreso: dile al dev que si toma otro ticket cambie el estado de este a mano.
+4. Si no hubo `SOLAPE` de zona, busca PR abiertos que toquen los mismos archivos: `paralelo.js prs-abiertos --zonas "<zonas>" --issue <ID>`. El objetivo es evitar conflictos, así que solo importa si sale `PR ABIERTO`.
+   - `Sin PR abiertos...` o `AVISO: no pude consultar...`: no cambia nada, sigue al Paso 5 y crea la rama desde la principal como siempre.
+   - `PR ABIERTO #N`: muéstrale al dev el PR, los archivos que comparten y las dos opciones del comando (apilar sobre ese PR o esperar su merge), y pregunta cuál elige. Si el comando dice que el repo no tiene el workflow de reapuntado, recomienda esperar. Si hay más de un PR, apilar solo se ofrece sobre uno. Guarda la respuesta: el Paso 6 la usa.
+   - Si elige esperar, el flujo no cambia: sigue al Paso 5 desde la rama principal.
 
 ## Paso 5: Plan
 
@@ -61,6 +65,7 @@ Haz el Modo A, paso 1. Si el ID empieza con `REQ-`, el ticket está en el Sheet 
 ## Paso 6: Reclama y empieza a editar
 
 1. Con el plan aprobado, haz el Modo A, pasos 6 y 7 (`iniciar-rama` y `reclamar`), con las zonas del plan.
+   - Si el dev eligió apilar en el Paso 4, corre `iniciar-rama <rama> --base <rama-del-PR-padre>`. La rama sale del padre y no trae su `CLAIM.md`. Las zonas del plan pueden incluir los archivos que solo existen en el PR padre. Al crear el PR (Modo D), la base es la rama del padre (`--base <rama-del-PR-padre>`), no `main`. Si el dev tiene que rebasar después de un merge con squash, dale el comando para que lo corra él con `!`; tú no haces force-push.
    - Código `3` en `reclamar`: apareció un choque mientras se planeaba. Guarda el plan como dice `references/plantilla-plan.md` y vuelve al Paso 4, punto 3.
    - Otros códigos: sigue la tabla del Modo A, paso 7.
 2. No repitas el Modo A, paso 8: el Sheet ya se marcó en el Paso 2.

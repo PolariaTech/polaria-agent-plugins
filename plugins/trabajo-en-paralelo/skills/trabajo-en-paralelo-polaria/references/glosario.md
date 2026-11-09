@@ -30,6 +30,8 @@ Los estados del Sheet y los de Linear, y cuál equivale a cuál, están en la ta
 | Ampliar o autorizar | Agregar archivos al `CLAIM.md` ya publicado. Solo lo puede hacer el dev, en su terminal: `paralelo.js autorizar <ruta>`. |
 | Caché de reclamos | Copia local de los `CLAIM.md` de las ramas remotas. La llena `paralelo.js importar-claims` y la leen los hooks. |
 | `origin/main` | Rama principal del remoto. El reclamo solo cubre archivos que existen ahí. Un archivo que `origin/main` no tiene se crea sin reclamar. |
+| Apilar | Crear la rama del ticket a partir de la rama de un PR abierto de otro ticket, en vez de a partir de `main`, para no chocar con él. Comando: `paralelo.js iniciar-rama <rama> --base <rama-padre>`. Solo se ofrece cuando ese PR toca los mismos archivos que el ticket. |
+| PR padre | El PR abierto sobre el que se apila la rama. Su rama es la rama padre. La rama hija reclama también los archivos que solo existen en el PR padre y no trae el `CLAIM.md` del padre. El PR de la hija se crea con base en la rama del padre (`--base <rama-padre>`); el workflow `auto-rebase-stacked-prs.yml` lo reapunta a `main` cuando el padre se mergea. |
 | Prefijo de rama | Primera parte del nombre de la rama (`dani`, `lucho`, `mauro`). Sale de `git config user.name`, nunca del usuario del sistema operativo. Comando: `paralelo.js prefijo`. |
 
 ## 4. Avisos de choque
@@ -67,7 +69,8 @@ Los estados del Sheet y los de Linear, y cuál equivale a cuál, están en la ta
 | `comparar --zonas "..."` | Cruza las zonas que se piensa reclamar con los reclamos ajenos. Solo lee: no escribe nada. |
 | `solapes` | Compara la rama actual contra las ramas y los reclamos de los demás. |
 | `prefijo` | Imprime el prefijo de rama del dev. |
-| `iniciar-rama <rama>` | Cambia a la rama del ticket en el mismo proyecto. |
+| `prs-abiertos --zonas "..."` | Lista los PR abiertos (con `gh`) que tocan esas zonas y ofrece apilar o esperar. Solo lee. Sin `gh` o sin sesión avisa en una línea. Siempre sale con código 0. |
+| `iniciar-rama <rama>` | Cambia a la rama del ticket en el mismo proyecto. Con `--base <rama-padre>`, la rama nueva sale del PR padre (apilar). |
 | `reclamar` | Crea y publica el reclamo. |
 | `autorizar <ruta>` | Amplía el reclamo. Solo el dev, en su terminal. |
 | `liberar [--volver]` | Borra el reclamo; con `--volver` regresa a la rama principal. |
@@ -88,4 +91,5 @@ Los estados del Sheet y los de Linear, y cuál equivale a cuál, están en la ta
 
 | Nombre | Significado |
 | -- | -- |
+| `POLARIA_PARALELO_GH` | Solo para pruebas: ruta de un `.js` que hace de `gh`. En uso normal no se define. |
 | `POLARIA_PARALELO_MODO=bloquear` | Hace que los avisos de zona ajena y de push bloqueen en vez de solo avisar. El rechazo de escribir fuera del propio `CLAIM.md` es siempre bloqueante, sin esta variable. |

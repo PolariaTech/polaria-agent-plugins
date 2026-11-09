@@ -2,6 +2,19 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según [SemVer](https://semver.org/lang/es/).
 
+## [1.6.0] — 2026-11-09
+
+### Agregado (POL-411)
+- **Apilar la rama sobre un PR abierto, solo cuando evita un conflicto.** `paralelo.js prs-abiertos --zonas "..." [--issue X]` consulta `gh pr list` y lista los PR abiertos de otros tickets que tocan los mismos archivos que el ticket. Si hay uno, ofrece dos opciones: apilar sobre ese PR o esperar su merge. Si el repo no tiene el workflow `auto-rebase-stacked-prs.yml`, recomienda esperar. Sin PR que toque tus archivos, sin `gh` o sin sesión, avisa en una línea (o no dice nada que cambie el flujo) y sale con código 0: el flujo sigue desde la rama principal.
+- `paralelo.js iniciar-rama <rama> --base <rama-padre>`: la rama nueva sale del PR padre, guarda el padre en la config de git (`branch.<rama>.polaria-base`) y quita el `CLAIM.md` que heredó. Sin `--base` nada cambia. Si la rama ya existía, `--base` se ignora con un aviso.
+- **La rama hija reclama los archivos que solo existen en el PR padre** (decisión del Responsable Metodología sobre R3). "Existe en la base" ahora es `origin/main` más la rama padre: `reclamar`, `autorizar`, `solapes`, el pre-commit y el hook de edición lo usan, así que un archivo nuevo del padre queda protegido igual que uno de `main`. `solapes` mide el trabajo propio contra el padre y no avisa "MISMO ARCHIVO" por el PR padre, que se solapa por diseño.
+- Skill `iniciar-ticket-polaria`: el Paso 4 corre `prs-abiertos` y le pregunta al dev si apila o espera; el Paso 6 usa `--base` y crea el PR de la hija con base en la rama del padre.
+- `references/glosario.md`: términos "apilar" y "PR padre", el comando `prs-abiertos` y la variable `POLARIA_PARALELO_GH` (solo pruebas).
+
+### Límites conocidos
+- El rebase tras un merge con squash lo corre el dev con `!`; el force-push lo bloquea el clasificador. El workflow `auto-rebase-stacked-prs.yml` no se crea ni se cambia aquí: ya existe en `polaria-wms-web` y `polaria-wms-api`.
+- Se consultan los 100 PR abiertos más recientes y los archivos que `gh pr list` entregue por PR; en un repo con más PR abiertos o en un PR enorme la detección puede quedarse corta.
+
 ## [1.5.0] — 2026-11-09
 
 ### Agregado
