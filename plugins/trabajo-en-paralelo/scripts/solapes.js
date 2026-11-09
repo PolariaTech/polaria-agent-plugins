@@ -61,7 +61,7 @@ function simularMerge(directorio, otraRama) {
   }
 }
 
-function ramasDeOtros(directorio, base, repo, issuePropio) {
+function ramasDeOtros(directorio, base, repo, issuePropio, padre = null) {
   let salida = '';
   try {
     salida = lib.git(directorio, ['branch', '-r', '--no-merged', base, '--format=%(refname:short)']);
@@ -71,6 +71,7 @@ function ramasDeOtros(directorio, base, repo, issuePropio) {
   return lineas(salida)
     .filter((rama) => rama !== base && !/\/HEAD$/.test(rama) && rama !== 'origin')
     .filter((rama) => rama !== `origin/${repo.rama}`)
+    .filter((rama) => !padre || padre !== `refs/remotes/${rama}`) // POL-411: el PR padre se solapa por diseño.
     .filter((rama) => {
       const issue = lib.issueDeRama(rama.replace(/^origin\//, ''));
       return issue && issue !== issuePropio;
@@ -96,10 +97,12 @@ function analizar(directorio, opciones = {}) {
     }
   }
 
-  const propios = archivosPropios(directorio, base);
+  // POL-411: una rama apilada mide su trabajo contra el PR padre; lo del padre no es trabajo propio.
+  const padre = lib.refDelPadre(directorio);
+  const propios = archivosPropios(directorio, padre || base);
   resultado.archivosPropios = propios.archivos;
 
-  for (const otra of ramasDeOtros(directorio, base, repo, issuePropio)) {
+  for (const otra of ramasDeOtros(directorio, base, repo, issuePropio, padre)) {
     let archivosDeOtra = [];
     try {
       const puntoComun = lib.git(directorio, ['merge-base', base, otra]);

@@ -11,8 +11,9 @@
 //   node paralelo.js prefijo [--linear "Nombre"]
 //                                              Imprime el prefijo de la rama (dani, lucho, mauro) según git config user.name o, si ese
 //                                              nombre no se reconoce, el nombre de Linear. Nunca el usuario del PC. Código 8 si ninguno sirve.
-//   node paralelo.js iniciar-rama <rama> [--pausar] [--linear "Nombre"]
+//   node paralelo.js iniciar-rama <rama> [--base <rama-padre>] [--pausar] [--linear "Nombre"]
 //                                              Cambia a la rama del ticket dentro del mismo proyecto (nueva desde la principal, sin tracking).
+//                                              --base apila la rama nueva sobre el PR de otra (POL-411): sale de la rama padre y quita su CLAIM.md.
 //                                              Una rama nueva de un REQ-NNN debe empezar con el prefijo del dev (código 8 si no).
 //                                              Códigos: 6 hay cambios sin guardar, 7 la rama actual tiene un reclamo activo.
 //   node paralelo.js reclamar --zonas "src/a.ts,src/b.ts#fn" --confianza 80 [--compartidos "package.json"] [--responsable R]
@@ -24,6 +25,8 @@
 //   node paralelo.js liberar [--volver]        Borra el CLAIM.md (commit y push) y deja el resultado en el mensaje. Con --volver,
 //                                              vuelve a la rama principal y borra la rama local si ya está mergeada. Si el reclamo ya
 //                                              estaba liberado (se libera antes de crear el PR), solo vuelve a la principal.
+//   node paralelo.js prs-abiertos --zonas "a.ts,b.ts" [--issue POL-1]
+//                                              Lista los PR abiertos (gh) que tocan esas zonas y ofrece apilar o esperar. Siempre sale con 0.
 //   node paralelo.js base                      Imprime la rama principal (origin/main, origin/master...).
 // Salida siempre en texto. Códigos: 0 bien, 1 cancelado por el usuario, 2 error de uso, 3 choca con otra rama,
 // 4 falta una terminal interactiva, 5 el commit quedó pero el push falló, 6 hay cambios sin guardar, 7 la rama actual tiene un reclamo activo,
@@ -35,6 +38,7 @@ const claims = require('./claims');
 const { analizar, formatear, ramaBase } = require('./solapes');
 const { sincronizar } = require('./sincronizar');
 const { resolverPrefijo } = require('./prefijo');
+const apilar = require('./apilar');
 
 function falla(mensaje, codigo = 2) {
   process.stderr.write(`${mensaje}\n`);
@@ -97,7 +101,7 @@ function comparar(argumentos) {
 // Cambia de rama dentro del mismo proyecto (sin carpetas nuevas): la rama del ticket sale de la principal, sin tracking.
 // Se detiene con el árbol sucio (6) o si la rama actual tiene un reclamo activo de otro ticket (7), salvo --pausar.
 function iniciarRama(argumentos) {
-  const rama = argumentos.find((a, i) => !a.startsWith('--') && argumentos[i - 1] !== '--linear');
+  const rama = argumentos.find((a, i) => !a.startsWith('--') && !['--linear', '--base'].includes(argumentos[i - 1]));
   if (!rama || !/^[\w./-]+$/.test(rama)) falla('Uso: paralelo.js iniciar-rama <rama> [--pausar] [--linear "Nombre"] (solo letras, números, ., _, - y /).');
   const repo = repoActual();
   if (repo.rama === rama) return console.log(`Ya estás en ${rama}: no hay nada que cambiar.`);
@@ -129,6 +133,10 @@ function iniciarRama(argumentos) {
   };
   const local = existe(`refs/heads/${rama}`);
   const remota = existe(`refs/remotes/origin/${rama}`);
+  const padre = valorDe(argumentos, '--base');
+  const apilada = padre && !local && !remota ? apilar.prepararPadre(repo.raiz, padre, base) : null;
+  if (apilada && apilada.error) falla(apilada.error);
+  if (padre && !apilada) console.log(`AVISO: ${rama} ya existía, así que --base ${padre} se ignora.`);
   // Una rama nueva de un REQ-NNN no trae el nombre de Linear: el prefijo debe ser el del dev (git o Linear), no el del PC.
   // Las ramas que ya existen se reutilizan tal cual, y las de un POL-X usan el gitBranchName que sugiere Linear.
   if (!local && !remota && /^REQ-/.test(lib.issueDeRama(rama) || '')) {
@@ -139,13 +147,14 @@ function iniciarRama(argumentos) {
     }
   }
   // --no-track: sin esto la rama nueva queda siguiendo a origin/main y un push iría a la rama principal.
-  const argumentosGit = local ? ['switch', rama] : remota ? ['switch', '--track', `origin/${rama}`] : ['switch', '--no-track', '-c', rama, base];
+  const argumentosGit = local ? ['switch', rama] : remota ? ['switch', '--track', `origin/${rama}`] : ['switch', '--no-track', '-c', rama, apilada ? apilada.ref : base];
   try {
     lib.git(repo.raiz, argumentosGit, { timeoutMs: 60000 });
   } catch (error) {
     falla(`git switch falló: ${error.message}`);
   }
-  console.log(`Rama activa: ${rama} ${local ? '(ya existía)' : remota ? '(traída de origin)' : `(nueva, desde ${base}, sin tracking)`}. Carpeta: ${repo.raiz}`);
+  console.log(`Rama activa: ${rama} ${local ? '(ya existía)' : remota ? '(traída de origin)' : `(nueva, desde ${apilada ? apilada.ref.replace(/^refs\/(remotes|heads)\//, '') : base}, sin tracking)`}. Carpeta: ${repo.raiz}`);
+  if (apilada) apilar.registrarApilado(lib.infoDelRepo(repo.raiz), rama, padre).forEach((linea) => console.log(linea));
   // Una rama que ya existía puede estar atrás de su remota: se descarga antes de empezar (la nueva ya sale de la última principal).
   if (local || remota) sincronizar(lib.infoDelRepo(repo.raiz)).lineas.forEach((linea) => console.log(linea));
 }
@@ -263,6 +272,10 @@ switch (comando) {
   case 'prefijo':
     prefijo(argumentos);
     break;
+  case 'prs-abiertos':
+    if (!valorDe(argumentos, '--zonas')) falla('Uso: paralelo.js prs-abiertos --zonas "src/a.ts,src/b.ts" [--issue POL-1]');
+    console.log(apilar.informe(repoActual(), listaDe(valorDe(argumentos, '--zonas')), (valorDe(argumentos, '--issue') || '').toUpperCase() || lib.issueDeRama(repoActual().rama)));
+    break;
   case 'iniciar-rama':
     iniciarRama(argumentos);
     break;
@@ -279,5 +292,5 @@ switch (comando) {
     console.log(ramaBase(repoActual().raiz) || 'sin rama principal');
     break;
   default:
-    falla('Comandos: importar-claims | estado | comparar | solapes | sincronizar | prefijo | iniciar-rama | reclamar | autorizar | liberar | base. Ver la cabecera de paralelo.js.');
+    falla('Comandos: importar-claims | estado | comparar | solapes | sincronizar | prefijo | prs-abiertos | iniciar-rama | reclamar | autorizar | liberar | base. Ver la cabecera de paralelo.js.');
 }
