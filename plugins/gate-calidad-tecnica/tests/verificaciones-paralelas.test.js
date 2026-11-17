@@ -1,4 +1,5 @@
-// Pruebas de correr-verificaciones.js: elección de comandos, ESLint del criterio 9 y ejecución en paralelo.
+// Pruebas de correr-verificaciones.js: elección de comandos, ESLint del criterio 9 y ejecución en tandas
+// (pruebas y ESLint a la vez, el build después).
 // El comportamiento del revisor que lee este bloque se prueba en el laboratorio de plugins.
 // Se corren con: node --test "plugins/gate-calidad-tecnica/tests/*.test.js"
 
@@ -15,6 +16,7 @@ const {
   hayReglasEslint,
   ultimasLineas,
   leerArgumentos,
+  correrEnTandas,
 } = require('../hooks/correr-verificaciones');
 
 const SCRIPT = path.join(__dirname, '..', 'hooks', 'correr-verificaciones.js');
@@ -120,17 +122,42 @@ test('sin rama principal termina con código 1 y el uso', () => {
   assert.match(resultado.stderr, /Uso: correr-verificaciones\.js/);
 });
 
-test('pruebas y build corren a la vez: el total es menor que la suma de las dos', () => {
-  const carpeta = crearRepo({ scripts: { test: esperar(2), build: esperar(2) } });
+test('pruebas y ESLint corren a la vez: el total es menor que la suma de las dos', async () => {
+  const inicio = Date.now();
+  const resultados = await correrEnTandas({
+    comandoPruebas: esperar(2),
+    comandoBuild: null,
+    comandoEslint: esperar(2),
+    sinBuild: true,
+    raiz: carpetaTemporal('gate-tandas-'),
+    milisegundosMaximo: 60000,
+  });
+  const segundos = (Date.now() - inicio) / 1000;
+  assert.deepStrictEqual(resultados.map((r) => r.nombre), ['PRUEBAS', 'BUILD', 'ESLINT']);
+  assert.deepStrictEqual(resultados.map((r) => r.estado), ['OK', 'NO_APLICA', 'OK']);
+  assert.ok(segundos < 3.6, `en paralelo deberían tardar poco más de 2 s y tardaron ${segundos} s`);
+});
+
+test('el build no arranca hasta que terminan las pruebas (POL-412: prisma generate no debe pisar a Jest)', () => {
+  const marca = path.join(carpetaTemporal('gate-marca-'), 'pruebas-terminaron.txt').replace(/\\/g, '/');
+  const escribirAlTerminar = `node -e "setTimeout(() => require('fs').writeFileSync('${marca}', '1'), 1500)"`;
+  const falla7SiNoTerminaron = `node -e "process.exit(require('fs').existsSync('${marca}') ? 0 : 7)"`;
+  const carpeta = crearRepo({ scripts: { test: escribirAlTerminar, build: falla7SiNoTerminaron } });
   const { codigo, salida } = correr(carpeta);
   assert.strictEqual(codigo, 0);
   assert.match(salida, /--- PRUEBAS: OK \| comando: npm test/);
   assert.match(salida, /--- BUILD: OK \| comando: npm run build/);
   assert.match(salida, /--- ESLINT: NO_APLICA/);
-  const [, total, suma] = /: ([\d.]+) s en total \(la suma de las tres, en secuencia, serían ([\d.]+) s\)/.exec(salida);
-  assert.ok(Number(suma) >= 4, `la suma debería ser al menos 4 s y fue ${suma}`);
-  assert.ok(Number(total) < Number(suma) * 0.8, `en paralelo el total (${total} s) debería ser menor que la suma (${suma} s)`);
   assert.match(salida, /ARBOL: sin cambios/);
+});
+
+test('el total nunca supera la suma de las tres verificaciones en secuencia (CA3 de POL-412)', () => {
+  const carpeta = crearRepo({ scripts: { test: esperar(1), build: esperar(1) } });
+  const { codigo, salida } = correr(carpeta);
+  assert.strictEqual(codigo, 0);
+  const [, total, suma] = /: ([\d.]+) s en total \(la suma de las tres, en secuencia, serían ([\d.]+) s\)/.exec(salida);
+  assert.ok(Number(suma) >= 2, `la suma debería ser al menos 2 s y fue ${suma}`);
+  assert.ok(Number(total) <= Number(suma) + 1, `el total (${total} s) no debería superar la suma (${suma} s) más el arranque`);
 });
 
 test('una verificación que falla se reporta como FAIL con su código y su salida, y el script sigue en 0', () => {
