@@ -1,9 +1,11 @@
 #!/usr/bin/env node
-// Corre EN PARALELO las verificaciones ejecutables del gate (pruebas, build de despliegue y ESLint del criterio 9)
-// y entrega un solo bloque de texto para pegar en <contexto> del revisor. Lo ejecuta la skill
+// Corre las verificaciones ejecutables del gate (pruebas, build de despliegue y ESLint del criterio 9): pruebas y
+// ESLint a la vez y el build después, para que un build que escribe en el proyecto no pise a las pruebas. Entrega
+// un solo bloque de texto para pegar en <contexto> del revisor. Lo ejecuta la skill
 // gate-calidad-tecnica-pre-merge-polaria en su Paso 1, desde la raíz del repo:
 //   node "<raíz del plugin>/hooks/correr-verificaciones.js" <rama principal> [--pruebas "<comando>"] [--build "<comando>" | --sin-build] [--minutos-maximo N]
-// Sin LLM: el tiempo total pasa de la SUMA de las tres verificaciones a lo que tarde la más lenta.
+// Sin LLM: el tiempo total es lo que tarden juntas las pruebas y ESLint (la más lenta) más el build, y nunca
+// supera la SUMA de las tres en secuencia.
 // Es de solo lectura sobre el proyecto: solo ejecuta los comandos del propio repo (el build puede escribir en
 // carpetas ignoradas por git, como .next/ o dist/) y nunca corre eslint con --fix, --suppress-all ni --prune-suppressions.
 // Salida: texto. Un bloque "--- <NOMBRE>: <ESTADO>" por verificación (OK, FAIL, TIMEOUT, NO_DETERMINADO o NO_APLICA),
@@ -144,6 +146,28 @@ function leerArgumentos(argumentos) {
   return opciones;
 }
 
+function correrBuild({ comandoBuild, sinBuild, raiz, milisegundosMaximo }) {
+  if (comandoBuild) return ejecutar({ nombre: 'BUILD', comando: comandoBuild, raiz, milisegundosMaximo });
+  if (sinBuild) return sinEjecutar('BUILD', 'NO_APLICA', 'El repo no se despliega (--sin-build).');
+  return sinEjecutar('BUILD', 'NO_DETERMINADO', 'No hay buildCommand, vercel-build ni build: el revisor aplica las reglas de su criterio 8.');
+}
+
+// PRUEBAS y ESLINT solo leen el proyecto: corren a la vez. BUILD corre después, cuando ambas terminaron,
+// porque puede escribir en el proyecto (en polaria-wms-api empieza con `prisma generate`, que regenera
+// src/generated mientras Jest lo carga y tumba una suite que no tiene la culpa). Devuelve los resultados
+// siempre en el orden PRUEBAS, BUILD, ESLINT.
+async function correrEnTandas({ comandoPruebas, comandoBuild, comandoEslint, sinBuild, raiz, milisegundosMaximo }) {
+  const pruebas = comandoPruebas
+    ? ejecutar({ nombre: 'PRUEBAS', comando: comandoPruebas, raiz, milisegundosMaximo })
+    : sinEjecutar('PRUEBAS', 'NO_DETERMINADO', 'El repo no declara comando de pruebas: el revisor aplica las reglas de su criterio 6.');
+  const eslint = comandoEslint
+    ? ejecutar({ nombre: 'ESLINT', comando: comandoEslint, raiz, milisegundosMaximo })
+    : sinEjecutar('ESLINT', 'NO_APLICA', 'El repo no tiene las reglas del criterio 9 (falta la plantilla eslint-limites) o el diff no trae código JS/TS.');
+  const [resultadoPruebas, resultadoEslint] = await Promise.all([pruebas, eslint]);
+  const resultadoBuild = await correrBuild({ comandoBuild, sinBuild, raiz, milisegundosMaximo });
+  return [resultadoPruebas, resultadoBuild, resultadoEslint];
+}
+
 function arbolModificado(raiz) {
   return spawnSync('git', ['status', '--porcelain'], { cwd: raiz, encoding: 'utf8' }).stdout.trim();
 }
@@ -164,25 +188,15 @@ async function main() {
   const archivosDeCodigo = archivosDeCodigoDelDiff(raiz, opciones.principal);
   const eslintAplica = archivosDeCodigo.length > 0 && hayReglasEslint(raiz);
 
-  const pendientes = [
-    comandoPruebas
-      ? ejecutar({ nombre: 'PRUEBAS', comando: comandoPruebas, raiz, milisegundosMaximo })
-      : sinEjecutar('PRUEBAS', 'NO_DETERMINADO', 'El repo no declara comando de pruebas: el revisor aplica las reglas de su criterio 6.'),
-    comandoBuild
-      ? ejecutar({ nombre: 'BUILD', comando: comandoBuild, raiz, milisegundosMaximo })
-      : opciones.sinBuild
-        ? sinEjecutar('BUILD', 'NO_APLICA', 'El repo no se despliega (--sin-build).')
-        : sinEjecutar('BUILD', 'NO_DETERMINADO', 'No hay buildCommand, vercel-build ni build: el revisor aplica las reglas de su criterio 8.'),
-    eslintAplica
-      ? ejecutar({
-          nombre: 'ESLINT',
-          comando: `npx eslint --max-warnings 0 ${archivosDeCodigo.map(citarParaShell).join(' ')}`,
-          raiz,
-          milisegundosMaximo,
-        })
-      : sinEjecutar('ESLINT', 'NO_APLICA', 'El repo no tiene las reglas del criterio 9 (falta la plantilla eslint-limites) o el diff no trae código JS/TS.'),
-  ];
-  const resultados = await Promise.all(pendientes);
+  const comandoEslint = eslintAplica ? `npx eslint --max-warnings 0 ${archivosDeCodigo.map(citarParaShell).join(' ')}` : null;
+  const resultados = await correrEnTandas({
+    comandoPruebas,
+    comandoBuild,
+    comandoEslint,
+    sinBuild: opciones.sinBuild,
+    raiz,
+    milisegundosMaximo,
+  });
 
   const arbolDespues = arbolModificado(raiz);
   const segundosTotales = Math.round((Date.now() - inicioTotal) / 100) / 10;
@@ -204,4 +218,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { elegirComandoPruebas, elegirComandoBuild, hayReglasEslint, ultimasLineas, formatearBloque, leerArgumentos };
+module.exports = { elegirComandoPruebas, elegirComandoBuild, hayReglasEslint, ultimasLineas, formatearBloque, leerArgumentos, correrEnTandas };
