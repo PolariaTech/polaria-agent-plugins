@@ -13,7 +13,7 @@ Clasifica la credencial en uno de los 3 tipos de la tabla del Paso 1 del protoco
 
 ## Paso 2 — Slug
 
-Si el nombre lleva aplicativo o cliente, pide al usuario que confirme el slug del Registro de slugs (Google Sheet en la carpeta de credenciales de Drive), o léelo con el MCP de Google Drive si está disponible. Si el slug no existe, propón uno con la regla de slugs de la sección 4 del protocolo y pide que lo agreguen al registro. NUNCA inventes ni abrevies un slug sin confirmarlo.
+Si el nombre lleva aplicativo o cliente, pide al usuario que confirme el slug del [Registro de slugs](https://docs.google.com/spreadsheets/d/16gUOGxn65z7V-VEyBoxDrbkIfQDeFVHek_006bg_S4Y/edit) (Google Sheet en la carpeta de credenciales de Drive), o léelo con el MCP de Google Drive si está disponible. Si el slug no existe, propón uno con la regla de slugs de la sección 4 del protocolo y pide que lo agreguen al registro. NUNCA inventes ni abrevies un slug sin confirmarlo.
 
 ## Paso 3 — Armar el nombre
 

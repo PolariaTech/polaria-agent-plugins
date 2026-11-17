@@ -76,7 +76,7 @@
       "displayName": "Nomenclatura de Credenciales (Polaria)",
       "source": "nomenclatura-credenciales",
       "description": "Aplica el Protocolo de Nomenclatura de Credenciales v1.0 de Polaria: nombra cada cuenta, cuenta de prueba o demo, API key, token, credencial de n8n o cuenta de servicio nueva y dice donde registrarla sin exponer el secreto.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": { "name": "Polaria Tech" },
       "keywords": ["credenciales", "nomenclatura", "secretos", "cuentas", "polaria"],
       "defaultEnabled": false
