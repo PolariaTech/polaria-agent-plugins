@@ -96,7 +96,7 @@ Todas viven en la carpeta de credenciales del Drive de Polaria.
 
 | Herramienta | Para qué se usa | Quién necesita acceso |
 |---|---|---|
-| Google Sheet "Registro de slugs" | Lista de slugs de aplicativos y clientes. Columnas: Tipo (aplicativo o cliente), Nombre, Slug, Fecha y Quién lo asignó. | Todo el equipo. |
+| Google Sheet "Registro de slugs" ([enlace](https://docs.google.com/spreadsheets/d/16gUOGxn65z7V-VEyBoxDrbkIfQDeFVHek_006bg_S4Y/edit)) | Lista de slugs de aplicativos y clientes. Columnas: Tipo (aplicativo o cliente), Nombre, Slug, Fecha y Quién lo asignó. | Todo el equipo. |
 | "Plantilla registro de cuentas (prueba/demo)" ([enlace](https://docs.google.com/spreadsheets/d/1766sKC7b51AGbbaJv0a54r-x89MsnT26DvE8lEyY_GM/edit)) | Estructura que copia cada Sheet de cuentas: datos de acceso generales (URL, empresa, cuenta, contraseña general, forma de ingreso) y una fila por cuenta con Rol, Correo, Contraseña, Empresa asignada, Nombre, accesos, Descripción y Estado (activa o desactivada). | Todo el equipo. |
 | Google Sheets de cuentas de prueba y de demo, uno por aplicativo | Una copia de la plantilla por aplicativo. | Todo el equipo. |
 | `.xlsx` cifrado con contraseña | Una fila por API key, token, credencial de n8n o cuenta de servicio. Columnas: Nombre, Valor, Plataforma donde se usa, Estado (activa o revocada) y Notas. | Solo el Responsable Metodología. |
