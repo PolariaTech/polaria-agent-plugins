@@ -25,6 +25,9 @@ Los estados del Sheet y los de Linear, y cuál equivale a cuál, están en la ta
 | Zona | Un archivo exacto que el dev va a tocar (`src/a.ts`) o una función de un archivo (`src/a.ts#miFuncion`). Nunca una carpeta, salvo la excepción `--permitir-carpetas`. |
 | Compartido | Archivo que casi todos los tickets tocan (por ejemplo `package.json`). Se cambia lo mínimo y se avisa. |
 | Confianza | Número del 1 al 100: qué tan probable es que el diff final quede dentro de las zonas y los compartidos declarados. Cómo se calcula: `estimacion-de-zonas.md`. |
+| Lote | Reclamo con 2 o 3 tickets de una misma funcionalidad (`reclamar --issue A,B,C --funcionalidad "<frase>"`). El máximo es 3 tickets, 2 áreas de código y 15 archivos; con más, `reclamar` sale con código 2. Un reclamo es una funcionalidad o un arreglo a la vez. |
+| Funcionalidad | La frase que nombra lo que tocan todos los tickets de un lote. La propone el asistente y la confirma el dev antes de reclamar. Queda en `**Funcionalidad:**` del `CLAIM.md`. |
+| Área de código | Los tres primeros niveles de la carpeta de un archivo (`src/modules/auth/guard.ts` es del área `src/modules/auth`). Sirve para medir si un lote se reparte en demasiado código. |
 | Reclamar | Crear el `CLAIM.md`, commitearlo y publicar la rama. Comando: `paralelo.js reclamar`. |
 | Liberar | Borrar el `CLAIM.md` con un commit y publicarlo. Se hace antes de crear el PR. Comando: `paralelo.js liberar`. |
 | Ampliar o autorizar | Agregar archivos al `CLAIM.md` ya publicado. Solo lo puede hacer el dev, en su terminal: `paralelo.js autorizar <ruta>`. |

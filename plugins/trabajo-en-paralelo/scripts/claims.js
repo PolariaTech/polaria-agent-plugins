@@ -118,7 +118,7 @@ function rutaValida(ruta) {
   return Boolean(ruta) && ruta !== '/' && !/(^|\/)\.\.(\/|$)/.test(ruta) && !/[`\n\r]/.test(ruta) && !/^[a-zA-Z]:/.test(ruta);
 }
 
-function construirClaim({ issue, rama, responsable, confianza, zonas, compartidos = [], porque = '', carpetasPermitidas = [] }) {
+function construirClaim({ issue, tickets = [], funcionalidad = '', rama, responsable, confianza, zonas, compartidos = [], porque = '', carpetasPermitidas = [] }) {
   const nota = (r) => (carpetasPermitidas.includes(r) ? ' — carpeta (excepción)' : '');
   const lista = (rutas) => (rutas.length ? rutas.map((r) => `- \`${r}\`${nota(r)}`).join('\n') : 'Ninguno.');
   return [
@@ -127,6 +127,7 @@ function construirClaim({ issue, rama, responsable, confianza, zonas, compartido
     '',
     '**Estado:** ACTIVO',
     `**Issue:** ${issue}`,
+    ...(tickets.length > 1 ? [`**Tickets:** ${tickets.join(', ')}`, `**Funcionalidad:** ${funcionalidad}`] : []),
     `**Rama:** ${rama}`,
     `**Responsable:** ${responsable || 'sin responsable'}`,
     `**Confianza:** ${confianza}%`,
@@ -173,8 +174,19 @@ function publicar(repo, mensaje, { subir = true } = {}) {
 
 // Crea el CLAIM.md de la rama: el primer commit de la rama y su primer push. Se detiene sin escribir nada si alguna
 // zona choca con el reclamo vigente de otra rama.
-function reclamar(repo, { issue, responsable, confianza, zonas, compartidos = [], porque = '', nuevos = [], permitirCarpetas = false }) {
-  const issueFinal = (issue || lib.issueDeRama(repo.rama) || '').toUpperCase();
+function reclamar(repo, { issue, funcionalidad = '', responsable, confianza, zonas, compartidos = [], porque = '', nuevos = [], permitirCarpetas = false }) {
+  // --issue acepta varios tickets separados por coma (el primero es el principal). Un reclamo es una sola funcionalidad.
+  const tickets = issue ? String(issue).split(',').map((t) => t.trim().toUpperCase()).filter(Boolean) : [];
+  const malFormado = tickets.find((t) => !/^[A-Z][A-Z0-9]*-\d+$/.test(t));
+  if (malFormado) return { codigo: 2, mensaje: `Ticket no válido: "${malFormado}". Usa IDs como POL-123 o REQ-012, separados por coma.` };
+  if (new Set(tickets).size !== tickets.length) return { codigo: 2, mensaje: 'Hay un ticket repetido en --issue. Lista cada ticket una sola vez.' };
+  if (tickets.length > lib.MAX_TICKETS_POR_RECLAMO) {
+    return { codigo: 2, mensaje: `Un reclamo admite como máximo ${lib.MAX_TICKETS_POR_RECLAMO} tickets y todos de la misma funcionalidad: pasaste ${tickets.length}. Elige una funcionalidad (o un solo arreglo), reclama esos tickets y deja el resto para otro reclamo cuando termines.` };
+  }
+  if (tickets.length > 1 && !String(funcionalidad).trim()) {
+    return { codigo: 2, mensaje: `Con varios tickets en --issue falta --funcionalidad "<una frase>": el dev debe confirmar que ${tickets.join(', ')} tocan la misma funcionalidad. Si no es así, reclama un solo ticket.` };
+  }
+  const issueFinal = (tickets[0] || lib.issueDeRama(repo.rama) || '').toUpperCase();
   if (!issueFinal) return { codigo: 2, mensaje: 'La rama no trae un ID de ticket (por ejemplo usuario/pol-123-titulo o usuario/req-012-titulo) y no pasaste --issue.' };
   if (!repo.rama) return { codigo: 2, mensaje: 'Estás en HEAD suelto: cambia a la rama del ticket antes de reclamar.' };
   if (fs.existsSync(lib.rutaDelClaim(repo.raiz))) return { codigo: 2, mensaje: 'Esta rama ya tiene un CLAIM.md. Para ampliarlo, el usuario debe correr "paralelo.js autorizar <ruta>" en su terminal.' };
@@ -191,6 +203,16 @@ function reclamar(repo, { issue, responsable, confianza, zonas, compartidos = []
     return { codigo: 2, mensaje: `El reclamo debe listar archivos exactos, no carpetas: ${carpetas.join(', ')}. Lista cada archivo con Glob (código, pruebas, tipos, fixtures, documentación). Si de verdad no se puede saber (por ejemplo, archivos generados), repite con --permitir-carpetas y explica el motivo en --porque.` };
   }
   if (carpetas.length && !porque.trim()) return { codigo: 2, mensaje: 'Con --permitir-carpetas, --porque debe explicar por qué no se pueden listar los archivos.' };
+  if (tickets.length > 1) {
+    const archivos = new Set(listaZonas.filter((z) => zonaDeTexto(z).tipo !== 'carpeta').map((z) => z.split('#')[0]));
+    const areas = new Set(listaZonas.map((z) => lib.areaDeRuta(z)));
+    if (areas.size > lib.MAX_AREAS_POR_LOTE) {
+      return { codigo: 2, mensaje: `Estos ${tickets.length} tickets tocan ${areas.size} áreas de código (${[...areas].join(', ')}); el máximo de un lote es ${lib.MAX_AREAS_POR_LOTE}. Parece más de una funcionalidad: reclama solo los tickets de una y deja el resto para otro reclamo.` };
+    }
+    if (archivos.size > lib.MAX_ARCHIVOS_POR_LOTE) {
+      return { codigo: 2, mensaje: `Este lote reclama ${archivos.size} archivos; el máximo con varios tickets es ${lib.MAX_ARCHIVOS_POR_LOTE}. Reduce el lote a menos tickets o a una funcionalidad más acotada.` };
+    }
+  }
   // POL-403: el reclamo solo cubre archivos que ya existen en origin/main. Los que el ticket crea se crean sin reclamar.
   const rutasDeArchivo = [...new Set([...listaZonas, ...listaCompartidos].filter((z) => zonaDeTexto(z).tipo !== 'carpeta').map((z) => z.split('#')[0]))];
   const enMain = new Set(lib.rutasEnMain(repo.raiz, rutasDeArchivo));
@@ -211,7 +233,7 @@ function reclamar(repo, { issue, responsable, confianza, zonas, compartidos = []
   }
 
   const preCommit = instalarPreCommit(repo.raiz);
-  const texto = construirClaim({ issue: issueFinal, rama: repo.rama, responsable, confianza, zonas: listaZonas, compartidos: listaCompartidos, porque, carpetasPermitidas: carpetas });
+  const texto = construirClaim({ issue: issueFinal, tickets, funcionalidad: String(funcionalidad).trim(), rama: repo.rama, responsable, confianza, zonas: listaZonas, compartidos: listaCompartidos, porque, carpetasPermitidas: carpetas });
   fs.writeFileSync(lib.rutaDelClaim(repo.raiz), texto);
   lib.registrarAutorizado(repo, lib.hashDeClaim(texto));
   const agregado = correrGit(repo.raiz, ['add', '--', lib.ARCHIVO_RECLAMO]);
@@ -219,7 +241,7 @@ function reclamar(repo, { issue, responsable, confianza, zonas, compartidos = []
     fs.rmSync(lib.rutaDelClaim(repo.raiz), { force: true });
     return { codigo: 2, mensaje: `git add falló: ${agregado.error}` };
   }
-  const resultado = publicar(repo, `claim(${issueFinal}): reclama las zonas del ticket`);
+  const resultado = publicar(repo, `claim(${tickets.length > 1 ? tickets.join('+') : issueFinal}): reclama las zonas ${tickets.length > 1 ? 'de los tickets' : 'del ticket'}`);
   if (!resultado.ok) {
     correrGit(repo.raiz, ['reset', '-q', '--', lib.ARCHIVO_RECLAMO]);
     fs.rmSync(lib.rutaDelClaim(repo.raiz), { force: true });

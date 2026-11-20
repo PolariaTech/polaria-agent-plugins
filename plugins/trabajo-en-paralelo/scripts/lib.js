@@ -20,6 +20,10 @@ const DIAS_INACTIVIDAD = 5;
 // Una autorización (hash del CLAIM.md que escribió el CLI) sirve para un commit en este lapso.
 const MINUTOS_VIGENCIA_AUTORIZACION = 10;
 const HASH_ELIMINADO = 'ELIMINADO';
+// Límite de un reclamo con varios tickets (una sola funcionalidad a la vez). Con 1 ticket no aplican los de áreas y archivos.
+const MAX_TICKETS_POR_RECLAMO = 3;
+const MAX_AREAS_POR_LOTE = 2;
+const MAX_ARCHIVOS_POR_LOTE = 15;
 
 function git(directorio, argumentos, opciones = {}) {
   return execFileSync('git', argumentos, {
@@ -51,6 +55,15 @@ function infoDelRepo(directorio) {
 function issueDeRama(rama) {
   const coincidencia = REGEX_ISSUE.exec(rama || '');
   return coincidencia ? coincidencia[1].toUpperCase() : null;
+}
+
+// Área de código de una ruta: los 3 primeros segmentos de su directorio (src/modules/auth/guard.ts -> src/modules/auth).
+// Una carpeta reclamada cuenta como su propia área. Sirve para medir si un lote de tickets se reparte en demasiado código.
+function areaDeRuta(ruta) {
+  const limpia = normalizarRuta(String(ruta).split('#')[0]);
+  const segmentos = limpia.split('/').filter(Boolean);
+  const directorio = /\/(\*{1,2})?$/.test(limpia) ? segmentos : segmentos.slice(0, -1);
+  return directorio.slice(0, 3).join('/') || '.';
 }
 
 function normalizarRuta(ruta) {
@@ -123,8 +136,11 @@ function parsearReclamo(cuerpo) {
   };
   const confianza = /(\d{1,3})\s*%/.exec(campo('Confianza'));
   const issue = REGEX_ISSUE.exec(campo('Issue'));
+  const tickets = [...new Set((campo('Tickets').match(new RegExp(REGEX_ISSUE.source, 'gi')) || []).map((t) => t.toUpperCase()))];
   return {
     issue: issue ? issue[1].toUpperCase() : '',
+    tickets: tickets.length ? tickets : issue ? [issue[1].toUpperCase()] : [],
+    funcionalidad: campo('Funcionalidad'),
     estado: /liberado/i.test(campo('Estado')) ? 'LIBERADO' : 'ACTIVO',
     rama: campo('Rama'),
     responsable: campo('Responsable'),
@@ -366,6 +382,10 @@ module.exports = {
   ARCHIVO_RECLAMO,
   DIAS_INACTIVIDAD,
   HASH_ELIMINADO,
+  MAX_TICKETS_POR_RECLAMO,
+  MAX_AREAS_POR_LOTE,
+  MAX_ARCHIVOS_POR_LOTE,
+  areaDeRuta,
   rutaDelClaim,
   leerClaimPropio,
   claimCubreArchivo,

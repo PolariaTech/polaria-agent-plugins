@@ -16,9 +16,11 @@ Hay dos reglas que no cambian: el reclamo se publica **antes** de editar cualqui
 1. Ejecuta lo que dice el Modo A antes del paso 1 (`paralelo.js sincronizar`).
 2. Busca `TMP/<ID>-plan.md`. Si existe, sigue "Retomar un plan guardado" en `references/plantilla-plan.md`.
 
-## Paso 1: Identifica dónde vive el ticket
+## Paso 1: Identifica dónde vive el ticket y elige el lote
 
 Haz el Modo A, paso 1. Si el ID empieza con `REQ-`, el ticket está en el Sheet de requerimientos. Si empieza con `POL-`, está en Linear.
+
+**Un reclamo es una funcionalidad y máximo 3 tickets.** Si el dev nombró más de un ticket, aplica aquí la regla del Modo A, paso 1: lee solo lo necesario para agrupar por funcionalidad, propón UN grupo (3 o menos) con una frase que nombre la funcionalidad y espera la confirmación del dev. Solo los tickets del grupo confirmado siguen los pasos 2 a 6 (se leen a fondo, se marcan en progreso, se investigan y se reclaman con `--issue A,B,C --funcionalidad "<frase>"`). Los demás quedan sin tocar para otro reclamo. Si el dev nombró un solo ticket, no cambia nada.
 
 ## Paso 2: Lee el ticket, sus imágenes, y márcalo en progreso
 
@@ -74,6 +76,7 @@ Haz el Modo A, paso 1. Si el ID empieza con `REQ-`, el ticket está en el Sheet 
 
 ## Restricciones
 
+- NUNCA tomes más de 3 tickets ni tickets de funcionalidades distintas en el mismo inicio: una funcionalidad o un arreglo a la vez.
 - NUNCA edites un archivo del proyecto antes de que `reclamar` salga con código `0`. Las únicas escrituras permitidas antes son las de la carpeta `TMP/` y `.git/info/exclude`.
 - NUNCA crees la carpeta `TMP/` sin que el dev diga que sí.
 - NUNCA edites `.gitignore` para esconder `TMP/`: usa `.git/info/exclude`.
