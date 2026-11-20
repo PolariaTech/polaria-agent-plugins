@@ -18,6 +18,8 @@
 //                                              Códigos: 6 hay cambios sin guardar, 7 la rama actual tiene un reclamo activo.
 //   node paralelo.js reclamar --zonas "src/a.ts,src/b.ts#fn" --confianza 80 [--compartidos "package.json"] [--responsable R]
 //                             [--issue POL-1] [--porque "texto"] [--permitir-carpetas (excepción; exige --porque)]
+//                             --issue acepta hasta 3 tickets separados por coma (POL-1,POL-2), todos de UNA funcionalidad: con más de uno exige
+//                             --funcionalidad "<frase confirmada por el dev>" y limita el lote a 2 áreas de código y 15 archivos (código 2 si no).
 //                             Las zonas son archivos exactos que existen en origin/main. Los archivos nuevos no se reclaman: se crean sin pasar por el CLAIM.md.
 //                                              Crea el CLAIM.md, lo commitea y publica la rama. Se detiene si choca.
 //   node paralelo.js autorizar <ruta>...       Amplía el CLAIM.md. SOLO lo corre una persona: pide confirmación en una
@@ -208,6 +210,7 @@ function reclamar(argumentos) {
   terminarCon(
     claims.reclamar(repoActual(), {
       issue: valorDe(argumentos, '--issue'),
+      funcionalidad: valorDe(argumentos, '--funcionalidad') || '',
       responsable: valorDe(argumentos, '--responsable'),
       confianza: confianza === null ? NaN : Number(confianza),
       zonas: listaDe(valorDe(argumentos, '--zonas')),

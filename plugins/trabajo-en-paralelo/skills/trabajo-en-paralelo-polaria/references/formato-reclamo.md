@@ -33,6 +33,7 @@ Una o dos frases: qué pide el ticket y qué evidencia sostiene la estimación.
 - La primera línea es SIEMPRE `<!-- polaria-reclamo v1 -->`.
 - `**Estado:**` vale `ACTIVO`. Para liberar no se cambia el estado: se borra el archivo con `paralelo.js liberar`.
 - `**Issue:**` es el ID del ticket: `POL-123` si vive en Linear o `REQ-012` si vive en el Sheet de requerimientos. Si falta, se toma de la rama.
+- Un reclamo es una sola funcionalidad y admite hasta 3 tickets. Con más de uno, el CLI agrega bajo `**Issue:**` (que es el ticket principal, el primero) las líneas `**Tickets:** POL-123, POL-124` y `**Funcionalidad:** <frase confirmada por el dev>`. Con un solo ticket esas líneas no existen y el formato es el de siempre. Límites (en `scripts/lib.js`): 3 tickets, 2 áreas de código y 15 archivos por lote; `reclamar` los hace cumplir con código 2.
 - `**Rama:**` es la rama del dev. `**Responsable:**` es el asignado del ticket (Linear) o el valor de "Asignado a" (Sheet); si no hay, el dev.
 - `**Confianza:**` es un número entero seguido de `%`: la probabilidad de que el diff final quede dentro de las zonas y compartidos declarados (cómo se calcula: `estimacion-de-zonas.md`).
 - Cada zona es una viñeta que empieza por la ruta entre comillas invertidas, relativa a la raíz del repo y con `/` (nunca `\`):

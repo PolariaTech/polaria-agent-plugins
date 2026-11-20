@@ -2,6 +2,18 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según [SemVer](https://semver.org/lang/es/).
 
+## [1.7.0] — 2026-11-20
+
+### Agregado
+- **Límite de tickets por reclamo: una funcionalidad o un arreglo a la vez.** Los lotes de 5 a 9 REQs en un mismo claim le daban demasiado alcance al asistente y corregir un lote reintrodujo fallas ya corregidas. `paralelo.js reclamar --issue A,B,C --funcionalidad "<frase>"` ahora acepta hasta 3 tickets y rechaza con código 2: más de 3 tickets, tickets repetidos o mal formados, varios tickets sin `--funcionalidad`, y un lote que se reparte en más de 2 áreas de código (3 primeros niveles de la carpeta) o en más de 15 archivos. Los límites son las constantes `MAX_TICKETS_POR_RECLAMO`, `MAX_AREAS_POR_LOTE` y `MAX_ARCHIVOS_POR_LOTE` de `scripts/lib.js`. Con un solo ticket nada cambia.
+- El `CLAIM.md` de un lote suma `**Tickets:**` y `**Funcionalidad:**` bajo `**Issue:**` (el ticket principal, el primero); los reclamos de un ticket y los v1 existentes se leen igual. `parsearReclamo` devuelve `tickets` y `funcionalidad`. El commit del reclamo dice `claim(A+B+C)`.
+- Skills: `trabajo-en-paralelo-polaria` (Modo A, paso 1, Restricciones) e `iniciar-ticket-polaria` (Paso 1) ordenan al asistente agrupar por funcionalidad, proponer UN grupo de 3 tickets o menos, esperar la confirmación del dev y dejar el resto para otro reclamo. El Sheet se marca por cada ticket del lote.
+- `references/formato-reclamo.md` y `glosario.md`: lote, funcionalidad y área de código.
+
+### Límites conocidos
+- El CLI no puede juzgar si dos tickets son "la misma funcionalidad": la frase la propone el asistente y la confirma el dev, y el CLI solo mide tickets, áreas y archivos. El cruce con otras ramas usa el ticket principal; los demás tickets del lote solo se ven en el texto del `CLAIM.md`.
+- Los valores 3, 2 y 15 son los iniciales; se ajustan en `lib.js` cuando el equipo defina el límite definitivo.
+
 ## [1.6.0] — 2026-11-09
 
 ### Agregado (POL-411)
