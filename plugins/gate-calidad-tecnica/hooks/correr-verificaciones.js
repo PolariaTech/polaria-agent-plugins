@@ -16,6 +16,8 @@ const { spawn, spawnSync, execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
+const { ticketsDeLaRama, resultadoDeTickets, resultadoDeAudit } = require('./lint-audit-tickets');
+
 const MAXIMO_LINEAS_DE_SALIDA = 60;
 const MAXIMO_CARACTERES_DE_SALIDA = 6000;
 const MINUTOS_MAXIMO_POR_DEFECTO = 20;
@@ -60,6 +62,11 @@ function hayReglasEslint(raiz) {
     .map((nombre) => fs.readFileSync(path.join(raiz, nombre), 'utf8'));
   const junto = textos.join('\n');
   return junto.includes('max-lines-per-function') && junto.includes('sonarjs/cognitive-complexity');
+}
+
+// El criterio 10a aplica con cualquier configuración de ESLint del repo (no solo con las reglas de tamaño del criterio 9).
+function hayConfigEslint(raiz) {
+  return fs.readdirSync(raiz).some((nombre) => nombre.startsWith('eslint.config') || nombre.startsWith('.eslintrc'));
 }
 
 function archivosDeCodigoDelDiff(raiz, principal) {
@@ -168,6 +175,17 @@ async function correrEnTandas({ comandoPruebas, comandoBuild, comandoEslint, sin
   return [resultadoPruebas, resultadoBuild, resultadoEslint];
 }
 
+// LINT (criterio 10a): ESLint sobre los archivos JS/TS del diff, con la config que tenga el repo. Si el bloque ESLINT ya corrió
+// el mismo comando, se reutiliza su resultado en vez de volver a correrlo. Nunca --fix.
+async function resultadoDeLint({ raiz, archivosDeCodigo, resultadoEslint, milisegundosMaximo }) {
+  if (!archivosDeCodigo.length || !hayConfigEslint(raiz)) {
+    return { nombre: 'LINT', comando: null, estado: 'NO_APLICA', codigo: null, segundos: 0, salida: 'El repo no tiene configuración de ESLint o el diff no trae código JS/TS.' };
+  }
+  if (resultadoEslint && resultadoEslint.comando) return { ...resultadoEslint, nombre: 'LINT' };
+  const comando = `npx eslint --max-warnings 0 ${archivosDeCodigo.map(citarParaShell).join(' ')}`;
+  return ejecutar({ nombre: 'LINT', comando, raiz, milisegundosMaximo });
+}
+
 function arbolModificado(raiz) {
   return spawnSync('git', ['status', '--porcelain'], { cwd: raiz, encoding: 'utf8' }).stdout.trim();
 }
@@ -198,7 +216,9 @@ async function main() {
     milisegundosMaximo,
   });
 
+  const lint = await resultadoDeLint({ raiz, archivosDeCodigo, resultadoEslint: resultados.find((r) => r.nombre === 'ESLINT'), milisegundosMaximo });
   const arbolDespues = arbolModificado(raiz);
+  resultados.push(lint, resultadoDeAudit(raiz, opciones.principal), resultadoDeTickets(ticketsDeLaRama(raiz, opciones.principal)));
   const segundosTotales = Math.round((Date.now() - inicioTotal) / 100) / 10;
   const sumaSecuencial = Math.round(resultados.reduce((suma, r) => suma + r.segundos, 0) * 10) / 10;
   const lineas = [
@@ -218,4 +238,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { elegirComandoPruebas, elegirComandoBuild, hayReglasEslint, ultimasLineas, formatearBloque, leerArgumentos, correrEnTandas };
+module.exports = { elegirComandoPruebas, elegirComandoBuild, hayReglasEslint, hayConfigEslint, resultadoDeLint, ultimasLineas, formatearBloque, leerArgumentos, correrEnTandas };
