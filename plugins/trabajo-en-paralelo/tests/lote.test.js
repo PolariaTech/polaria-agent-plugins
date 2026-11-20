@@ -10,7 +10,7 @@ const { git, crearEscenario, ejecutarParalelo, cuerpoDeReclamo } = require('./ay
 
 function conRama() {
   const e = crearEscenario();
-  const r = ejecutarParalelo(e.daniel, 'iniciar-rama', 'dani/req-012-recepcion');
+  const r = ejecutarParalelo(e.daniel, 'iniciar-rama', 'daniel/pol-102-recepcion');
   assert.strictEqual(r.codigo, 0, r.error);
   return e;
 }
