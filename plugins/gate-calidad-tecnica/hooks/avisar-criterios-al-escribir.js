@@ -7,6 +7,8 @@
 //   - Criterio 9 (tamaño y complejidad): más de 300 líneas de código en el archivo (medir-tamano.js) y, si el
 //     repo tiene ESLint local con las reglas de la plantilla plantillas/eslint-limites/, funciones de más de
 //     50 líneas o complejidad cognitiva mayor de 15.
+//   - Criterio 10 (lint y dependencias): cualquier error de ESLint del archivo que se acaba de tocar (aprovechar que ya
+//     se edita para corregirlo) y, si se edita package.json, las dependencias con vulnerabilidades altas de npm audit.
 //   - Criterio 6 (pruebas): si el archivo JS/TS no tiene su archivo de prueba (buscar-prueba.js). Solo comprueba
 //     que exista; que la prueba cubra el cambio lo revisa el gate.
 // Solo avisa: nunca borra ni revierte nada. El veredicto lo da el revisor aislado del gate, no este hook.
@@ -26,6 +28,7 @@ const path = require('path');
 
 const { LIMITE_LINEAS, contarLineasDeCodigo, esCodigoMedible } = require('./medir-tamano');
 const { avisoDePruebaFaltante } = require('./buscar-prueba');
+const { correrNpmAudit, vulnerabilidadesAltas } = require('./lint-audit-tickets');
 
 const EXTENSIONES_DE_CODIGO = new Set([
   '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.mts', '.cts',
@@ -129,12 +132,36 @@ function avisosDeEslint(archivo) {
   }
   try {
     const mensajes = (JSON.parse(salida)[0] || {}).messages || [];
+    // Criterio 9: las dos reglas de tamaño. Criterio 10: cualquier otro error de lint del archivo que se acaba de tocar.
     return mensajes
-      .filter((mensaje) => REGLAS_DE_ESLINT.has(mensaje.ruleId))
-      .map((mensaje) => ({ criterio: 9, linea: mensaje.line || null, texto: `${mensaje.ruleId}: ${mensaje.message}` }));
+      .filter((mensaje) => mensaje.severity === 2 || REGLAS_DE_ESLINT.has(mensaje.ruleId))
+      .map((mensaje) => {
+        const deTamano = REGLAS_DE_ESLINT.has(mensaje.ruleId);
+        const texto = `${mensaje.ruleId || 'error'}: ${mensaje.message}`;
+        return { criterio: deTamano ? 9 : 10, linea: mensaje.line || null, texto: deTamano ? texto : `${texto} (ya que tocas este archivo, corrígelo ahora)` };
+      });
   } catch {
     return []; // ESLint no corrió o no entregó JSON: este hook no es quien decide eso.
   }
+}
+
+// Criterio 10b: si se edita package.json, avisa de las dependencias directas con vulnerabilidades altas o críticas para
+// actualizarlas ahora que se toca el manifiesto. Solo informa; el gate decide por lo que el PR empeora.
+function avisosDeAudit(archivo) {
+  if (path.basename(archivo) !== 'package.json') return [];
+  const carpeta = path.dirname(archivo);
+  if (!fs.existsSync(path.join(carpeta, 'package-lock.json'))) return [];
+  let dependencias;
+  try {
+    dependencias = new Set(Object.keys(JSON.parse(fs.readFileSync(archivo, 'utf8')).dependencies || {}));
+  } catch {
+    return [];
+  }
+  const auditoria = correrNpmAudit(carpeta);
+  if (!auditoria) return [];
+  return [...vulnerabilidadesAltas(auditoria)]
+    .filter(([nombre]) => dependencias.has(nombre))
+    .map(([nombre, severidad]) => ({ criterio: 10, linea: null, texto: `la dependencia ${nombre} tiene una vulnerabilidad ${severidad} (npm audit): aprovecha que tocas package.json para actualizarla` }));
 }
 
 function formatear(archivo, hallazgos) {
@@ -196,7 +223,7 @@ function main() {
     }
 
     const sinPrueba = avisoDePruebaFaltante(archivo);
-    const hallazgos = [...analizarArchivo(archivo, contenido), ...(sinPrueba ? [sinPrueba] : []), ...avisosDeEslint(archivo)];
+    const hallazgos = [...analizarArchivo(archivo, contenido), ...(sinPrueba ? [sinPrueba] : []), ...avisosDeEslint(archivo), ...avisosDeAudit(archivo)];
     if (hallazgos.length === 0) nadaQueDecir();
     avisar(formatear(archivo, hallazgos));
   });

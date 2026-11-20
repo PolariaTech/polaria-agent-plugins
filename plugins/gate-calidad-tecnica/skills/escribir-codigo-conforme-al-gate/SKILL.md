@@ -1,6 +1,6 @@
 ---
 name: escribir-codigo-conforme-al-gate
-description: Guía al asistente para que el código que escribe ya cumpla los 9 criterios del Gate de Calidad Técnica Pre-Merge de Polaria, antes de que lo revise el gate. Úsala SIEMPRE que vayas a escribir, modificar, corregir o refactorizar código de un repo de software de Polaria (una función, un endpoint, un componente, un bug, un hallazgo de auditoría), aunque el dev no mencione el gate ni los criterios — por ejemplo "agrega este endpoint", "arregla este bug", "implementa el ticket POL-X", "refactoriza este archivo", "corrige el hallazgo". No la uses para revisar un diff ya terminado ni para decidir si se puede hacer push (eso es `gate-calidad-tecnica-pre-merge-polaria`), ni para workflows de n8n (eso es `gate-calidad-n8n-polaria`), ni para escribir la validación de un formulario (eso es `validacion-formularios-polaria`).
+description: Guía al asistente para que el código que escribe ya cumpla los 11 criterios del Gate de Calidad Técnica Pre-Merge de Polaria, antes de que lo revise el gate. Úsala SIEMPRE que vayas a escribir, modificar, corregir o refactorizar código de un repo de software de Polaria (una función, un endpoint, un componente, un bug, un hallazgo de auditoría), aunque el dev no mencione el gate ni los criterios — por ejemplo "agrega este endpoint", "arregla este bug", "implementa el ticket POL-X", "refactoriza este archivo", "corrige el hallazgo". No la uses para revisar un diff ya terminado ni para decidir si se puede hacer push (eso es `gate-calidad-tecnica-pre-merge-polaria`), ni para workflows de n8n (eso es `gate-calidad-n8n-polaria`), ni para escribir la validación de un formulario (eso es `validacion-formularios-polaria`).
 ---
 
 # Skill: Escribir código conforme al gate
@@ -11,7 +11,7 @@ La definición de cada criterio (cuándo es `FAIL`) vive en la sección 6 de `..
 
 ## Antes de escribir
 
-1. Lee la sección 6 del documento indicado arriba y quédate con los 9 criterios.
+1. Lee la sección 6 del documento indicado arriba y quédate con los 11 criterios.
 2. Pregunta al dev el tipo del cambio si no lo sabes: Bug, feature o refactor. Si es Bug, el criterio 6 exige un test de regresión.
 3. Si el cambio toca un formulario o un campo de formulario, detente y usa la skill `validacion-formularios-polaria`. El criterio 7 se cumple con ese protocolo, no con esta skill.
 
@@ -26,19 +26,21 @@ La definición de cada criterio (cuándo es `FAIL`) vive en la sección 6 de `..
 7. **Formularios (7):** ya cubierto en «Antes de escribir», paso 3.
 8. **Build (8):** antes de dar el cambio por terminado, corre el comando de build del repo. Las pruebas no revisan los tipos y el build sí. Después corre `git status` y comprueba que el build no dejó archivos versionados modificados.
 9. **Tamaño y complejidad (9):** un archivo de código no pasa de 300 líneas (sin blancos ni comentarios), una función no pasa de 50 líneas ni de complejidad cognitiva 15. Si un archivo va a pasar del límite, créalo dividido desde el principio. Nunca agregues código a un archivo que ya pasa del límite: extrae a un archivo nuevo. Nunca edites `eslint-suppressions.json` para esconder un incumplimiento.
+10. **Lint y dependencias (10):** los archivos que tocas no pueden terminar con errores de ESLint (corre `npx eslint` sobre ellos, sin `--fix` masivo). Si el archivo que vas a editar ya tiene errores de lint, corrígelos en el mismo cambio, ya que lo tocas: así la deuda baja de a poco. Si tocas `package.json` o el lock, no agregues dependencias con vulnerabilidades altas o críticas (`npm audit --omit=dev`), y si el paquete que tocas ya tiene una, actualízalo.
+11. **Un solo frente (11):** un cambio toca como máximo 3 tickets y todos de una misma funcionalidad. Si te piden más, avisa al dev que el máximo es 3, sugiere cuáles tomar y deja el resto para otro PR.
 
 ## El hook de aviso
 
-El plugin trae un hook que, después de cada edición, avisa de los criterios 3, 4, 6 y 9 que se miden sin juicio. En el 6 solo comprueba que exista el archivo de prueba del archivo que editaste, no que lo cubra. Si el hook te devuelve un aviso:
+El plugin trae un hook que, después de cada edición, avisa de los criterios 3, 4, 6, 9 y 10 que se miden sin juicio. El 10 avisa de los errores de ESLint del archivo que acabas de editar y, si editas `package.json`, de las dependencias con vulnerabilidades altas. En el 6 solo comprueba que exista el archivo de prueba del archivo que editaste, no que lo cubra. Si el hook te devuelve un aviso:
 
 1. Corrige exactamente lo que dice, en el mismo archivo, antes de seguir con otra cosa.
 2. Si el aviso es de un secreto, no copies su valor a ninguna parte. Muévelo a una variable de entorno y dile al dev que debe rotar esa credencial.
 3. Si crees que el aviso es un falso positivo, díselo al dev con la línea y el motivo. No lo ignores en silencio.
 
-El hook solo avisa. Que no avise no significa que el código cumpla: los criterios 1, 2, 5 y 8 no los mide el hook, y del 6 solo mide que exista el archivo de prueba.
+El hook solo avisa. Que no avise no significa que el código cumpla: los criterios 1, 2, 5, 8 y 11 no los mide el hook, y del 6 solo mide que exista el archivo de prueba.
 
 ## Al terminar
 
-1. Repasa los 9 criterios uno por uno contra lo que escribiste.
+1. Repasa los 11 criterios uno por uno contra lo que escribiste.
 2. Dile al dev que el cambio está listo para el gate y que haga commit local. No hagas commit ni push por tu cuenta.
 3. Indica que el siguiente paso es la skill `gate-calidad-tecnica-pre-merge-polaria`. No digas que el cambio «pasa el gate»: solo el revisor aislado puede decirlo.
